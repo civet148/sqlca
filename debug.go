@@ -9,17 +9,24 @@ import (
 )
 
 //assert string or struct/slice/map nil (not include decimal type)
-func assert(v interface{}, strMsg string, args ...interface{}) {
+func assertNil(v interface{}, strMsg string, args ...interface{}) {
+	if isNil(v) {
+		panic(fmt.Sprintf(strMsg, args...))
+	}
+}
+
+func isNil(v interface{}) bool {
 	switch v.(type) {
 	case string:
-		if v.(string) == "" {
-			panic(fmt.Sprintf(strMsg, args...))
+		if v.(string) != "" {
+			return true
 		}
 	default:
-		if reflect.ValueOf(v).IsNil() {
-			panic(fmt.Sprintf(strMsg, args...))
+		if !reflect.ValueOf(v).IsNil() {
+			return true
 		}
 	}
+	return false
 }
 
 // get function name from call stack

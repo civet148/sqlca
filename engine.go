@@ -76,7 +76,7 @@ func (e *Engine) Open(adapterType AdapterType, strUrl string) *Engine {
 		//e.cache = v.(cache.Cache)
 		e.adapterCache = adapterType
 	default:
-		assert(nil, "open adapter instance type [%v] url [%s] failed", adapterType, strUrl)
+		assertNil(nil, "open adapter instance type [%v] url [%s] failed", adapterType, strUrl)
 	}
 	return e
 }
@@ -87,18 +87,22 @@ func (e *Engine) Attach(adapterType AdapterType, v interface{}) *Engine {
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres:
 		{
-			assert(e.db, "already have a [%v] instance, attach failed", adapterType)
+			if !isNil(e.db) {
+				assertNil(nil, "already have a [%v] instance, attach failed", adapterType)
+			}
 			e.db = v.(*sqlx.DB)
 			e.adapterSqlx = adapterType
 		}
 	case AdapterCache_Redis, AdapterCache_Memcached, AdapterCache_Memory:
 		{
-			assert(e.cache, "already have a [%v] instance, attach failed", adapterType)
+			if !isNil(e.cache) {
+				assertNil(nil, "already have a [%v] instance, attach failed", adapterType)
+			}
 			e.cache = v.(cache.Cache)
 			e.adapterCache = adapterType
 		}
 	default:
-		assert(nil, "adapter type [%v] attach instance failed", adapterType)
+		assertNil(nil, "adapter type [%v] attach instance failed", adapterType)
 		return nil
 	}
 	return e
@@ -175,7 +179,7 @@ func (e *Engine) Update(strColumns ...string) (rows int64, err error) {
 // use raw sql to query results
 // return rows and error, if err is not nil must be something wrong
 func (e *Engine) QuerySQL(strQuery string, args ...interface{}) (rows int64, err error) {
-	assert(strQuery, "query sql string is nil")
+	assertNil(strQuery, "query sql string is nil")
 	// TODO @libin QuerySQL() implement
 
 	return
@@ -184,7 +188,7 @@ func (e *Engine) QuerySQL(strQuery string, args ...interface{}) (rows int64, err
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows and error, if err is not nil must be something wrong
 func (e *Engine) ExecSQL(strQuery string, args ...interface{}) (rows int64, err error) {
-	assert(strQuery, "query sql string is nil")
+	assertNil(strQuery, "query sql string is nil")
 	// TODO @libin ExecSQL() implement
 	return
 }

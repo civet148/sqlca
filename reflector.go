@@ -3,6 +3,7 @@ package sqlca
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 func Struct(v interface{}) *Structure {
@@ -32,8 +33,11 @@ func (s *Structure) ToMap(tagName string) (m map[string]string) {
 	if typ.Kind() == reflect.Struct { // struct type
 
 		s.parseStructField(typ, val, tagName)
+
+	} else if typ.Kind() == reflect.Slice {
+
 	} else {
-		assert(nil, "not a struct object")
+		assert(false, "not a struct or slice object")
 	}
 	return s.dict
 }
@@ -70,10 +74,12 @@ func (s *Structure) parseStructField(typ reflect.Type, val reflect.Value, tagNam
 	}
 }
 
+//trim the field value's first and last blank character and save to map
 func (s *Structure) setValueByField(field reflect.StructField, val reflect.Value, tagName string) {
 
 	tag := s.getTag(field, tagName)
 	if tag != "" {
-		s.dict[field.Name] = fmt.Sprintf("%v", val.Interface())
+		strVal := fmt.Sprintf("%v", val.Interface())
+		s.dict[field.Name] = fmt.Sprintf("%v", strings.TrimSpace(strVal)) //trim the first and last blank character and save to map
 	}
 }

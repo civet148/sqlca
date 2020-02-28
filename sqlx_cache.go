@@ -1,5 +1,10 @@
 package sqlca
 
+import (
+	"fmt"
+	"strings"
+)
+
 const (
 	TAG_NAME_DB    = "db"
 	TAG_NAME_JSON  = "json"
@@ -82,7 +87,7 @@ const (
 	OperType_Insert OperType = 3 // insert sql
 	OperType_Upsert OperType = 4 // insert or update sql
 	OperType_Tx     OperType = 5 // transaction sql
-	OperType_Alter  OperType = 6 // alter sql
+
 )
 
 func (o OperType) GoString() string {
@@ -101,8 +106,6 @@ func (o OperType) String() string {
 		return "OperType_Upsert"
 	case OperType_Tx:
 		return "OperType_Tx"
-	case OperType_Alter:
-		return "OperType_Alter"
 	}
 	return "OperType_Unknown"
 }
@@ -167,6 +170,22 @@ func (e *Engine) setPkName(strName string) {
 	e.strPkName = strName
 }
 
+func (e *Engine) getPkValue() string {
+	return e.strPkValue
+}
+
+func (e *Engine) setPkValue(strValue string) {
+	e.strPkValue = strValue
+}
+
+func (e *Engine) getColumns() []string {
+	return e.strColumns
+}
+
+func (e *Engine) setColumns(strColumns ...string) {
+	e.strColumns = strColumns
+}
+
 func (e *Engine) getWhere() string {
 	return e.strWhere
 }
@@ -193,43 +212,188 @@ func (e *Engine) setOperType(operType OperType) {
 
 // get data base driver name and data source name
 func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strScheme, strDSN string) {
-	//TODO @libin connect to database
+	//TODO @libin parse connect url for database
 	strScheme = adapterType.Schema()
 	return strScheme, strUrl
 }
 
-func (e *Engine) makeOrmQueryMysql() (strSQL string) {
+func (e *Engine) getForwardQuote() (strSlash string) {
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL:
+		return "`"
+	case AdapterSqlx_Postgres:
+		return ""
+	case AdapterSqlx_Sqlite:
+		return ""
+	case AdapterSqlx_Mssql:
+		return ""
+	}
+	return
+}
+
+func (e *Engine) getBackQuote() (strSlash string) {
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL:
+		return "`"
+	case AdapterSqlx_Postgres:
+		return ""
+	case AdapterSqlx_Sqlite:
+		return ""
+	case AdapterSqlx_Mssql:
+		return ""
+	}
+	return
+}
+
+func (e *Engine) getOnDuplicateForwardKey() (strKey string) {
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL:
+		return " ON DUPLICATE KEY "
+	case AdapterSqlx_Postgres:
+		return " ON CONFLICT ( "
+	case AdapterSqlx_Sqlite:
+		return " "
+	case AdapterSqlx_Mssql:
+		return " "
+	}
+	return
+}
+
+func (e *Engine) getOnDuplicateBackKey() (strKey string) {
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL:
+		return " UPDATE "
+	case AdapterSqlx_Postgres:
+		return " ) DO UPDATE SET "
+	case AdapterSqlx_Sqlite:
+		return " "
+	case AdapterSqlx_Mssql:
+		return " "
+	}
+	return
+}
+
+func (e *Engine) getOnDuplicateUpdate() (strUpdate string) {
+	// TODO @libin insert into table(...) value(...) on duplicate...
+	return
+}
+
+func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
+
+	if len(e.strColumns) == 0 {
+		return true
+	}
+
+	for _, v := range strExcepts {
+		if v == strCol {
+			return true
+		}
+	}
+
+	for _, v := range e.strColumns {
+		if v == strCol {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
+	var cols []string
+
+	for _, v := range e.strConflicts {
+
+		if e.isColumnSelected(v) {
+			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // postgresql conflict column name format to `id`,...
+			cols = append(cols, c)
+		}
+	}
+
+	if len(cols) > 0 {
+		strQuoteConflicts = strings.Join(cols, ",")
+	}
+	return
+}
+
+func (e *Engine) getQuoteColumns(strExcepts ...string) (strQuoteColumns string) {
+	var cols []string
+
+	for _, v := range e.dict {
+
+		if e.isColumnSelected(v, strExcepts...) {
+			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // column name format to `id`,...
+			cols = append(cols, c)
+		}
+	}
+	strQuoteColumns = strings.Join(cols, ",")
+	return
+}
+
+func (e *Engine) getColonValues(strExcepts ...string) (strQuoteValues string) {
+	var cols []string
+	for _, v := range e.dict {
+		if e.isColumnSelected(v, strExcepts...) {
+			c := fmt.Sprintf(":%v", v) // column value format to :id,...
+			cols = append(cols, c)
+		}
+	}
+	strQuoteValues = strings.Join(cols, ",")
+	return
+}
+
+func (e *Engine) makeSqlxString() (strSqlx string) {
 	assert(e.getModeType() == ModeType_ORM, "not a orm mode")
 	//TODO: @libin make SQL query string (mysql)
+
+	switch e.operType {
+	case OperType_Query:
+	case OperType_Update:
+	case OperType_Insert:
+	case OperType_Upsert:
+	case OperType_Tx:
+	default:
+		assert(false, "operation illegal")
+	}
+
 	if e.debug {
-		e.debugf(strSQL)
+		e.debugf("SqlxString: %s", strSqlx)
 	}
 	return
 }
 
-func (e *Engine) makeOrmQuerySqlite() (strSQL string) {
-	assert(e.getModeType() == ModeType_ORM, "not a orm mode")
-	//TODO: @libin make SQL query string (sqlite)
-	if e.debug {
-		e.debugf(strSQL)
-	}
+func (e *Engine) makeSqlxQuery() (strSqlx string) {
+
 	return
 }
 
-func (e *Engine) makeOrmQueryPostgresql() (strSQL string) {
-	assert(e.getModeType() == ModeType_ORM, "not a orm mode")
-	//TODO: @libin make SQL query string (postgresql)
-	if e.debug {
-		e.debugf(strSQL)
-	}
+func (e *Engine) makeSqlxUpdate() (strSqlx string) {
+
 	return
 }
 
-func (e *Engine) makeOrmQueryMssql() (strSQL string) {
-	assert(e.getModeType() == ModeType_ORM, "not a orm mode")
-	//TODO: @libin make SQL query string (mssql)
-	if e.debug {
-		e.debugf(strSQL)
-	}
+//"insert into
+// phone_call_sessions(`access_hash`, `admin_id`, `participant_id`, `admin_auth_key_id`, `participant_auth_key_id`, `random_id`, `admin_protocol`,
+//                     `participant_protocol`, `g_a_hash`, `g_a`, `g_b`, `key_fingerprint`, `connections`, `admin_debug_data`, `participant_debug_data`, `date`, `state`)
+// values (:access_hash, :admin_id, :participant_id, :admin_auth_key_id, :participant_auth_key_id, :random_id, :admin_protocol,
+//         :participant_protocol, :g_a_hash, :g_a, :g_b, :key_fingerprint, :connections, :admin_debug_data, :participant_debug_data, :date, :state)"
+func (e *Engine) makeSqlxInsert() (strSqlx string) {
+
+	strSqlx = fmt.Sprintf("insert into %v (%v) values (%v)", e.strTableName, e.getQuoteColumns(), e.getColonValues())
+
+	return
+}
+
+//"insert into
+// phone_call_sessions(access_hash, admin_id, participant_id, admin_auth_key_id, participant_auth_key_id, random_id, admin_protocol, participant_protocol, g_a_hash, g_a, g_b, key_fingerprint, connections, admin_debug_data, participant_debug_data, `date`, state)
+// values (:access_hash, :admin_id, :participant_id, :admin_auth_key_id, :participant_auth_key_id, :random_id, :admin_protocol,
+//         :participant_protocol, :g_a_hash, :g_a, :g_b, :key_fingerprint, :connections, :admin_debug_data, :participant_debug_data, :date, :state)
+// on duplicate key update id = last_insert_id(id), date='1582890480'"
+func (e *Engine) makeSqlxUpsert() (strSqlx string) {
+
+	return
+}
+
+func (e *Engine) makeSqlxTx() (strSqlx string) {
+
 	return
 }

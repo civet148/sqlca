@@ -2,60 +2,23 @@ package sqlca
 
 import (
 	"github.com/astaxie/beego/cache"
+	_ "github.com/go-sql-driver/mysql" //mysql golang driver
 	"github.com/jmoiron/sqlx"
 )
 
-type AdapterType int
-
-const (
-	DEFAULT_PRIMARY_KEY_NAME = "id"
-)
-
-const (
-	AdapterSqlx_MySQL      AdapterType = 1 //sqlx: mysql
-	AdapterSqlx_Postgres   AdapterType = 2 //sqlx: postgresql
-	AdapterCache_Redis     AdapterType = 3 //cache: redis
-	AdapterCache_Memcached AdapterType = 4 //cache: memcached
-	AdapterCache_Memory    AdapterType = 5 //cache: memory
-	AdapterCache_File      AdapterType = 6 //cache: file
-)
-
-func (a AdapterType) GoString() string {
-	return a.String()
-}
-
-func (a AdapterType) String() string {
-
-	switch a {
-	case AdapterSqlx_MySQL:
-		return "AdapterSqlx_MySQL"
-	case AdapterSqlx_Postgres:
-		return "AdapterSqlx_Postgres"
-	case AdapterCache_Redis:
-		return "AdapterCache_Redis"
-	case AdapterCache_Memcached:
-		return "AdapterCache_Memcached"
-	case AdapterCache_Memory:
-		return "AdapterCache_Memory"
-	case AdapterCache_File:
-		return "AdapterCache_File"
-	default:
-	}
-	return "Adapter_Unknown"
-}
-
-type SqlxWhere map[string]interface{}
-
 type Engine struct {
-	db           *sqlx.DB    // sqlx instance
-	cache        cache.Cache // beego cache instance
-	adapterSqlx  AdapterType // what's adapter of sqlx
-	adapterCache AdapterType // what's adapter of cache
-	debug        bool        // debug on/off
-	model        interface{} // data model of record
-	strTableName string      // table name
-	strPkName    string      // primary key of table, default 'id'
-	strWhere     string      // where condition to query or update
+	db           *sqlx.DB          // sqlx instance
+	cache        cache.Cache       // beego cache instance
+	adapterSqlx  AdapterType       // what's adapter of sqlx
+	adapterCache AdapterType       // what's adapter of cache
+	modeType     ModeType          // mode: orm or raw
+	operType     OperType          // operate type
+	debug        bool              // debug mode [on/off]
+	model        interface{}       // data model [struct object or struct slice]
+	dict         map[string]string // data model db dictionary
+	strTableName string            // table name
+	strPkName    string            // primary key of table, default 'id'
+	strWhere     string            // where condition to query or update
 }
 
 func NewEngine() *Engine {
@@ -66,17 +29,22 @@ func NewEngine() *Engine {
 }
 
 func (e *Engine) Open(adapterType AdapterType, strUrl string) *Engine {
+
+	var err error
 	switch adapterType {
-	case AdapterSqlx_MySQL, AdapterSqlx_Postgres:
+	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
 		// TODO @libin open sqlx database conection
-		//e.db = v.(*sqlx.DB)
+		strSchema, strDSN := e.getConnUrl(adapterType, strUrl)
+		if e.db, err = sqlx.Open(strSchema, strDSN); err != nil {
+			e.panic("open schema %v DSN %v original url [%v] error [%v]", strSchema, strDSN, strUrl, err.Error())
+		}
 		e.adapterSqlx = adapterType
 	case AdapterCache_Redis, AdapterCache_Memcached, AdapterCache_Memory, AdapterCache_File:
 		// TODO @libin open beego cache conection
 		//e.cache = v.(cache.Cache)
 		e.adapterCache = adapterType
 	default:
-		assertNil(nil, "open adapter instance type [%v] url [%s] failed", adapterType, strUrl)
+		assert(nil, "open adapter instance type [%v] url [%s] failed", adapterType, strUrl)
 	}
 	return e
 }
@@ -85,24 +53,20 @@ func (e *Engine) Open(adapterType AdapterType, strUrl string) *Engine {
 func (e *Engine) Attach(adapterType AdapterType, v interface{}) *Engine {
 
 	switch adapterType {
-	case AdapterSqlx_MySQL, AdapterSqlx_Postgres:
+	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
 		{
-			if !isNil(e.db) {
-				assertNil(nil, "already have a [%v] instance, attach failed", adapterType)
-			}
+			assert(!isNilOrFalse(e.db), "already have a [%v] sqlx instance, attach failed", adapterType)
 			e.db = v.(*sqlx.DB)
 			e.adapterSqlx = adapterType
 		}
-	case AdapterCache_Redis, AdapterCache_Memcached, AdapterCache_Memory:
+	case AdapterCache_Redis, AdapterCache_Memcached, AdapterCache_Memory, AdapterCache_File:
 		{
-			if !isNil(e.cache) {
-				assertNil(nil, "already have a [%v] instance, attach failed", adapterType)
-			}
+			assert(!isNilOrFalse(e.cache), "already have a [%v] beego cache instance, attach failed", adapterType)
 			e.cache = v.(cache.Cache)
 			e.adapterCache = adapterType
 		}
 	default:
-		assertNil(nil, "adapter type [%v] attach instance failed", adapterType)
+		assert(nil, "adapter type [%v] attach instance failed", adapterType)
 		return nil
 	}
 	return e
@@ -130,40 +94,49 @@ func (e *Engine) Debug(ok bool) {
 // use to get result set, support single struct object or slice [pointer type]
 // notice: will clone a new engine object for orm operations
 func (e *Engine) Model(v interface{}) *Engine {
+	assert(v, "model is nil")
 	return e.clone(v)
 }
 
 // set orm query table name
 // when your struct type name is not a table name
 func (e *Engine) Table(strName string) *Engine {
+	assert(strName, "name is nil")
 	e.setTableName(strName)
 	return e
 }
 
 // set orm primary key, default named 'id'
 func (e *Engine) PrimaryKey(strName string) *Engine {
+	assert(strName, "name is nil")
 	e.setPkName(strName)
 	return e
 }
 
 // orm query
 // return rows affected and error, if err is not nil must be something wrong
+// Model function is must be called before call this function
 func (e *Engine) Query() (rows int64, err error) {
+	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Query() implement
 	return
 }
 
 // orm insert
 // return last insert id and error, if err is not nil must be something wrong
+// Model function is must be called before call this function
 func (e *Engine) Insert() (lastInsertId int64, err error) {
+	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Insert() implement
 	return
 }
 
 // orm insert or update if exist
 // strColumns... if set, columns will be updated, if none all columns in model will be updated except primary key
-// return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe lastInsertId return 0
-func (e *Engine) Upsert(strColumns ...string) (lastInsertId int64, err error) {
+// return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe id return 0
+// Model function is must be called before call this function
+func (e *Engine) Upsert(strColumns ...string) (id int64, err error) {
+	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Upsert() implement
 	return
 }
@@ -171,15 +144,20 @@ func (e *Engine) Upsert(strColumns ...string) (lastInsertId int64, err error) {
 // orm update from model
 // strColumns... if set, columns will be updated, if none all columns in model will be updated except primary key
 // return rows affected and error, if err is not nil must be something wrong
+// Model function is must be called before call this function
 func (e *Engine) Update(strColumns ...string) (rows int64, err error) {
+	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Update() implement
+
 	return
 }
 
 // use raw sql to query results
 // return rows and error, if err is not nil must be something wrong
+// Model function is must be called before call this function
 func (e *Engine) QuerySQL(strQuery string, args ...interface{}) (rows int64, err error) {
-	assertNil(strQuery, "query sql string is nil")
+	assert(strQuery, "query sql string is nil")
+	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin QuerySQL() implement
 
 	return
@@ -188,7 +166,7 @@ func (e *Engine) QuerySQL(strQuery string, args ...interface{}) (rows int64, err
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows and error, if err is not nil must be something wrong
 func (e *Engine) ExecSQL(strQuery string, args ...interface{}) (rows int64, err error) {
-	assertNil(strQuery, "query sql string is nil")
+	assert(strQuery, "query sql string is nil")
 	// TODO @libin ExecSQL() implement
 	return
 }

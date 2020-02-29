@@ -15,6 +15,7 @@ type Engine struct {
 	adapterCache AdapterType       // what's adapter of cache
 	modeType     ModeType          // mode: orm or raw
 	operType     OperType          // operate type
+	expireTime   int               // cache expire time of seconds
 	refreshCache bool              // can refresh cache ? true=yes false=no
 	debug        bool              // debug mode [on/off]
 	model        interface{}       // data model [struct object or struct slice]
@@ -30,8 +31,9 @@ type Engine struct {
 func NewEngine(debug bool) *Engine {
 
 	return &Engine{
-		debug:     debug,
-		strPkName: DEFAULT_PRIMARY_KEY_NAME,
+		debug:      debug,
+		strPkName:  DEFAULT_PRIMARY_KEY_NAME,
+		expireTime: DEFAULT_CAHCE_EXPIRE_SECONDS,
 	}
 }
 
@@ -55,6 +57,9 @@ func (e *Engine) Open(adapterType AdapterType, strDSN string, expireSeconds ...i
 		// TODO @libin open beego cache conection
 		//e.cache = v.(cache.Cache)
 		e.adapterCache = adapterType
+		if len(expireSeconds) > 0 {
+			e.expireTime = expireSeconds[0]
+		}
 	default:
 		assert(false, "open adapter instance type [%v] url [%s] failed", adapterType, strDSN)
 	}
@@ -185,7 +190,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	return
 }
 
-// update data if insert on keys conflict
+// set the conflict columns for upsert
 // only for postgresql
 func (e *Engine) OnConflict(strColumns ...string) *Engine {
 
@@ -193,9 +198,9 @@ func (e *Engine) OnConflict(strColumns ...string) *Engine {
 	return e
 }
 
-// orm insert or update if exist
+// orm insert or update if key(s) conflict
 // return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe id return 0
-// Model function is must be called before call this function
+// Model function is must be called before call this function and call OnConflict function when you are on postgresql
 func (e *Engine) Upsert() (id int64, err error) {
 	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
 	assert(e.model, "model is nil, please call Model function first")

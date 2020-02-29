@@ -14,7 +14,8 @@ const (
 type AdapterType int
 
 const (
-	DEFAULT_PRIMARY_KEY_NAME = "id"
+	DEFAULT_CAHCE_EXPIRE_SECONDS = 60 * 60
+	DEFAULT_PRIMARY_KEY_NAME     = "id"
 )
 
 const (
@@ -141,7 +142,13 @@ func (e *Engine) clone(model interface{}) *Engine {
 		adapterSqlx:  e.adapterSqlx,
 		adapterCache: e.adapterCache,
 		strPkName:    e.strPkName,
+		expireTime:   e.expireTime,
 	}
+}
+
+func (e *Engine) clean() *Engine {
+
+	return e
 }
 
 func (e *Engine) checkModel() bool {
@@ -301,6 +308,13 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 }
 
 func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
+
+	if e.adapterSqlx != AdapterSqlx_Postgres {
+		//return  //TODO @libin only postgres need conflicts fields
+	}
+
+	assert(e.strConflicts, "on conflict columns is nil")
+
 	var cols []string
 
 	for _, v := range e.strConflicts {
@@ -314,6 +328,11 @@ func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 	if len(cols) > 0 {
 		strQuoteConflicts = strings.Join(cols, ",")
 	}
+	return
+}
+
+func (e *Engine) getOnConflictDo() (strDo string) {
+
 	return
 }
 
@@ -337,6 +356,11 @@ func (e *Engine) getInsertColumnsAndValues(strExcepts ...string) (strQuoteColumn
 
 func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) {
 
+	//mysql/sqlite: ON DUPLICATE KEY UPDATE id=last_insert_id(id), date='1582980944'
+	//postgres: ON CONFLICT (id) DO UPDATE SET date='1582980944' [WHERE condition]
+	//mssql: nothing...
+	strUpdates = fmt.Sprintf("%v %v %v %v",
+		e.getOnConflictForwardKey(), e.getQuoteConflicts(), e.getOnConflictBackKey(), e.getOnConflictDo())
 	return
 }
 

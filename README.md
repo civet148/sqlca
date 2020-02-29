@@ -1,5 +1,5 @@
 # author 
-lory.lee 
+lory.li
 # email
 civet148@126.com
 # QQ 

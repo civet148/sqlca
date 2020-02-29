@@ -32,7 +32,7 @@ func isNilOrFalse(v interface{}) bool {
 			return true
 		}
 	case bool:
-		return v.(bool)
+		return !v.(bool)
 	default:
 		{
 			typ := reflect.TypeOf(v)
@@ -84,14 +84,14 @@ func (e *Engine) panic(strFmt string, args ...interface{}) {
 	if e.isDebug() {
 		panic(fmt.Sprintf(strFmt, args...))
 	} else {
-		strFmt = fmtParentCaller(strFmt)
+		//strFmt = fmtParentCaller(strFmt)
 		log.Errorf(strFmt, args...)
 	}
 }
 
 func (e *Engine) debugf(strFmt string, args ...interface{}) {
 	if e.isDebug() {
-		strFmt = fmtParentCaller(strFmt)
+		//strFmt = fmtParentCaller(strFmt)
 		log.Debugf(strFmt, args...)
 	}
 }

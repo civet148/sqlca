@@ -3,6 +3,7 @@ package sqlca
 import (
 	"fmt"
 	"github.com/astaxie/beego/cache"
+	"github.com/civet148/gotools/log"
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
 	"github.com/jmoiron/sqlx"
 )
@@ -36,23 +37,29 @@ func NewEngine(debug bool) *Engine {
 
 // open a sqlx database or cache connection
 // @params expireSeconds 	cache data expire seconds, just for AdapterTypeCache_XXX
-func (e *Engine) Open(adapterType AdapterType, strUrl string, expireSeconds ...int) *Engine {
+func (e *Engine) Open(adapterType AdapterType, strDSN string, expireSeconds ...int) *Engine {
 
 	var err error
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-		strSchema, strDSN := e.getConnUrl(adapterType, strUrl)
+		strSchema, strDSN := e.getConnUrl(adapterType, strDSN)
 		if e.db, err = sqlx.Open(strSchema, strDSN); err != nil {
-			e.panic("open schema %v DSN %v original url [%v] error [%v]", strSchema, strDSN, strUrl, err.Error())
+			e.panic("open schema %v DSN %v original url [%v] error [%v]", strSchema, strDSN, strDSN, err.Error())
 		}
+		if err = e.db.Ping(); err != nil {
+			e.panic("ping database error %v, url %v", err.Error(), strDSN)
+		}
+
 		e.adapterSqlx = adapterType
 	case AdapterCache_Redis, AdapterCache_Memcached, AdapterCache_Memory, AdapterCache_File:
 		// TODO @libin open beego cache conection
 		//e.cache = v.(cache.Cache)
 		e.adapterCache = adapterType
 	default:
-		assert(false, "open adapter instance type [%v] url [%s] failed", adapterType, strUrl)
+		assert(false, "open adapter instance type [%v] url [%s] failed", adapterType, strDSN)
 	}
+
+	//log.Struct(e)
 	return e
 }
 
@@ -163,21 +170,34 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Insert() implement
 	e.operType = OperType_Insert
-	//var strSqlx string
-	//strSqlx = e.makeSqlxString()
-
+	var strSqlx string
+	strSqlx = e.makeSqlxString()
+	r, err := e.db.NamedExec(strSqlx, e.model)
+	if err != nil {
+		log.Errorf("error %v model %+v", err, e.model)
+		return
+	}
+	lastInsertId, err = r.LastInsertId()
+	if err != nil {
+		log.Errorf("get last insert id error %v model %+v", err, e.model)
+		return
+	}
 	return
 }
 
-// update data if insert on conflict (just for postgresql)
-func (e *Engine) OnConflict(strColumns ...string) {
+// update data if insert on keys conflict
+// only for postgresql
+func (e *Engine) OnConflict(strColumns ...string) *Engine {
+
 	e.strConflicts = strColumns
+	return e
 }
 
 // orm insert or update if exist
 // return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe id return 0
 // Model function is must be called before call this function
 func (e *Engine) Upsert() (id int64, err error) {
+	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Upsert() implement
 	return

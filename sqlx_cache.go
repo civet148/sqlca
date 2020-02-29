@@ -86,8 +86,6 @@ const (
 	OperType_Update OperType = 2 // update sql
 	OperType_Insert OperType = 3 // insert sql
 	OperType_Upsert OperType = 4 // insert or update sql
-	OperType_Tx     OperType = 5 // transaction sql
-
 )
 
 func (o OperType) GoString() string {
@@ -104,8 +102,6 @@ func (o OperType) String() string {
 		return "OperType_Insert"
 	case OperType_Upsert:
 		return "OperType_Upsert"
-	case OperType_Tx:
-		return "OperType_Tx"
 	}
 	return "OperType_Unknown"
 }
@@ -136,12 +132,15 @@ func (e *Engine) clone(model interface{}) *Engine {
 
 	dict := Struct(model).ToMap(TAG_NAME_DB)
 	return &Engine{
-		db:        e.db,
-		cache:     e.cache,
-		debug:     e.debug,
-		model:     model,
-		dict:      dict,
-		strPkName: e.strPkName,
+		db:           e.db,
+		cache:        e.cache,
+		debug:        e.debug,
+		model:        model,
+		dict:         dict,
+		modeType:     e.modeType,
+		adapterSqlx:  e.adapterSqlx,
+		adapterCache: e.adapterCache,
+		strPkName:    e.strPkName,
 	}
 }
 
@@ -214,6 +213,14 @@ func (e *Engine) setOperType(operType OperType) {
 func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strScheme, strDSN string) {
 	//TODO @libin parse connect url for database
 	strScheme = adapterType.Schema()
+	// TODO parse url ....
+	//
+	//switch e.adapterSqlx {
+	//case AdapterSqlx_MySQL:
+	//case AdapterSqlx_Postgres:
+	//case AdapterSqlx_Sqlite:
+	//case AdapterSqlx_Mssql:
+	//}
 	return strScheme, strUrl
 }
 
@@ -245,49 +252,44 @@ func (e *Engine) getBackQuote() (strSlash string) {
 	return
 }
 
-func (e *Engine) getOnDuplicateForwardKey() (strKey string) {
+func (e *Engine) getOnConflictForwardKey() (strKey string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL:
-		return " ON DUPLICATE KEY "
+		return " ON DUPLICATE "
 	case AdapterSqlx_Postgres:
 		return " ON CONFLICT ( "
 	case AdapterSqlx_Sqlite:
-		return " "
+		return " ON DUPLICATE "
 	case AdapterSqlx_Mssql:
 		return " "
 	}
 	return
 }
 
-func (e *Engine) getOnDuplicateBackKey() (strKey string) {
+func (e *Engine) getOnConflictBackKey() (strKey string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL:
-		return " UPDATE "
+		return " KEY UPDATE "
 	case AdapterSqlx_Postgres:
 		return " ) DO UPDATE SET "
 	case AdapterSqlx_Sqlite:
-		return " "
+		return " KEY UPDATE "
 	case AdapterSqlx_Mssql:
 		return " "
 	}
-	return
-}
-
-func (e *Engine) getOnDuplicateUpdate() (strUpdate string) {
-	// TODO @libin insert into table(...) value(...) on duplicate...
 	return
 }
 
 func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 
-	if len(e.strColumns) == 0 {
-		return true
-	}
-
 	for _, v := range strExcepts {
 		if v == strCol {
-			return true
+			return false
 		}
+	}
+
+	if len(e.strColumns) == 0 {
+		return true
 	}
 
 	for _, v := range e.strColumns {
@@ -315,48 +317,47 @@ func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 	return
 }
 
-func (e *Engine) getQuoteColumns(strExcepts ...string) (strQuoteColumns string) {
-	var cols []string
+func (e *Engine) getInsertColumnsAndValues(strExcepts ...string) (strQuoteColumns, strColonValues string) {
+	var cols, vals []string
 
-	for _, v := range e.dict {
+	for k, _ := range e.dict {
 
-		if e.isColumnSelected(v, strExcepts...) {
-			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // column name format to `id`,...
+		if e.isColumnSelected(k, strExcepts...) {
+
+			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
+			v := fmt.Sprintf(":%v", k)                                           // column value format to :id,...
 			cols = append(cols, c)
+			vals = append(vals, v)
 		}
 	}
 	strQuoteColumns = strings.Join(cols, ",")
+	strColonValues = strings.Join(vals, ",")
 	return
 }
 
-func (e *Engine) getColonValues(strExcepts ...string) (strQuoteValues string) {
-	var cols []string
-	for _, v := range e.dict {
-		if e.isColumnSelected(v, strExcepts...) {
-			c := fmt.Sprintf(":%v", v) // column value format to :id,...
-			cols = append(cols, c)
-		}
-	}
-	strQuoteValues = strings.Join(cols, ",")
+func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) {
+
 	return
 }
 
 func (e *Engine) makeSqlxString() (strSqlx string) {
-	assert(e.getModeType() == ModeType_ORM, "not a orm mode")
 	//TODO: @libin make SQL query string (mysql)
 
 	switch e.operType {
 	case OperType_Query:
+		strSqlx = e.makeSqlxQuery()
 	case OperType_Update:
+		strSqlx = e.makeSqlxUpdate()
 	case OperType_Insert:
+		strSqlx = e.makeSqlxInsert()
 	case OperType_Upsert:
-	case OperType_Tx:
+		strSqlx = e.makeSqlxUpsert()
 	default:
 		assert(false, "operation illegal")
 	}
 
 	if e.debug {
-		e.debugf("SqlxString: %s", strSqlx)
+		e.debugf("sqlx query [%s]", strSqlx)
 	}
 	return
 }
@@ -371,29 +372,18 @@ func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 	return
 }
 
-//"insert into
-// phone_call_sessions(`access_hash`, `admin_id`, `participant_id`, `admin_auth_key_id`, `participant_auth_key_id`, `random_id`, `admin_protocol`,
-//                     `participant_protocol`, `g_a_hash`, `g_a`, `g_b`, `key_fingerprint`, `connections`, `admin_debug_data`, `participant_debug_data`, `date`, `state`)
-// values (:access_hash, :admin_id, :participant_id, :admin_auth_key_id, :participant_auth_key_id, :random_id, :admin_protocol,
-//         :participant_protocol, :g_a_hash, :g_a, :g_b, :key_fingerprint, :connections, :admin_debug_data, :participant_debug_data, :date, :state)"
 func (e *Engine) makeSqlxInsert() (strSqlx string) {
 
-	strSqlx = fmt.Sprintf("insert into %v (%v) values (%v)", e.strTableName, e.getQuoteColumns(), e.getColonValues())
-
+	strColumns, strValues := e.getInsertColumnsAndValues()
+	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v)", e.strTableName, strColumns, strValues)
 	return
 }
 
-//"insert into
-// phone_call_sessions(access_hash, admin_id, participant_id, admin_auth_key_id, participant_auth_key_id, random_id, admin_protocol, participant_protocol, g_a_hash, g_a, g_b, key_fingerprint, connections, admin_debug_data, participant_debug_data, `date`, state)
-// values (:access_hash, :admin_id, :participant_id, :admin_auth_key_id, :participant_auth_key_id, :random_id, :admin_protocol,
-//         :participant_protocol, :g_a_hash, :g_a, :g_b, :key_fingerprint, :connections, :admin_debug_data, :participant_debug_data, :date, :state)
-// on duplicate key update id = last_insert_id(id), date='1582890480'"
 func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 
-	return
-}
-
-func (e *Engine) makeSqlxTx() (strSqlx string) {
-
+	strColumns, strValues := e.getInsertColumnsAndValues()
+	strOnConflictUpdates := e.getOnConflictUpdates()
+	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) %v",
+		e.strTableName, strColumns, strValues, strOnConflictUpdates)
 	return
 }

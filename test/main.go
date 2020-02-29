@@ -38,8 +38,8 @@ const (
 func main() {
 
 	e := sqlca.NewEngine(true)
-	e.Open(sqlca.AdapterSqlx_MySQL, "mysql://root:123456@tcp(127.0.0.1:3306)/enterprise?charset=utf8mb4")
-	e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/db?dbnum=0")
+	e.Open(sqlca.AdapterSqlx_MySQL, "root:123456@tcp(127.0.0.1:3306)/enterprise?charset=utf8mb4")
+	//e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/db?dbnum=0")
 
 	var pc = PhoneCall{
 		Id:                   0,
@@ -48,7 +48,7 @@ func main() {
 		ParticipantId:        1000001,
 		AdminAuthKeyId:       -4978771431149903665,
 		ParticipantAuthKeyId: -5040703424437420153,
-		RandomId:             4032409412382324334,
+		RandomId:             4032409,
 		AdminProtocol:        "udp_p2p",
 		ParticipantProtocol:  "udp_p2p",
 		GAHash:               "",

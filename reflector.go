@@ -77,9 +77,9 @@ func (s *Structure) parseStructField(typ reflect.Type, val reflect.Value, tagNam
 //trim the field value's first and last blank character and save to map
 func (s *Structure) setValueByField(field reflect.StructField, val reflect.Value, tagName string) {
 
-	tag := s.getTag(field, tagName)
-	if tag != "" {
+	tagVal := s.getTag(field, tagName)
+	if tagVal != "" {
 		strVal := fmt.Sprintf("%v", val.Interface())
-		s.dict[field.Name] = fmt.Sprintf("%v", strings.TrimSpace(strVal)) //trim the first and last blank character and save to map
+		s.dict[tagVal] = fmt.Sprintf("%v", strings.TrimSpace(strVal)) //trim the first and last blank character and save to map
 	}
 }

@@ -97,7 +97,7 @@ func (s *Structure) setValueByField(field reflect.StructField, val reflect.Value
 }
 
 //fetch row to struct or slice, must call rows.Next() before call this function
-func (e *Engine) fetchRow(rows *sql.Rows, arg interface{}) (err error) {
+func (e *Engine) fetchRow(rows *sql.Rows, arg interface{}) (count int64, err error) {
 
 	fetcher, _ := e.getFecther(rows)
 
@@ -115,6 +115,7 @@ func (e *Engine) fetchRow(rows *sql.Rows, arg interface{}) (err error) {
 	case reflect.Map:
 		{
 			err = e.fetchToMap(fetcher, argment)
+			count++
 		}
 	case reflect.Slice:
 		{
@@ -125,6 +126,7 @@ func (e *Engine) fetchRow(rows *sql.Rows, arg interface{}) (err error) {
 				elemVal := reflect.New(elemTyp).Elem()
 				err = e.fetchToStruct(rows, fetcher, elemTyp, elemVal) //assign to struct object
 				val.Set(reflect.Append(val, elemVal))
+				count++
 				if !rows.Next() {
 					break
 				}
@@ -133,6 +135,7 @@ func (e *Engine) fetchRow(rows *sql.Rows, arg interface{}) (err error) {
 	case reflect.Struct:
 		{
 			err = e.fetchToStruct(rows, fetcher, typ, val)
+			count++
 		}
 	}
 

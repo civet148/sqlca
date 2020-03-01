@@ -187,11 +187,15 @@ func (e *Engine) Query() (rows int64, err error) {
 		return
 	}
 
+	defer r.Close()
+
 	for r.Next() {
-		if err = e.fetchRow(r, e.model); err != nil {
+		var c int64
+		if c, err = e.fetchRow(r, e.model); err != nil {
 			log.Error("fetchRow error [%v]", err.Error())
 			return
 		}
+		rows += c
 	}
 	return
 }

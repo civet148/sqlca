@@ -41,7 +41,7 @@ func main() {
 	e.Open(sqlca.AdapterSqlx_MySQL, "root:123456@tcp(127.0.0.1:3306)/enterprise?charset=utf8mb4")
 	//e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/db?dbnum=0")
 
-	var call = PhoneCall{
+	var callUpsert = PhoneCall{
 		Id:                   0,
 		AccessHash:           1234567890,
 		AdminId:              1000000,
@@ -65,34 +65,39 @@ func main() {
 		Date:                 0,
 		State:                0,
 	}
+
+	var callQuery PhoneCall
 	var callList []PhoneCall
 
 	// insert a record
-	id, err := e.Model(&call).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Insert()
+	id, err := e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Insert()
 	_ = id
 
 	// insert if not exist, otherwise update state and date
-	call.State = 1
-	call.Date = int32(time.Now().Unix())
-	id, err = e.Model(&call).Table(TABLE_NAME_PHONE_CALL_SESSIONS).OnConflict("id").Upsert("state", "date")
+	callUpsert.State = 1
+	callUpsert.Date = int32(time.Now().Unix())
+	id, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Upsert("state", "date")
 	_ = id
 
 	//Remark: single record to fetch by primary key which named 'id'
 	//SQL: select * from phone_call_sessions where id='99'
 	var rows int64
-	rows, err = e.Model(&call).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Id(1).Query()
+	rows, err = e.Model(&callQuery).Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		Id(1).
+		//Select("id", "access_hash", "admin_id", "participant_id", "admin_auth_key_id", "participant_auth_key_id", "g_a_hash").
+		Query()
 	if err != nil {
 		_ = rows
 		log.Errorf(err.Error())
 		return
 	}
-	log.Debugf("query result rows [%v] values %+v", rows, call)
+	log.Debugf("query result rows [%v] values %+v", rows, callQuery)
 
 	//Remark: multiple record to fetch by where condition
 	//SQL: select id, access_hash, admin_id, participant_id, admin_auth_key_id, participant_auth_key_id from phone_call_sessions where id <='100'
 	rows, err = e.Model(&callList).
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
-		//Select("id", "access_hash", "admin_id", "participant_id", "admin_auth_key_id", "participant_auth_key_id", "created_at").
+		//Select("id", "access_hash", "admin_id", "participant_id", "admin_auth_key_id", "participant_auth_key_id", "g_a_hash").
 		Where("id <= 100"). // use Where function, the records which be updated can not be refreshed to redis/memcached...
 		Query()
 	if err != nil {
@@ -100,7 +105,7 @@ func main() {
 		log.Errorf(err.Error())
 		return
 	}
-
 	log.Debugf("query result rows [%v] values %+v custom where condition", rows, callList)
+
 	log.Info("program exit...")
 }

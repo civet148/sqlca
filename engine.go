@@ -186,14 +186,13 @@ func (e *Engine) Query() (rows int64, err error) {
 		log.Errorf("query [%v] error [%v]", strSqlx, err.Error())
 		return
 	}
-	log.Enter()
+
 	for r.Next() {
 		if err = e.fetchRow(r, e.model); err != nil {
 			log.Error("fetchRow error [%v]", err.Error())
 			return
 		}
 	}
-	log.Leave()
 	return
 }
 

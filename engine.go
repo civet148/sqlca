@@ -1,6 +1,7 @@
 package sqlca
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/astaxie/beego/cache"
 	"github.com/civet148/gotools/log"
@@ -140,7 +141,8 @@ func (e *Engine) PkName(strName string) *Engine {
 func (e *Engine) Id(value interface{}) *Engine {
 
 	//TODO @libin sql syntax differences of MySQL/Postgresql/Sqlite/Mssql...
-	e.setPkValue(fmt.Sprintf("'%v'", value))
+	e.setSelectColumns("*")
+	e.setPkValue(fmt.Sprintf("%v", value))
 	return e
 }
 
@@ -148,15 +150,6 @@ func (e *Engine) Id(value interface{}) *Engine {
 func (e *Engine) Select(strColumns ...string) *Engine {
 	e.setSelectColumns(strColumns...)
 	return e
-}
-
-// orm query
-// return rows affected and error, if err is not nil must be something wrong
-// Model function is must be called before call this function
-func (e *Engine) Query() (rows int64, err error) {
-	assert(e.model, "model is nil, please call Model function first")
-	// TODO @libin Query() implement
-	return
 }
 
 // orm query
@@ -175,6 +168,33 @@ func (e *Engine) OnConflict(strColumns ...string) *Engine {
 
 	e.strConflicts = strColumns
 	return e
+}
+
+// orm query
+// return rows affected and error, if err is not nil must be something wrong
+// Model function is must be called before call this function
+func (e *Engine) Query() (rows int64, err error) {
+	assert(e.model, "model is nil, please call Model function first")
+
+	// TODO @libin Query() implement
+	e.operType = OperType_Query
+	strSqlx := e.makeSqlxString()
+	//e.db.Select(e.model, strSqlx)
+
+	var r *sql.Rows
+	if r, err = e.db.Query(strSqlx); err != nil {
+		log.Errorf("query [%v] error [%v]", strSqlx, err.Error())
+		return
+	}
+	log.Enter()
+	for r.Next() {
+		if err = e.fetchRow(r, e.model); err != nil {
+			log.Error("fetchRow error [%v]", err.Error())
+			return
+		}
+	}
+	log.Leave()
+	return
 }
 
 // orm insert

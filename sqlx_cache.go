@@ -199,8 +199,25 @@ func (e *Engine) getSelectColumns() (strColumns []string) {
 	return e.strSelectColumns
 }
 
+// use Where function to set custom where condition
 func (e *Engine) getWhere() string {
 	return e.strWhere
+}
+
+// primary key value like 'id'=xxx condition
+func (e *Engine) getPkWhere() (strPkCondition string) {
+
+	strPkName := e.getPkName()
+	strPkValue := e.getPkValue()
+	if isNilOrFalse(strPkValue) {
+		//use model primary value
+		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), strPkName, e.getBackQuote(), e.getSingleQuote(), e.dict[strPkName], e.getSingleQuote())
+	} else {
+		//use custom primary value
+		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), strPkName, e.getBackQuote(), e.getSingleQuote(), strPkValue, e.getSingleQuote())
+	}
+
+	return
 }
 
 func (e *Engine) setWhere(strWhere string) {
@@ -312,10 +329,6 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 
 	for _, v := range e.strSelectColumns {
 
-		if _, ok := e.dict[v]; !ok {
-			assert(false, "column %v not exist in model dictionary", v)
-		}
-
 		if v == strCol {
 			return true
 		}
@@ -347,7 +360,33 @@ func (e *Engine) getQuoteConflicts(strExcepts ...string) (strQuoteConflicts stri
 	return
 }
 
-func (e *Engine) getUpdates(strColumns []string, strExcepts ...string) (strUpdates string) {
+func (e *Engine) getQuoteColumns() (strColumns string) {
+	var cols []string
+
+	selectCols := e.getSelectColumns()
+	if len(selectCols) == 0 {
+		return "*"
+	}
+
+	for _, v := range selectCols {
+
+		if v == "*" {
+			return "*"
+		}
+
+		if e.isColumnSelected(v) {
+			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // column name format to `id`,`date`,...
+			cols = append(cols, c)
+		}
+	}
+
+	if len(cols) > 0 {
+		strColumns = strings.Join(cols, ",")
+	}
+	return
+}
+
+func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (strUpdates string) {
 
 	var cols []string
 	for _, v := range strColumns {
@@ -368,15 +407,18 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		{
-			strDo = fmt.Sprintf("`%v`=last_insert_id(`%v`)", e.strPkName, e.strPkName)
-			strUpdates := e.getUpdates(e.strUpdateColumns, e.strPkName)
+			strDo = fmt.Sprintf("`%v`=LAST_INSERT_ID(`%v`)", e.strPkName, e.strPkName)
+			strUpdates := e.getQuoteUpdates(e.strUpdateColumns, e.strPkName)
 			if !isNilOrFalse(strUpdates) {
-				strDo = fmt.Sprintf("`%v`=last_insert_id(`%v`), %v", e.strPkName, e.strPkName, strUpdates)
+				strDo = fmt.Sprintf("%v, %v", strDo, strUpdates)
 			}
 		}
 	case AdapterSqlx_Postgres:
 		{
-
+			strUpdates := e.getQuoteUpdates(e.strUpdateColumns, e.strPkName)
+			if !isNilOrFalse(strUpdates) {
+				strDo = fmt.Sprintf("%v RETURNING id", strUpdates) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
+			}
 		}
 	case AdapterSqlx_Mssql:
 		{
@@ -415,7 +457,6 @@ func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) 
 }
 
 func (e *Engine) makeSqlxString() (strSqlx string) {
-	//TODO: @libin make SQL query string (mysql)
 
 	switch e.operType {
 	case OperType_Query:
@@ -437,11 +478,20 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 }
 
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
+	//TODO: @libin make query string sql
 
+	if isNilOrFalse(e.getWhere()) {
+		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v", e.getQuoteColumns(), e.getTableName(), e.getPkWhere()) //where condition by model primary key value
+	} else {
+		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v", e.getQuoteColumns(), e.getTableName(), e.getWhere()) //where condition by custom where condition from Where()
+	}
+
+	assert(strSqlx, "query sql is nil")
 	return
 }
 
 func (e *Engine) makeSqlxUpdate() (strSqlx string) {
+	//TODO: @libin make update string sql
 
 	return
 }

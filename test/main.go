@@ -107,5 +107,9 @@ func main() {
 	}
 	log.Debugf("query result rows [%v] values %+v custom where condition", rows, callList)
 
+	callUpsert.State = 3
+	rows, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Id(1).Update("state")
+	log.Debugf("update effect rows [%v] ", rows)
+
 	log.Info("program exit...")
 }

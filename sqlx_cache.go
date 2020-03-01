@@ -199,8 +199,16 @@ func (e *Engine) getSelectColumns() (strColumns []string) {
 	return e.strSelectColumns
 }
 
+//func (e *Engine) setUpdateColumns(strColumns ...string) {
+//	e.strUpdateColumns = strColumns
+//}
+//
+//func (e *Engine) getUpdateColumns() (strColumns []string) {
+//	return e.strUpdateColumns
+//}
+
 // use Where function to set custom where condition
-func (e *Engine) getWhere() string {
+func (e *Engine) getCustomWhere() string {
 	return e.strWhere
 }
 
@@ -392,7 +400,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 	for _, v := range strColumns {
 
 		if e.isColumnSelected(v, strExcepts...) {
-			c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), v, e.getBackQuote(), e.getSingleQuote(), e.dict[v], e.getSingleQuote()) // column name format to `date`=:date,...
+			c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), v, e.getBackQuote(), e.getSingleQuote(), e.dict[v], e.getSingleQuote()) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
 		}
 	}
@@ -408,14 +416,14 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		{
 			strDo = fmt.Sprintf("`%v`=LAST_INSERT_ID(`%v`)", e.strPkName, e.strPkName)
-			strUpdates := e.getQuoteUpdates(e.strUpdateColumns, e.strPkName)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v, %v", strDo, strUpdates)
 			}
 		}
 	case AdapterSqlx_Postgres:
 		{
-			strUpdates := e.getQuoteUpdates(e.strUpdateColumns, e.strPkName)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v RETURNING id", strUpdates) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}
@@ -433,13 +441,10 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 
 	for k, _ := range e.dict {
 
-		if e.isColumnSelected(k) {
-
-			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
-			v := fmt.Sprintf(":%v", k)                                           // column value format to :id,...
-			cols = append(cols, c)
-			vals = append(vals, v)
-		}
+		c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
+		v := fmt.Sprintf(":%v", k)                                           // column value format to :id,...
+		cols = append(cols, c)
+		vals = append(vals, v)
 	}
 	strQuoteColumns = strings.Join(cols, ",")
 	strColonValues = strings.Join(vals, ",")
@@ -478,21 +483,26 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 }
 
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
-	//TODO: @libin make query string sql
 
-	if isNilOrFalse(e.getWhere()) {
+	if isNilOrFalse(e.getCustomWhere()) {
 		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v", e.getQuoteColumns(), e.getTableName(), e.getPkWhere()) //where condition by model primary key value
 	} else {
-		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v", e.getQuoteColumns(), e.getTableName(), e.getWhere()) //where condition by custom where condition from Where()
+		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v", e.getQuoteColumns(), e.getTableName(), e.getCustomWhere()) //where condition by custom where condition from Where()
 	}
-
 	assert(strSqlx, "query sql is nil")
 	return
 }
 
 func (e *Engine) makeSqlxUpdate() (strSqlx string) {
-	//TODO: @libin make update string sql
 
+	if isNilOrFalse(e.getCustomWhere()) {
+		//where condition by model primary key value (not include primary key like 'id')
+		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.getPkName()), e.getPkWhere())
+	} else {
+		//where condition by custom condition (not include primary key like 'id')
+		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.getPkName()), e.getCustomWhere())
+	}
+	assert(strSqlx, "update sql is nil")
 	return
 }
 

@@ -26,8 +26,8 @@ type Engine struct {
 	strPkValue       string            // primary key's value
 	strWhere         string            // where condition to query or update
 	strSelectColumns []string          // columns to query: select
-	strUpdateColumns []string          // columns to query: update
-	strConflicts     []string          // conflict key on duplicate set (just for postgresql)
+	//strUpdateColumns []string          // columns to query: update
+	strConflicts []string // conflict key on duplicate set (just for postgresql)
 }
 
 func NewEngine(debug bool) *Engine {
@@ -206,10 +206,11 @@ func (e *Engine) Query() (rows int64, err error) {
 func (e *Engine) Insert() (lastInsertId int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Insert() implement
-	e.operType = OperType_Insert
+	e.setOperType(OperType_Insert)
 	var strSqlx string
 	strSqlx = e.makeSqlxString()
-	r, err := e.db.NamedExec(strSqlx, e.model)
+	var r sql.Result
+	r, err = e.db.NamedExec(strSqlx, e.model)
 	if err != nil {
 		log.Errorf("error %v model %+v", err, e.model)
 		return
@@ -230,11 +231,13 @@ func (e *Engine) Upsert(strColumns ...string) (lastInsertId int64, err error) {
 	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Upsert() implement
-	e.operType = OperType_Upsert
-	e.strUpdateColumns = strColumns
+	e.setOperType(OperType_Upsert)
+	e.setSelectColumns(strColumns...)
 	var strSqlx string
 	strSqlx = e.makeSqlxString()
-	r, err := e.db.NamedExec(strSqlx, e.model)
+
+	var r sql.Result
+	r, err = e.db.NamedExec(strSqlx, e.model)
 	if err != nil {
 		log.Errorf("error %v model %+v", err, e.model)
 		return
@@ -254,17 +257,33 @@ func (e *Engine) Upsert(strColumns ...string) (lastInsertId int64, err error) {
 // Model function is must be called before call this function
 func (e *Engine) Update(strColumns ...string) (rows int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
+	assert(strColumns, "update columns is not set")
 	// TODO @libin Update() implement
-	e.strUpdateColumns = strColumns
+	e.setSelectColumns(strColumns...)
+	e.setOperType(OperType_Update)
 
-	log.Debugf("rows = %v", rows)
+	var strSqlx string
+	strSqlx = e.makeSqlxString()
+
+	var r sql.Result
+	r, err = e.db.Exec(strSqlx)
+	if err != nil {
+		log.Errorf("error %v model %+v", err, e.model)
+		return
+	}
+	rows, err = r.RowsAffected()
+	if err != nil {
+		log.Errorf("get last insert id error %v model %+v", err, e.model)
+		return
+	}
+	log.Debugf("RowsAffected = %v", rows)
 	return
 }
 
 // use raw sql to query results
 // return rows and error, if err is not nil must be something wrong
 // Model function is must be called before call this function
-func (e *Engine) QuerySQL(strQuery string, args ...interface{}) (rows int64, err error) {
+func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rows int64, err error) {
 	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin QuerySQL() implement
@@ -275,7 +294,7 @@ func (e *Engine) QuerySQL(strQuery string, args ...interface{}) (rows int64, err
 
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows and error, if err is not nil must be something wrong
-func (e *Engine) ExecSQL(strQuery string, args ...interface{}) (rows int64, err error) {
+func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rows int64, err error) {
 	assert(strQuery, "query sql string is nil")
 	// TODO @libin ExecSQL() implement
 

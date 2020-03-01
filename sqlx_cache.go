@@ -238,6 +238,18 @@ func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strScheme, 
 	return strScheme, strUrl
 }
 
+func (e *Engine) getSingleQuote() (strQuote string) {
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+		return "'"
+	case AdapterSqlx_Postgres:
+		return "'"
+	case AdapterSqlx_Mssql:
+		return "'"
+	}
+	return
+}
+
 func (e *Engine) getForwardQuote() (strQuote string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
@@ -341,7 +353,7 @@ func (e *Engine) getUpdates(strColumns []string, strExcepts ...string) (strUpdat
 	for _, v := range strColumns {
 
 		if e.isColumnSelected(v, strExcepts...) {
-			c := fmt.Sprintf("%v%v%v=:%v", e.getForwardQuote(), v, e.getBackQuote(), v) // column name format to `date`=:date,...
+			c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), v, e.getBackQuote(), e.getSingleQuote(), e.dict[v], e.getSingleQuote()) // column name format to `date`=:date,...
 			cols = append(cols, c)
 		}
 	}
@@ -357,9 +369,9 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		{
 			strDo = fmt.Sprintf("`%v`=last_insert_id(`%v`)", e.strPkName, e.strPkName)
-			strUpdates := e.getUpdates(e.strConflicts, e.strPkName)
+			strUpdates := e.getUpdates(e.strUpdateColumns, e.strPkName)
 			if !isNilOrFalse(strUpdates) {
-				strUpdates = fmt.Sprintf("`%v`=last_insert_id(`%v`) %v", e.strPkName, e.strPkName, strUpdates)
+				strDo = fmt.Sprintf("`%v`=last_insert_id(`%v`), %v", e.strPkName, e.strPkName, strUpdates)
 			}
 		}
 	case AdapterSqlx_Postgres:

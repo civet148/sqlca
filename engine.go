@@ -232,6 +232,7 @@ func (e *Engine) Upsert(strColumns ...string) (lastInsertId int64, err error) {
 func (e *Engine) Update(strColumns ...string) (rows int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Update() implement
+	e.strUpdateColumns = strColumns
 
 	log.Debugf("rows = %v", rows)
 	return

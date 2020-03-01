@@ -74,7 +74,7 @@ func main() {
 	// insert if not exist, otherwise update state and date
 	pc.State = 1
 	pc.Date = int32(time.Now().Unix())
-	id, err = e.Model(&pc).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Select("state").Upsert()
+	id, err = e.Model(&pc).Table(TABLE_NAME_PHONE_CALL_SESSIONS).OnConflict("id").Upsert("state")
 	_ = id
 
 	//Remark: single record to fetch by primary key which named 'id'

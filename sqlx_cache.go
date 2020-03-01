@@ -132,17 +132,24 @@ func (m ModeType) String() string {
 func (e *Engine) clone(model interface{}) *Engine {
 
 	dict := Struct(model).ToMap(TAG_NAME_DB)
+
+	var cols []string
+	for k, _ := range dict {
+		cols = append(cols, k)
+	}
+
 	return &Engine{
-		db:           e.db,
-		cache:        e.cache,
-		debug:        e.debug,
-		model:        model,
-		dict:         dict,
-		modeType:     e.modeType,
-		adapterSqlx:  e.adapterSqlx,
-		adapterCache: e.adapterCache,
-		strPkName:    e.strPkName,
-		expireTime:   e.expireTime,
+		db:               e.db,
+		cache:            e.cache,
+		debug:            e.debug,
+		model:            model,
+		dict:             dict,
+		modeType:         e.modeType,
+		adapterSqlx:      e.adapterSqlx,
+		adapterCache:     e.adapterCache,
+		strPkName:        e.strPkName,
+		expireTime:       e.expireTime,
+		strSelectColumns: cols,
 	}
 }
 
@@ -184,12 +191,12 @@ func (e *Engine) setPkValue(strValue string) {
 	e.strPkValue = strValue
 }
 
-func (e *Engine) getColumns() []string {
-	return e.strColumns
+func (e *Engine) setSelectColumns(strColumns ...string) {
+	e.strSelectColumns = strColumns
 }
 
-func (e *Engine) setColumns(strColumns ...string) {
-	e.strColumns = strColumns
+func (e *Engine) getSelectColumns() (strColumns []string) {
+	return e.strSelectColumns
 }
 
 func (e *Engine) getWhere() string {
@@ -231,13 +238,11 @@ func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strScheme, 
 	return strScheme, strUrl
 }
 
-func (e *Engine) getForwardQuote() (strSlash string) {
+func (e *Engine) getForwardQuote() (strQuote string) {
 	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL:
+	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		return "`"
 	case AdapterSqlx_Postgres:
-		return ""
-	case AdapterSqlx_Sqlite:
 		return ""
 	case AdapterSqlx_Mssql:
 		return ""
@@ -245,13 +250,11 @@ func (e *Engine) getForwardQuote() (strSlash string) {
 	return
 }
 
-func (e *Engine) getBackQuote() (strSlash string) {
+func (e *Engine) getBackQuote() (strQuote string) {
 	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL:
+	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		return "`"
 	case AdapterSqlx_Postgres:
-		return ""
-	case AdapterSqlx_Sqlite:
 		return ""
 	case AdapterSqlx_Mssql:
 		return ""
@@ -261,26 +264,22 @@ func (e *Engine) getBackQuote() (strSlash string) {
 
 func (e *Engine) getOnConflictForwardKey() (strKey string) {
 	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL:
-		return " ON DUPLICATE "
+	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+		return "ON DUPLICATE"
 	case AdapterSqlx_Postgres:
-		return " ON CONFLICT ( "
-	case AdapterSqlx_Sqlite:
-		return " ON DUPLICATE "
+		return "ON CONFLICT ("
 	case AdapterSqlx_Mssql:
-		return " "
+		return ""
 	}
 	return
 }
 
 func (e *Engine) getOnConflictBackKey() (strKey string) {
 	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL:
-		return " KEY UPDATE "
+	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+		return "KEY UPDATE"
 	case AdapterSqlx_Postgres:
-		return " ) DO UPDATE SET "
-	case AdapterSqlx_Sqlite:
-		return " KEY UPDATE "
+		return ") DO UPDATE SET"
 	case AdapterSqlx_Mssql:
 		return " "
 	}
@@ -295,11 +294,16 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 		}
 	}
 
-	if len(e.strColumns) == 0 {
+	if len(e.strSelectColumns) == 0 {
 		return true
 	}
 
-	for _, v := range e.strColumns {
+	for _, v := range e.strSelectColumns {
+
+		if _, ok := e.dict[v]; !ok {
+			assert(false, "column %v not exist in model dictionary", v)
+		}
+
 		if v == strCol {
 			return true
 		}
@@ -307,10 +311,10 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 	return false
 }
 
-func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
+func (e *Engine) getQuoteConflicts(strExcepts ...string) (strQuoteConflicts string) {
 
 	if e.adapterSqlx != AdapterSqlx_Postgres {
-		//return  //TODO @libin only postgres need conflicts fields
+		return //TODO @libin only postgres need conflicts fields
 	}
 
 	assert(e.strConflicts, "on conflict columns is nil")
@@ -319,7 +323,7 @@ func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 
 	for _, v := range e.strConflicts {
 
-		if e.isColumnSelected(v) {
+		if e.isColumnSelected(v, strExcepts...) {
 			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // postgresql conflict column name format to `id`,...
 			cols = append(cols, c)
 		}
@@ -331,17 +335,51 @@ func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 	return
 }
 
-func (e *Engine) getOnConflictDo() (strDo string) {
+func (e *Engine) getUpdates(strColumns []string, strExcepts ...string) (strUpdates string) {
 
+	var cols []string
+	for _, v := range strColumns {
+
+		if e.isColumnSelected(v, strExcepts...) {
+			c := fmt.Sprintf("%v%v%v=:%v", e.getForwardQuote(), v, e.getBackQuote(), v) // column name format to `date`=:date,...
+			cols = append(cols, c)
+		}
+	}
+
+	if len(cols) > 0 {
+		strUpdates = strings.Join(cols, ",")
+	}
 	return
 }
 
-func (e *Engine) getInsertColumnsAndValues(strExcepts ...string) (strQuoteColumns, strColonValues string) {
+func (e *Engine) getOnConflictDo() (strDo string) {
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+		{
+			strDo = fmt.Sprintf("`%v`=last_insert_id(`%v`)", e.strPkName, e.strPkName)
+			strUpdates := e.getUpdates(e.strConflicts, e.strPkName)
+			if !isNilOrFalse(strUpdates) {
+				strUpdates = fmt.Sprintf("`%v`=last_insert_id(`%v`) %v", e.strPkName, e.strPkName, strUpdates)
+			}
+		}
+	case AdapterSqlx_Postgres:
+		{
+
+		}
+	case AdapterSqlx_Mssql:
+		{
+
+		}
+	}
+	return
+}
+
+func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues string) {
 	var cols, vals []string
 
 	for k, _ := range e.dict {
 
-		if e.isColumnSelected(k, strExcepts...) {
+		if e.isColumnSelected(k) {
 
 			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
 			v := fmt.Sprintf(":%v", k)                                           // column value format to :id,...
@@ -356,8 +394,8 @@ func (e *Engine) getInsertColumnsAndValues(strExcepts ...string) (strQuoteColumn
 
 func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) {
 
-	//mysql/sqlite: ON DUPLICATE KEY UPDATE id=last_insert_id(id), date='1582980944'
-	//postgres: ON CONFLICT (id) DO UPDATE SET date='1582980944' [WHERE condition]
+	//mysql/sqlite: ON DUPLICATE KEY UPDATE id=last_insert_id(id), date='1582980944'...
+	//postgres: ON CONFLICT (id) DO UPDATE SET date='1582980944'...
 	//mssql: nothing...
 	strUpdates = fmt.Sprintf("%v %v %v %v",
 		e.getOnConflictForwardKey(), e.getQuoteConflicts(), e.getOnConflictBackKey(), e.getOnConflictDo())

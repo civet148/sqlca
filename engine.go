@@ -9,23 +9,24 @@ import (
 )
 
 type Engine struct {
-	db           *sqlx.DB          // sqlx instance
-	cache        cache.Cache       // beego cache instance
-	adapterSqlx  AdapterType       // what's adapter of sqlx
-	adapterCache AdapterType       // what's adapter of cache
-	modeType     ModeType          // mode: orm or raw
-	operType     OperType          // operate type
-	expireTime   int               // cache expire time of seconds
-	refreshCache bool              // can refresh cache ? true=yes false=no
-	debug        bool              // debug mode [on/off]
-	model        interface{}       // data model [struct object or struct slice]
-	dict         map[string]string // data model db dictionary
-	strTableName string            // table name
-	strPkName    string            // primary key of table, default 'id'
-	strPkValue   string            // primary key's value
-	strWhere     string            // where condition to query or update
-	strColumns   []string          // columns to query or update
-	strConflicts []string          // conflict key on duplicate set (just for postgresql)
+	db               *sqlx.DB          // sqlx instance
+	cache            cache.Cache       // beego cache instance
+	adapterSqlx      AdapterType       // what's adapter of sqlx
+	adapterCache     AdapterType       // what's adapter of cache
+	modeType         ModeType          // mode: orm or raw
+	operType         OperType          // operate type
+	expireTime       int               // cache expire time of seconds
+	refreshCache     bool              // can refresh cache ? true=yes false=no
+	debug            bool              // debug mode [on/off]
+	model            interface{}       // data model [struct object or struct slice]
+	dict             map[string]string // data model db dictionary
+	strTableName     string            // table name
+	strPkName        string            // primary key of table, default 'id'
+	strPkValue       string            // primary key's value
+	strWhere         string            // where condition to query or update
+	strSelectColumns []string          // columns to query: select
+	strUpdateColumns []string          // columns to query: update
+	strConflicts     []string          // conflict key on duplicate set (just for postgresql)
 }
 
 func NewEngine(debug bool) *Engine {
@@ -145,7 +146,7 @@ func (e *Engine) Id(value interface{}) *Engine {
 
 // orm select/update columns
 func (e *Engine) Select(strColumns ...string) *Engine {
-	e.setColumns(strColumns...)
+	e.setSelectColumns(strColumns...)
 	return e
 }
 
@@ -168,6 +169,14 @@ func (e *Engine) Where(strWhere string) *Engine {
 	return e
 }
 
+// set the conflict columns for upsert
+// only for postgresql
+func (e *Engine) OnConflict(strColumns ...string) *Engine {
+
+	e.strConflicts = strColumns
+	return e
+}
+
 // orm insert
 // return last insert id and error, if err is not nil must be something wrong
 // Model function is must be called before call this function
@@ -187,24 +196,32 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 		log.Errorf("get last insert id error %v model %+v", err, e.model)
 		return
 	}
+	log.Debugf("lastInsertId = %v", lastInsertId)
 	return
-}
-
-// set the conflict columns for upsert
-// only for postgresql
-func (e *Engine) OnConflict(strColumns ...string) *Engine {
-
-	e.strConflicts = strColumns
-	return e
 }
 
 // orm insert or update if key(s) conflict
 // return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe id return 0
 // Model function is must be called before call this function and call OnConflict function when you are on postgresql
-func (e *Engine) Upsert() (id int64, err error) {
+func (e *Engine) Upsert(strColumns ...string) (lastInsertId int64, err error) {
 	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Upsert() implement
+	e.operType = OperType_Upsert
+	e.strUpdateColumns = strColumns
+	var strSqlx string
+	strSqlx = e.makeSqlxString()
+	r, err := e.db.NamedExec(strSqlx, e.model)
+	if err != nil {
+		log.Errorf("error %v model %+v", err, e.model)
+		return
+	}
+	lastInsertId, err = r.LastInsertId()
+	if err != nil {
+		log.Errorf("get last insert id error %v model %+v", err, e.model)
+		return
+	}
+	log.Debugf("lastInsertId = %v", lastInsertId)
 	return
 }
 
@@ -216,6 +233,7 @@ func (e *Engine) Update(strColumns ...string) (rows int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin Update() implement
 
+	log.Debugf("rows = %v", rows)
 	return
 }
 
@@ -227,6 +245,7 @@ func (e *Engine) QuerySQL(strQuery string, args ...interface{}) (rows int64, err
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin QuerySQL() implement
 
+	log.Debugf("rows = %v", rows)
 	return
 }
 
@@ -235,5 +254,7 @@ func (e *Engine) QuerySQL(strQuery string, args ...interface{}) (rows int64, err
 func (e *Engine) ExecSQL(strQuery string, args ...interface{}) (rows int64, err error) {
 	assert(strQuery, "query sql string is nil")
 	// TODO @libin ExecSQL() implement
+
+	log.Debugf("rows = %v", rows)
 	return
 }

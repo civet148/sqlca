@@ -41,6 +41,7 @@ func main() {
 	e := sqlca.NewEngine(true)
 	e.Open(sqlca.AdapterSqlx_MySQL, "root:123456@tcp(127.0.0.1:3306)/enterprise?charset=utf8mb4")
 	//e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/db?dbnum=0")
+	e.Debug(true) //debug on
 
 	var callUpsert = PhoneCall{
 		Id:                   0,
@@ -69,6 +70,8 @@ func main() {
 
 	var callQuery PhoneCall
 	var callList []PhoneCall
+
+	//e.SetPkName("uuid") // set primary key name, default 'id'
 
 	// insert a record
 	id, err := e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Insert()
@@ -109,8 +112,7 @@ func main() {
 	log.Debugf("query result rows [%v] values %+v custom where condition", rows, callList)
 
 	callUpsert.State = 3
-	rows, err = e.Model(&callList).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Id(1).Update("state")
-	log.Debugf("update effect rows [%v] ", rows)
+	rows, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Id(1).Update("state")
 
 	var callRawList []PhoneCall
 	strQueryRaw := fmt.Sprintf("SELECT * FROM %v", "phone_call_sessions")

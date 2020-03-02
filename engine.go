@@ -30,6 +30,10 @@ type Engine struct {
 	strConflicts     []string          // conflict key on duplicate set (just for postgresql)
 }
 
+func init() {
+	log.SetLevel(log.LEVEL_INFO)
+}
+
 func NewEngine(debug bool) *Engine {
 
 	return &Engine{
@@ -131,10 +135,14 @@ func (e *Engine) Table(strName string) *Engine {
 }
 
 // set orm primary key's name, default named 'id'
-func (e *Engine) PkName(strName string) *Engine {
+func (e *Engine) SetPkName(strName string) *Engine {
 	assert(strName, "name is nil")
-	e.setPkName(strName)
+	e.strPkName = strName
 	return e
+}
+
+func (e *Engine) GetPkName() string {
+	return e.strPkName
 }
 
 // set orm primary key's value
@@ -280,10 +288,10 @@ func (e *Engine) Update(strColumns ...string) (rowsAffected int64, err error) {
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		log.Errorf("get last insert id error %v model %+v", err, e.model)
+		log.Errorf("get last insert id error [%v] query [%v] model [%+v]", err, strSqlx, e.model)
 		return
 	}
-	log.Debugf("RowsAffected = %v", rowsAffected)
+	log.Debugf("RowsAffected [%v] query [%v] model [%+v]", rowsAffected, strSqlx, e.model)
 	return
 }
 

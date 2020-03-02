@@ -74,6 +74,7 @@ func fmtParentCaller(strFmt string) string {
 
 func (e *Engine) setDebug(ok bool) {
 	e.debug = ok
+	log.SetLevel(log.LEVEL_DEBUG)
 }
 
 func (e *Engine) isDebug() bool {
@@ -86,12 +87,5 @@ func (e *Engine) panic(strFmt string, args ...interface{}) {
 	} else {
 		//strFmt = fmtParentCaller(strFmt)
 		log.Errorf(strFmt, args...)
-	}
-}
-
-func (e *Engine) debugf(strFmt string, args ...interface{}) {
-	if e.isDebug() {
-		//strFmt = fmtParentCaller(strFmt)
-		log.Debugf(strFmt, args...)
 	}
 }

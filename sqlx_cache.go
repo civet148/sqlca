@@ -2,6 +2,7 @@ package sqlca
 
 import (
 	"fmt"
+	"github.com/civet148/gotools/log"
 	"strings"
 )
 
@@ -181,14 +182,6 @@ func (e *Engine) setTableName(strName string) {
 	e.strTableName = strName
 }
 
-func (e *Engine) getPkName() string {
-	return e.strPkName
-}
-
-func (e *Engine) setPkName(strName string) {
-	e.strPkName = strName
-}
-
 func (e *Engine) getPkValue() string {
 	return e.strPkValue
 }
@@ -213,7 +206,7 @@ func (e *Engine) getCustomWhere() string {
 // primary key value like 'id'=xxx condition
 func (e *Engine) getPkWhere() (strPkCondition string) {
 
-	strPkName := e.getPkName()
+	strPkName := e.GetPkName()
 	strPkValue := e.getPkValue()
 	if isNilOrFalse(strPkValue) {
 		//use model primary value
@@ -474,9 +467,8 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 		assert(false, "operation illegal")
 	}
 
-	if e.debug {
-		e.debugf("sqlx query [%s]", strSqlx)
-	}
+	log.Debugf("sqlx query [%s]", strSqlx)
+
 	return
 }
 
@@ -495,10 +487,10 @@ func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 
 	if isNilOrFalse(e.getCustomWhere()) {
 		//where condition by model primary key value (not include primary key like 'id')
-		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.getPkName()), e.getPkWhere())
+		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), e.getPkWhere())
 	} else {
 		//where condition by custom condition (not include primary key like 'id')
-		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.getPkName()), e.getCustomWhere())
+		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), e.getCustomWhere())
 	}
 	assert(strSqlx, "update sql is nil")
 	return

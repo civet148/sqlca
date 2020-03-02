@@ -172,6 +172,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 			engine.setModelType(ModelType_Slice)
 		case reflect.Map: // map
 			engine.setModelType(ModelType_Map)
+			assert(false, "map type model not support yet")
 		default: //base type
 			engine.setModelType(ModelType_BaseType)
 		}
@@ -300,7 +301,7 @@ func (e *Engine) getForwardQuote() (strQuote string) {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		return "`"
 	case AdapterSqlx_Postgres:
-		return ""
+		return "\""
 	case AdapterSqlx_Mssql:
 		return ""
 	}
@@ -312,7 +313,7 @@ func (e *Engine) getBackQuote() (strQuote string) {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		return "`"
 	case AdapterSqlx_Postgres:
-		return ""
+		return "\""
 	case AdapterSqlx_Mssql:
 		return ""
 	}
@@ -349,6 +350,14 @@ func (e *Engine) setLimit(strLimit string) {
 
 func (e *Engine) getLimit() string {
 	return e.strLimit
+}
+
+func (e *Engine) setOffset(strOffset string) {
+	e.strOffset = strOffset
+}
+
+func (e *Engine) getOffset() string {
+	return e.strOffset
 }
 
 func (e *Engine) setOrderBy(strColumns ...string) {
@@ -538,11 +547,11 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 
 	if isNilOrFalse(e.getCustomWhere()) {
-		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v",
-			e.getQuoteColumns(), e.getTableName(), e.getPkWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit()) //where condition by model primary key value
+		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v %v",
+			e.getQuoteColumns(), e.getTableName(), e.getPkWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by model primary key value
 	} else {
-		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v",
-			e.getQuoteColumns(), e.getTableName(), e.getCustomWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit()) //where condition by custom where condition from Where()
+		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v %v",
+			e.getQuoteColumns(), e.getTableName(), e.getCustomWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
 	}
 	assert(strSqlx, "query sql is nil")
 	return

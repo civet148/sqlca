@@ -26,6 +26,7 @@ type Engine struct {
 	strPkValue      string            // primary key's value
 	strWhere        string            // where condition to query or update
 	strLimit        string            // limit
+	strOffset       string            // offset (only for postgres)
 	strAscOrDesc    string            // order by ... [asc|desc]
 	selectColumns   []string          // columns to query: select
 	conflictColumns []string          // conflict key on duplicate set (just for postgresql)
@@ -182,8 +183,7 @@ func (e *Engine) OnConflict(strColumns ...string) *Engine {
 }
 
 // query limit
-// Limit(10) - query records limit 10
-// Limit(1, 5) - query records limit 1,5
+// Limit(10) - query records limit 10 (mysql/postgres)
 func (e *Engine) Limit(args ...int) *Engine {
 
 	//TODO postgresql/mssql limit statement
@@ -193,6 +193,12 @@ func (e *Engine) Limit(args ...int) *Engine {
 	} else if nArgs == 2 {
 		e.setLimit(fmt.Sprintf("LIMIT %v,%v", args[0], args[1]))
 	}
+	return e
+}
+
+// query offset (for mysql/postgres)
+func (e *Engine) Offset(offset int) *Engine {
+	e.setOffset(fmt.Sprintf("OFFSET %v", offset))
 	return e
 }
 

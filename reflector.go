@@ -3,7 +3,6 @@ package sqlca
 import (
 	"database/sql"
 	"fmt"
-	"github.com/civet148/gotools/log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -44,13 +43,7 @@ func (s *ModelReflector) ToMap(tagName string) (m map[string]string) {
 	}
 
 	if typ.Kind() == reflect.Struct { // struct type
-
 		s.parseStructField(typ, val, tagName)
-
-	} else if typ.Kind() == reflect.Slice {
-
-	} else {
-		//assert(false, "not a struct or slice object")
 	}
 	return s.dict
 }
@@ -227,7 +220,6 @@ func (e *Engine) fetchToStruct(rows *sql.Rows, fetcher *Fetcher, typ reflect.Typ
 func (e *Engine) fetchToBaseType(rows *sql.Rows, fetcher *Fetcher, typ reflect.Type, val reflect.Value) {
 
 	v := fetcher.arrValues[fetcher.arrIndex]
-	log.Debug("fetchToBaseType varaint index [%d] set to [%s]", fetcher.arrIndex, v)
 	e.setValue(typ, val, string(v))
 	fetcher.arrIndex++
 	return

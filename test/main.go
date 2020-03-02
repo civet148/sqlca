@@ -72,13 +72,20 @@ func main() {
 		UpdatedAt:            "", //updated_at column ignore by insert/upsert/update
 	}
 
+	_ = callUpsert
+
 	var callQuery PhoneCall
 	var callList []PhoneCall
 
 	//e.SetPkName("uuid") // set primary key name, default 'id'
+	var err error
+	var rows int64
+	var lastInsertId int64
+
+	_ = lastInsertId
 
 	// insert a record
-	lastInsertId, err := e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Insert()
+	lastInsertId, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Insert()
 
 	// insert if not exist, otherwise update state and date
 	callUpsert.State = 1
@@ -88,7 +95,6 @@ func main() {
 
 	//Remark: single record to fetch by primary key which named 'id'
 	//SQL: select * from phone_call_sessions where id='1'
-	var rows int64
 	rows, err = e.Model(&callQuery).Table(TABLE_NAME_PHONE_CALL_SESSIONS).
 		Id(1).
 		Select("id", "access_hash", "admin_id", "participant_id", "admin_auth_key_id", "participant_auth_key_id", "g_a_hash", "created_at", "updated_at").
@@ -109,7 +115,8 @@ func main() {
 		OrderBy("created_at").
 		Desc(). //Asc().
 		//GroupBy("admin_id", "participant_id").
-		Limit(10).
+		Offset(2).
+		Limit(5).
 		Query()
 	if err != nil {
 		_ = rows
@@ -133,6 +140,7 @@ func main() {
 	}
 	log.Debugf("query result rows [%v] adminId [%d] participantId [%d]", rows, adminId, participantId)
 
+	//TODO @libin support map type model
 	//var mapResults = make(map[string]string, 1)
 	//rows, err = e.Model(&mapResults).
 	//	Table(TABLE_NAME_PHONE_CALL_SESSIONS).

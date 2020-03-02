@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca"
 	"time"
@@ -108,8 +109,25 @@ func main() {
 	log.Debugf("query result rows [%v] values %+v custom where condition", rows, callList)
 
 	callUpsert.State = 3
-	rows, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Id(1).Update("state")
+	rows, err = e.Model(&callList).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Id(1).Update("state")
 	log.Debugf("update effect rows [%v] ", rows)
 
+	var callRawList []PhoneCall
+	strQueryRaw := fmt.Sprintf("SELECT * FROM %v", "phone_call_sessions")
+	rows, err = e.Model(&callRawList).QueryRaw(strQueryRaw)
+	if err != nil {
+		log.Error("QueryRaw error [%v] query [%v]", err.Error(), strQueryRaw)
+		return
+	}
+	log.Debugf("QueryRaw rows [%v] query [%v] results %+v", rows, strQueryRaw, callRawList)
+
+	var lastInsertId int64
+	strUpdateRaw := fmt.Sprintf("UPDATE %v SET state='%v' WHERE id='%v'", "phone_call_sessions", 9, 1)
+	rows, lastInsertId, err = e.ExecRaw(strUpdateRaw)
+	if err != nil {
+		log.Error("ExecRaw error [%v] query [%v]", err.Error(), strUpdateRaw)
+		return
+	}
+	log.Debugf("ExecRaw rows [%v] last insert id [%v] query [%v]", rows, lastInsertId, strUpdateRaw)
 	log.Info("program exit...")
 }

@@ -83,10 +83,12 @@ func (a AdapterType) Schema() string {
 type OperType int
 
 const (
-	OperType_Query  OperType = 1 // query sql
-	OperType_Update OperType = 2 // update sql
-	OperType_Insert OperType = 3 // insert sql
-	OperType_Upsert OperType = 4 // insert or update sql
+	OperType_Query    OperType = 1 // orm: query sql
+	OperType_Update   OperType = 2 // orm: update sql
+	OperType_Insert   OperType = 3 // orm: insert sql
+	OperType_Upsert   OperType = 4 // orm: insert or update sql
+	OperType_QueryRaw OperType = 5 // raw: query sql
+	OperType_ExecRaw  OperType = 6 // raw: insert/update sql
 )
 
 func (o OperType) GoString() string {
@@ -103,6 +105,10 @@ func (o OperType) String() string {
 		return "OperType_Insert"
 	case OperType_Upsert:
 		return "OperType_Upsert"
+	case OperType_QueryRaw:
+		return "OperType_QueryRaw"
+	case OperType_ExecRaw:
+		return "OperType_ExecRaw"
 	}
 	return "OperType_Unknown"
 }
@@ -198,14 +204,6 @@ func (e *Engine) setSelectColumns(strColumns ...string) {
 func (e *Engine) getSelectColumns() (strColumns []string) {
 	return e.strSelectColumns
 }
-
-//func (e *Engine) setUpdateColumns(strColumns ...string) {
-//	e.strUpdateColumns = strColumns
-//}
-//
-//func (e *Engine) getUpdateColumns() (strColumns []string) {
-//	return e.strUpdateColumns
-//}
 
 // use Where function to set custom where condition
 func (e *Engine) getCustomWhere() string {

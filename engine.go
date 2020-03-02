@@ -26,8 +26,8 @@ type Engine struct {
 	strPkValue       string            // primary key's value
 	strWhere         string            // where condition to query or update
 	strSelectColumns []string          // columns to query: select
-	//strUpdateColumns []string          // columns to query: update
-	strConflicts []string // conflict key on duplicate set (just for postgresql)
+	strLimit         string            // limit
+	strConflicts     []string          // conflict key on duplicate set (just for postgresql)
 }
 
 func NewEngine(debug bool) *Engine {
@@ -170,6 +170,14 @@ func (e *Engine) OnConflict(strColumns ...string) *Engine {
 	return e
 }
 
+// query limit
+// Limit(10) - query records limit 10
+// Limit(1, 5) - query records limit 1,5
+func (e *Engine) Limit(args ...interface{}) *Engine {
+
+	return e
+}
+
 // orm query
 // return rows affected and error, if err is not nil must be something wrong
 // Model function is must be called before call this function
@@ -179,7 +187,6 @@ func (e *Engine) Query() (rows int64, err error) {
 	// TODO @libin Query() implement
 	e.operType = OperType_Query
 	strSqlx := e.makeSqlxString()
-	//e.db.Select(e.model, strSqlx)
 
 	var r *sql.Rows
 	if r, err = e.db.Query(strSqlx); err != nil {
@@ -255,7 +262,7 @@ func (e *Engine) Upsert(strColumns ...string) (lastInsertId int64, err error) {
 // strColumns... if set, columns will be updated, if none all columns in model will be updated except primary key
 // return rows affected and error, if err is not nil must be something wrong
 // Model function is must be called before call this function
-func (e *Engine) Update(strColumns ...string) (rows int64, err error) {
+func (e *Engine) Update(strColumns ...string) (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
 	assert(strColumns, "update columns is not set")
 	// TODO @libin Update() implement
@@ -271,33 +278,66 @@ func (e *Engine) Update(strColumns ...string) (rows int64, err error) {
 		log.Errorf("error %v model %+v", err, e.model)
 		return
 	}
-	rows, err = r.RowsAffected()
+	rowsAffected, err = r.RowsAffected()
 	if err != nil {
 		log.Errorf("get last insert id error %v model %+v", err, e.model)
 		return
 	}
-	log.Debugf("RowsAffected = %v", rows)
+	log.Debugf("RowsAffected = %v", rowsAffected)
 	return
 }
 
 // use raw sql to query results
 // return rows and error, if err is not nil must be something wrong
 // Model function is must be called before call this function
-func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rows int64, err error) {
+func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
 	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model function first")
 	// TODO @libin QuerySQL() implement
+	e.setOperType(OperType_QueryRaw)
 
-	log.Debugf("rows = %v", rows)
+	var r *sql.Rows
+	r, err = e.db.Query(strQuery, args...)
+	if err != nil {
+		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
+		return
+	}
+
+	defer r.Close()
+	for r.Next() {
+		var c int64
+		if c, err = e.fetchRow(r, e.model); err != nil {
+			log.Errorf("%v", err.Error())
+			return
+		}
+		rowsAffected += c
+	}
+	log.Debugf("rowsAffected [%v] query [%v]", rowsAffected, strQuery)
 	return
 }
 
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows and error, if err is not nil must be something wrong
-func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rows int64, err error) {
+func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
 	assert(strQuery, "query sql string is nil")
-	// TODO @libin ExecSQL() implement
 
-	log.Debugf("rows = %v", rows)
+	e.setOperType(OperType_ExecRaw)
+	var r sql.Result
+	r, err = e.db.Exec(strQuery, args...)
+	if err != nil {
+		log.Errorf("error [%v] model [%+v]", err, e.model)
+		return
+	}
+	rowsAffected, err = r.RowsAffected()
+	if err != nil {
+		log.Errorf("get rows affected error [%v] query [%v]", err.Error(), strQuery)
+		return
+	}
+	lastInsertId, err = r.LastInsertId()
+	if err != nil {
+		log.Errorf("get last insert id error [%v] query [%v]", err.Error(), strQuery)
+		return
+	}
+	log.Debugf("RowsAffected [%v] LastInsertId [%v] query [%v] ", rowsAffected, lastInsertId, strQuery)
 	return
 }

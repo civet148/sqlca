@@ -14,7 +14,7 @@ type Engine struct {
 	cache           cache.Cache       // beego cache instance
 	adapterSqlx     AdapterType       // what's adapter of sqlx
 	adapterCache    AdapterType       // what's adapter of cache
-	modeType        ModeType          // mode: orm or raw
+	modelType       ModelType         // model type
 	operType        OperType          // operate type
 	expireTime      int               // cache expire time of seconds
 	refreshCache    bool              // can refresh cache ? true=yes false=no
@@ -121,12 +121,12 @@ func (e *Engine) Debug(ok bool) {
 
 // orm model
 // use to get result set, support single struct object or slice [pointer type]
-// notice: will clone a new engine object for orm operations
-func (e *Engine) Model(v interface{}) *Engine {
-	assert(v, "model is nil")
+// notice: will clone a new engine object for orm operations(query/update/insert/upsert)
+func (e *Engine) Model(args ...interface{}) *Engine {
+	assert(args, "model is nil")
 	assert(e.db, "sqlx instance is nil, please call Open or Attach function first")
 
-	return e.clone(v)
+	return e.clone(args...)
 }
 
 // set orm query table name
@@ -238,9 +238,17 @@ func (e *Engine) Query() (rows int64, err error) {
 
 	for r.Next() {
 		var c int64
-		if c, err = e.fetchRow(r, e.model); err != nil {
-			log.Error("fetchRow error [%v]", err.Error())
-			return
+
+		if e.getModelType() == ModelType_BaseType {
+			if c, err = e.fetchRow(r, e.model.([]interface{})...); err != nil {
+				log.Error("fetchRow error [%v]", err.Error())
+				return
+			}
+		} else {
+			if c, err = e.fetchRow(r, e.model); err != nil {
+				log.Error("fetchRow error [%v]", err.Error())
+				return
+			}
 		}
 		rows += c
 	}
@@ -274,12 +282,12 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 // orm insert or update if key(s) conflict
 // return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe id return 0
 // Model function is must be called before call this function and call OnConflict function when you are on postgresql
-func (e *Engine) Upsert(strColumns ...string) (lastInsertId int64, err error) {
+func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
 	assert(e.model, "model is nil, please call Model function first")
+	assert(e.getSelectColumns(), "update columns is not set")
 	// TODO @libin Upsert() implement
 	e.setOperType(OperType_Upsert)
-	e.setSelectColumns(strColumns...)
 	var strSqlx string
 	strSqlx = e.makeSqlxString()
 
@@ -302,11 +310,10 @@ func (e *Engine) Upsert(strColumns ...string) (lastInsertId int64, err error) {
 // strColumns... if set, columns will be updated, if none all columns in model will be updated except primary key
 // return rows affected and error, if err is not nil must be something wrong
 // Model function is must be called before call this function
-func (e *Engine) Update(strColumns ...string) (rowsAffected int64, err error) {
+func (e *Engine) Update() (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
-	assert(strColumns, "update columns is not set")
+	assert(e.getSelectColumns(), "update columns is not set")
 	// TODO @libin Update() implement
-	e.setSelectColumns(strColumns...)
 	e.setOperType(OperType_Update)
 
 	var strSqlx string

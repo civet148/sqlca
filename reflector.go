@@ -3,12 +3,13 @@ package sqlca
 import (
 	"database/sql"
 	"fmt"
+	"github.com/civet148/gotools/log"
 	"reflect"
 	"strconv"
 	"strings"
 )
 
-type Structure struct {
+type ModelReflector struct {
 	value interface{}       //value
 	dict  map[string]string //dictionary of structure tag and value
 }
@@ -23,16 +24,16 @@ type Fetcher struct {
 	arrIndex  int               //fetch index
 }
 
-func Struct(v interface{}) *Structure {
+func newReflector(v interface{}) *ModelReflector {
 
-	return &Structure{
+	return &ModelReflector{
 		value: v,
 		dict:  make(map[string]string),
 	}
 }
 
 // parse struct tag and value to map
-func (s *Structure) ToMap(tagName string) (m map[string]string) {
+func (s *ModelReflector) ToMap(tagName string) (m map[string]string) {
 
 	typ := reflect.TypeOf(s.value)
 	val := reflect.ValueOf(s.value)
@@ -49,19 +50,19 @@ func (s *Structure) ToMap(tagName string) (m map[string]string) {
 	} else if typ.Kind() == reflect.Slice {
 
 	} else {
-		assert(false, "not a struct or slice object")
+		//assert(false, "not a struct or slice object")
 	}
 	return s.dict
 }
 
 // get struct field's tag value
-func (s *Structure) getTag(sf reflect.StructField, tagName string) string {
+func (s *ModelReflector) getTag(sf reflect.StructField, tagName string) string {
 
 	return sf.Tag.Get(tagName)
 }
 
 // parse struct fields
-func (s *Structure) parseStructField(typ reflect.Type, val reflect.Value, tagName string) {
+func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, tagName string) {
 
 	kind := typ.Kind()
 	if kind == reflect.Struct {
@@ -87,7 +88,7 @@ func (s *Structure) parseStructField(typ reflect.Type, val reflect.Value, tagNam
 }
 
 //trim the field value's first and last blank character and save to map
-func (s *Structure) setValueByField(field reflect.StructField, val reflect.Value, tagName string) {
+func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.Value, tagName string) {
 
 	tagVal := s.getTag(field, tagName)
 	if tagVal != "" {
@@ -97,48 +98,54 @@ func (s *Structure) setValueByField(field reflect.StructField, val reflect.Value
 }
 
 //fetch row to struct or slice, must call rows.Next() before call this function
-func (e *Engine) fetchRow(rows *sql.Rows, arg interface{}) (count int64, err error) {
+func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err error) {
 
 	fetcher, _ := e.getFecther(rows)
 
-	argment := arg
-	typ := reflect.TypeOf(argment)
-	val := reflect.ValueOf(argment)
+	for _, arg := range args {
 
-	if typ.Kind() == reflect.Ptr {
+		typ := reflect.TypeOf(arg)
+		val := reflect.ValueOf(arg)
 
-		typ = typ.Elem()
-		val = val.Elem()
-	}
+		if typ.Kind() == reflect.Ptr {
 
-	switch typ.Kind() {
-	case reflect.Map:
-		{
-			err = e.fetchToMap(fetcher, argment)
-			count++
+			typ = typ.Elem()
+			val = val.Elem()
 		}
-	case reflect.Slice:
-		{
-			val.Set(reflect.MakeSlice(val.Type(), 0, 0)) //make slice for storage
-			for {
-				fetcher, _ := e.getFecther(rows)
-				elemTyp := val.Type().Elem()
-				elemVal := reflect.New(elemTyp).Elem()
-				err = e.fetchToStruct(rows, fetcher, elemTyp, elemVal) //assign to struct object
-				val.Set(reflect.Append(val, elemVal))
+
+		switch typ.Kind() {
+		case reflect.Map:
+			{
+				err = e.fetchToMap(fetcher, arg)
 				count++
-				if !rows.Next() {
-					break
+			}
+		case reflect.Slice:
+			{
+				val.Set(reflect.MakeSlice(val.Type(), 0, 0)) //make slice for storage
+				for {
+					fetcher, _ := e.getFecther(rows)
+					elemTyp := val.Type().Elem()
+					elemVal := reflect.New(elemTyp).Elem()
+					err = e.fetchToStruct(rows, fetcher, elemTyp, elemVal) //assign to struct object
+					val.Set(reflect.Append(val, elemVal))
+					count++
+					if !rows.Next() {
+						break
+					}
 				}
 			}
-		}
-	case reflect.Struct:
-		{
-			err = e.fetchToStruct(rows, fetcher, typ, val)
-			count++
+		case reflect.Struct:
+			{
+				err = e.fetchToStruct(rows, fetcher, typ, val)
+				count++
+			}
+		default:
+			{
+				e.fetchToBaseType(rows, fetcher, typ, val)
+				count++
+			}
 		}
 	}
-
 	return
 }
 
@@ -214,6 +221,15 @@ func (e *Engine) fetchToStruct(rows *sql.Rows, fetcher *Fetcher, typ reflect.Typ
 		}
 	}
 
+	return
+}
+
+func (e *Engine) fetchToBaseType(rows *sql.Rows, fetcher *Fetcher, typ reflect.Type, val reflect.Value) {
+
+	v := fetcher.arrValues[fetcher.arrIndex]
+	log.Debug("fetchToBaseType varaint index [%d] set to [%s]", fetcher.arrIndex, v)
+	e.setValue(typ, val, string(v))
+	fetcher.arrIndex++
 	return
 }
 

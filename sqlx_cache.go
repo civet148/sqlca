@@ -3,6 +3,7 @@ package sqlca
 import (
 	"fmt"
 	"github.com/civet148/gotools/log"
+	"reflect"
 	"strings"
 )
 
@@ -19,6 +20,8 @@ const (
 	ORDER_BY_DESC                = "desc"
 	DEFAULT_CAHCE_EXPIRE_SECONDS = 60 * 60
 	DEFAULT_PRIMARY_KEY_NAME     = "id"
+	SQLX_IGNORE_CREATED_AT       = "created_at"
+	SQLX_IGNORE_UPDATED_AT       = "updated_at"
 )
 
 const (
@@ -116,64 +119,81 @@ func (o OperType) String() string {
 	return "OperType_Unknown"
 }
 
-type ModeType int
+type ModelType int
 
 const (
-	ModeType_ORM = 1
-	ModeType_Raw = 2
+	ModelType_Struct   = 1
+	ModelType_Slice    = 2
+	ModelType_Map      = 3
+	ModelType_BaseType = 4
 )
 
-func (m ModeType) GoString() string {
+func (m ModelType) GoString() string {
 	return m.String()
 }
 
-func (m ModeType) String() string {
+func (m ModelType) String() string {
 	switch m {
-	case ModeType_ORM:
-		return "ModeType_ORM"
-	case ModeType_Raw:
-		return "ModeType_Raw"
+	case ModelType_Struct:
+		return "ModelType_Struct"
+	case ModelType_Slice:
+		return "ModelType_StructSlice"
+	case ModelType_Map:
+		return "ModelType_Map"
+	case ModelType_BaseType:
+		return "ModelType_BaseType"
 	}
-	return "ModeType_Unknown"
+	return "ModelType_Unknown"
 }
 
 // clone engine
-func (e *Engine) clone(model interface{}) *Engine {
+func (e *Engine) clone(models ...interface{}) *Engine {
 
-	dict := Struct(model).ToMap(TAG_NAME_DB)
-
-	var cols []string
-	for k, _ := range dict {
-		cols = append(cols, k)
+	engine := &Engine{
+		db:           e.db,
+		cache:        e.cache,
+		debug:        e.debug,
+		adapterSqlx:  e.adapterSqlx,
+		adapterCache: e.adapterCache,
+		strPkName:    e.strPkName,
+		expireTime:   e.expireTime,
 	}
 
-	return &Engine{
-		db:            e.db,
-		cache:         e.cache,
-		debug:         e.debug,
-		model:         model,
-		dict:          dict,
-		modeType:      e.modeType,
-		adapterSqlx:   e.adapterSqlx,
-		adapterCache:  e.adapterCache,
-		strPkName:     e.strPkName,
-		expireTime:    e.expireTime,
-		selectColumns: cols,
+	for _, v := range models {
+
+		typ := reflect.TypeOf(v)
+		if typ.Kind() == reflect.Ptr {
+			typ = typ.Elem()
+		}
+		switch typ.Kind() {
+		case reflect.Struct: // struct
+			engine.setModelType(ModelType_Struct)
+		case reflect.Slice: //  slice
+			engine.setModelType(ModelType_Slice)
+		case reflect.Map: // map
+			engine.setModelType(ModelType_Map)
+		default: //base type
+			engine.setModelType(ModelType_BaseType)
+		}
+		if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice {
+			engine.model = models[0] //map, struct or slice
+		} else {
+			engine.model = models //base type argument like int/string/float32...
+		}
+		break //only check first argument
 	}
+
+	engine.dict = newReflector(engine.model).ToMap(TAG_NAME_DB)
+	for k, _ := range engine.dict {
+		engine.selectColumns = append(engine.selectColumns, k)
+	}
+
+	return engine
 }
 
 func (e *Engine) clean() *Engine {
 
 	return e
-}
-
-func (e *Engine) checkModel() bool {
-
-	if e.model == nil {
-		e.panic("orm model is nil, please call Model() method before query or update")
-		return false
-	}
-	return true
 }
 
 func (e *Engine) getTableName() string {
@@ -225,7 +245,6 @@ func (e *Engine) getPkWhere() (strPkCondition string) {
 		//use custom primary value
 		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), strPkName, e.getBackQuote(), e.getSingleQuote(), strPkValue, e.getSingleQuote())
 	}
-
 	return
 }
 
@@ -233,12 +252,12 @@ func (e *Engine) setWhere(strWhere string) {
 	e.strWhere = strWhere
 }
 
-func (e *Engine) getModeType() ModeType {
-	return e.modeType
+func (e *Engine) getModelType() ModelType {
+	return e.modelType
 }
 
-func (e *Engine) setModeType(modeType ModeType) {
-	e.modeType = modeType
+func (e *Engine) setModelType(modelType ModelType) {
+	e.modelType = modelType
 }
 
 func (e *Engine) getOperType() OperType {
@@ -448,14 +467,14 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		{
 			strDo = fmt.Sprintf("`%v`=LAST_INSERT_ID(`%v`)", e.strPkName, e.strPkName)
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v, %v", strDo, strUpdates)
 			}
 		}
 	case AdapterSqlx_Postgres:
 		{
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v RETURNING id", strUpdates) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}
@@ -473,6 +492,9 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 
 	for k, _ := range e.dict {
 
+		if k == SQLX_IGNORE_CREATED_AT || k == SQLX_IGNORE_UPDATED_AT {
+			continue
+		}
 		c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
 		v := fmt.Sprintf(":%v", k)                                           // column value format to :id,...
 		cols = append(cols, c)
@@ -530,10 +552,18 @@ func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 
 	if isNilOrFalse(e.getCustomWhere()) {
 		//where condition by model primary key value (not include primary key like 'id')
-		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), e.getPkWhere(), e.getLimit())
+		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v",
+			e.getTableName(),
+			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName(), SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT),
+			e.getPkWhere(),
+			e.getLimit())
 	} else {
 		//where condition by custom condition (not include primary key like 'id')
-		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), e.getCustomWhere(), e.getLimit())
+		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v",
+			e.getTableName(),
+			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName(), SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT),
+			e.getCustomWhere(),
+			e.getLimit())
 	}
 	assert(strSqlx, "update sql is nil")
 	return

@@ -30,6 +30,8 @@ type PhoneCall struct {
 	ParticipantComment   string `db:"participant_comment"`
 	Date                 int32  `db:"date"`
 	State                int32  `db:"state"`
+	CreatedAt            string `db:"created_at"`
+	UpdatedAt            string `db:"updated_at"`
 }
 
 const (
@@ -66,6 +68,8 @@ func main() {
 		ParticipantComment:   "",
 		Date:                 0,
 		State:                0,
+		CreatedAt:            "", //created_at column ignore by insert/upsert/update
+		UpdatedAt:            "", //updated_at column ignore by insert/upsert/update
 	}
 
 	var callQuery PhoneCall
@@ -74,21 +78,20 @@ func main() {
 	//e.SetPkName("uuid") // set primary key name, default 'id'
 
 	// insert a record
-	id, err := e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Insert()
-	_ = id
+	lastInsertId, err := e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Insert()
 
 	// insert if not exist, otherwise update state and date
 	callUpsert.State = 1
 	callUpsert.Date = int32(time.Now().Unix())
-	id, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Upsert("state", "date")
-	_ = id
+	lastInsertId, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Select("state", "date").Upsert()
+	_ = lastInsertId
 
 	//Remark: single record to fetch by primary key which named 'id'
-	//SQL: select * from phone_call_sessions where id='99'
+	//SQL: select * from phone_call_sessions where id='1'
 	var rows int64
 	rows, err = e.Model(&callQuery).Table(TABLE_NAME_PHONE_CALL_SESSIONS).
 		Id(1).
-		//Select("id", "access_hash", "admin_id", "participant_id", "admin_auth_key_id", "participant_auth_key_id", "g_a_hash").
+		Select("id", "access_hash", "admin_id", "participant_id", "admin_auth_key_id", "participant_auth_key_id", "g_a_hash", "created_at", "updated_at").
 		Query()
 	if err != nil {
 		_ = rows
@@ -115,11 +118,40 @@ func main() {
 	}
 	log.Debugf("query custom where condition result rows [%v] values %+v", rows, log.JsonDebugString(callList))
 
+	////Remark: single record to fetch by primary key which named 'id', fetch to base type variants
+	////SQL: select id, admin_id, participant_id from phone_call_sessions where id='1'
+	var adminId, participantId int64
+	rows, err = e.Model(&adminId, &participantId).
+		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		Id(1).
+		Select("admin_id", "participant_id").
+		Query()
+	if err != nil {
+		_ = rows
+		log.Errorf(err.Error())
+		return
+	}
+	log.Debugf("query result rows [%v] adminId [%d] participantId [%d]", rows, adminId, participantId)
+
+	//var mapResults = make(map[string]string, 1)
+	//rows, err = e.Model(&mapResults).
+	//	Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+	//	Id(1).
+	//	Select("admin_id", "participant_id").
+	//	Query()
+	//if err != nil {
+	//	_ = rows
+	//	log.Errorf(err.Error())
+	//	return
+	//}
+	//log.Debugf("query result rows [%v] map [%+v]", rows, mapResults)
+
 	callUpsert.State = 3
 	rows, err = e.Model(&callUpsert).
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
 		Id(1).
-		Update("state")
+		Select("state").
+		Update()
 
 	var callRawList []PhoneCall
 	strQueryRaw := fmt.Sprintf("SELECT * FROM %v", "phone_call_sessions")
@@ -130,7 +162,6 @@ func main() {
 	}
 	log.Debugf("QueryRaw rows [%v] query [%v] results %+v", rows, strQueryRaw, callRawList)
 
-	var lastInsertId int64
 	strUpdateRaw := fmt.Sprintf("UPDATE %v SET state='%v' WHERE id='%v'", "phone_call_sessions", 9, 1)
 	rows, lastInsertId, err = e.ExecRaw(strUpdateRaw)
 	if err != nil {

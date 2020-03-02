@@ -95,7 +95,7 @@ func main() {
 		log.Errorf(err.Error())
 		return
 	}
-	log.Debugf("query result rows [%v] values %+v", rows, callQuery)
+	log.Debugf("query result rows [%v] values %+v", rows, log.JsonDebugString(callQuery))
 
 	//Remark: multiple record to fetch by where condition
 	//SQL: select id, access_hash, admin_id, participant_id, admin_auth_key_id, participant_auth_key_id from phone_call_sessions where id <='100'
@@ -103,9 +103,9 @@ func main() {
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
 		//Select("id", "access_hash", "admin_id", "participant_id", "admin_auth_key_id", "participant_auth_key_id", "g_a_hash").
 		Where("id <= 100"). // use Where function, the records which be updated can not be refreshed to redis/memcached...
-		//OrderBy("created_at").
-		//Desc(). //Asc().
-		GroupBy("admin_id", "participant_id").
+		OrderBy("created_at").
+		Desc(). //Asc().
+		//GroupBy("admin_id", "participant_id").
 		Limit(10).
 		Query()
 	if err != nil {
@@ -113,7 +113,7 @@ func main() {
 		log.Errorf(err.Error())
 		return
 	}
-	log.Debugf("query result rows [%v] values %+v custom where condition", rows, callList)
+	log.Debugf("query custom where condition result rows [%v] values %+v", rows, log.JsonDebugString(callList))
 
 	callUpsert.State = 3
 	rows, err = e.Model(&callUpsert).

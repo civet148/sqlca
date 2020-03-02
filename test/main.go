@@ -103,6 +103,10 @@ func main() {
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
 		//Select("id", "access_hash", "admin_id", "participant_id", "admin_auth_key_id", "participant_auth_key_id", "g_a_hash").
 		Where("id <= 100"). // use Where function, the records which be updated can not be refreshed to redis/memcached...
+		//OrderBy("created_at").
+		//Desc(). //Asc().
+		GroupBy("admin_id", "participant_id").
+		Limit(10).
 		Query()
 	if err != nil {
 		_ = rows
@@ -112,7 +116,10 @@ func main() {
 	log.Debugf("query result rows [%v] values %+v custom where condition", rows, callList)
 
 	callUpsert.State = 3
-	rows, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Id(1).Update("state")
+	rows, err = e.Model(&callUpsert).
+		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		Id(1).
+		Update("state")
 
 	var callRawList []PhoneCall
 	strQueryRaw := fmt.Sprintf("SELECT * FROM %v", "phone_call_sessions")
@@ -131,5 +138,8 @@ func main() {
 		return
 	}
 	log.Debugf("ExecRaw rows [%v] last insert id [%v] query [%v]", rows, lastInsertId, strUpdateRaw)
+
+	//e.Update("123456") //not call Model(), this is a wrong operation, will panic
+
 	log.Info("program exit...")
 }

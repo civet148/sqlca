@@ -10,24 +10,27 @@ import (
 )
 
 type Engine struct {
-	db               *sqlx.DB          // sqlx instance
-	cache            cache.Cache       // beego cache instance
-	adapterSqlx      AdapterType       // what's adapter of sqlx
-	adapterCache     AdapterType       // what's adapter of cache
-	modeType         ModeType          // mode: orm or raw
-	operType         OperType          // operate type
-	expireTime       int               // cache expire time of seconds
-	refreshCache     bool              // can refresh cache ? true=yes false=no
-	debug            bool              // debug mode [on/off]
-	model            interface{}       // data model [struct object or struct slice]
-	dict             map[string]string // data model db dictionary
-	strTableName     string            // table name
-	strPkName        string            // primary key of table, default 'id'
-	strPkValue       string            // primary key's value
-	strWhere         string            // where condition to query or update
-	strSelectColumns []string          // columns to query: select
-	strLimit         string            // limit
-	strConflicts     []string          // conflict key on duplicate set (just for postgresql)
+	db              *sqlx.DB          // sqlx instance
+	cache           cache.Cache       // beego cache instance
+	adapterSqlx     AdapterType       // what's adapter of sqlx
+	adapterCache    AdapterType       // what's adapter of cache
+	modeType        ModeType          // mode: orm or raw
+	operType        OperType          // operate type
+	expireTime      int               // cache expire time of seconds
+	refreshCache    bool              // can refresh cache ? true=yes false=no
+	debug           bool              // debug mode [on/off]
+	model           interface{}       // data model [struct object or struct slice]
+	dict            map[string]string // data model db dictionary
+	strTableName    string            // table name
+	strPkName       string            // primary key of table, default 'id'
+	strPkValue      string            // primary key's value
+	strWhere        string            // where condition to query or update
+	strLimit        string            // limit
+	strAscOrDesc    string            // order by ... [asc|desc]
+	selectColumns   []string          // columns to query: select
+	conflictColumns []string          // conflict key on duplicate set (just for postgresql)
+	orderByColumns  []string          // order by columns
+	groupByColumns  []string          // group by columns
 }
 
 func init() {
@@ -174,15 +177,44 @@ func (e *Engine) Where(strWhere string) *Engine {
 // only for postgresql
 func (e *Engine) OnConflict(strColumns ...string) *Engine {
 
-	e.strConflicts = strColumns
+	e.conflictColumns = strColumns
 	return e
 }
 
 // query limit
 // Limit(10) - query records limit 10
 // Limit(1, 5) - query records limit 1,5
-func (e *Engine) Limit(args ...interface{}) *Engine {
+func (e *Engine) Limit(args ...int) *Engine {
 
+	//TODO postgresql/mssql limit statement
+	nArgs := len(args)
+	if nArgs == 1 {
+		e.setLimit(fmt.Sprintf("LIMIT %v", args[0]))
+	} else if nArgs == 2 {
+		e.setLimit(fmt.Sprintf("LIMIT %v,%v", args[0], args[1]))
+	}
+	return e
+}
+
+// order by [field1,field2...]
+func (e *Engine) OrderBy(strColumns ...string) *Engine {
+	e.setOrderBy(strColumns...)
+	return e
+}
+
+func (e *Engine) Asc() *Engine {
+	e.setAscOrDesc(ORDER_BY_ASC)
+	return e
+}
+
+func (e *Engine) Desc() *Engine {
+	e.setAscOrDesc(ORDER_BY_DESC)
+	return e
+}
+
+// group by [field1,field2...]
+func (e *Engine) GroupBy(strColumns ...string) *Engine {
+	e.setGroupBy(strColumns...)
 	return e
 }
 

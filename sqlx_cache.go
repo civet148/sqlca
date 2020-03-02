@@ -15,6 +15,8 @@ const (
 type AdapterType int
 
 const (
+	ORDER_BY_ASC                 = "asc"
+	ORDER_BY_DESC                = "desc"
 	DEFAULT_CAHCE_EXPIRE_SECONDS = 60 * 60
 	DEFAULT_PRIMARY_KEY_NAME     = "id"
 )
@@ -146,17 +148,17 @@ func (e *Engine) clone(model interface{}) *Engine {
 	}
 
 	return &Engine{
-		db:               e.db,
-		cache:            e.cache,
-		debug:            e.debug,
-		model:            model,
-		dict:             dict,
-		modeType:         e.modeType,
-		adapterSqlx:      e.adapterSqlx,
-		adapterCache:     e.adapterCache,
-		strPkName:        e.strPkName,
-		expireTime:       e.expireTime,
-		strSelectColumns: cols,
+		db:            e.db,
+		cache:         e.cache,
+		debug:         e.debug,
+		model:         model,
+		dict:          dict,
+		modeType:      e.modeType,
+		adapterSqlx:   e.adapterSqlx,
+		adapterCache:  e.adapterCache,
+		strPkName:     e.strPkName,
+		expireTime:    e.expireTime,
+		selectColumns: cols,
 	}
 }
 
@@ -191,11 +193,19 @@ func (e *Engine) setPkValue(strValue string) {
 }
 
 func (e *Engine) setSelectColumns(strColumns ...string) {
-	e.strSelectColumns = strColumns
+	e.selectColumns = strColumns
 }
 
 func (e *Engine) getSelectColumns() (strColumns []string) {
-	return e.strSelectColumns
+	return e.selectColumns
+}
+
+func (e *Engine) setAscOrDesc(strSort string) {
+	e.strAscOrDesc = strSort
+}
+
+func (e *Engine) getAscOrDesc() string {
+	return e.strAscOrDesc
 }
 
 // use Where function to set custom where condition
@@ -314,6 +324,37 @@ func (e *Engine) getOnConflictBackKey() (strKey string) {
 	return
 }
 
+func (e *Engine) setLimit(strLimit string) {
+	e.strLimit = strLimit
+}
+
+func (e *Engine) getLimit() string {
+	return e.strLimit
+}
+
+func (e *Engine) setOrderBy(strColumns ...string) {
+	e.orderByColumns = strColumns
+}
+
+func (e *Engine) getOrderBy() (strOrderBy string) {
+
+	if isNilOrFalse(e.orderByColumns) {
+		return
+	}
+	return fmt.Sprintf("ORDER BY %v %v", strings.Join(e.orderByColumns, ","), e.getAscOrDesc())
+}
+
+func (e *Engine) setGroupBy(strColumns ...string) {
+	e.groupByColumns = strColumns
+}
+
+func (e *Engine) getGroupBy() (strGroupBy string) {
+	if isNilOrFalse(e.groupByColumns) {
+		return
+	}
+	return fmt.Sprintf(" GROUP BY %v", strings.Join(e.groupByColumns, ","))
+}
+
 func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 
 	for _, v := range strExcepts {
@@ -322,11 +363,11 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 		}
 	}
 
-	if len(e.strSelectColumns) == 0 {
+	if len(e.selectColumns) == 0 {
 		return true
 	}
 
-	for _, v := range e.strSelectColumns {
+	for _, v := range e.selectColumns {
 
 		if v == strCol {
 			return true
@@ -341,11 +382,11 @@ func (e *Engine) getQuoteConflicts(strExcepts ...string) (strQuoteConflicts stri
 		return //TODO @libin only postgres need conflicts fields
 	}
 
-	assert(e.strConflicts, "on conflict columns is nil")
+	assert(e.conflictColumns, "on conflict columns is nil")
 
 	var cols []string
 
-	for _, v := range e.strConflicts {
+	for _, v := range e.conflictColumns {
 
 		if e.isColumnSelected(v, strExcepts...) {
 			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // postgresql conflict column name format to `id`,...
@@ -475,9 +516,11 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 
 	if isNilOrFalse(e.getCustomWhere()) {
-		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v", e.getQuoteColumns(), e.getTableName(), e.getPkWhere()) //where condition by model primary key value
+		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v",
+			e.getQuoteColumns(), e.getTableName(), e.getPkWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit()) //where condition by model primary key value
 	} else {
-		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v", e.getQuoteColumns(), e.getTableName(), e.getCustomWhere()) //where condition by custom where condition from Where()
+		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v",
+			e.getQuoteColumns(), e.getTableName(), e.getCustomWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit()) //where condition by custom where condition from Where()
 	}
 	assert(strSqlx, "query sql is nil")
 	return
@@ -487,10 +530,10 @@ func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 
 	if isNilOrFalse(e.getCustomWhere()) {
 		//where condition by model primary key value (not include primary key like 'id')
-		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), e.getPkWhere())
+		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), e.getPkWhere(), e.getLimit())
 	} else {
 		//where condition by custom condition (not include primary key like 'id')
-		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), e.getCustomWhere())
+		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v", e.getTableName(), e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), e.getCustomWhere(), e.getLimit())
 	}
 	assert(strSqlx, "update sql is nil")
 	return

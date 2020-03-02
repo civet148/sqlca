@@ -35,13 +35,8 @@ func isNilOrFalse(v interface{}) bool {
 		return !v.(bool)
 	default:
 		{
-			typ := reflect.TypeOf(v)
 			val := reflect.ValueOf(v)
-			if typ.Kind() == reflect.Ptr {
-				return val.IsNil()
-			} else if typ.Kind() == reflect.Struct {
-				return false
-			}
+			return val.IsNil()
 		}
 	}
 	return false

@@ -59,7 +59,7 @@ func main() {
 		GA:                   "",
 		GB:                   "",
 		KeyFingerprint:       0,
-		Connections:          "特殊字符' \"",
+		Connections:          "\"{\"protocol\": \"relay\", \"port\":50001}\"",
 		AdminDebugData:       "",
 		ParticipantDebugData: "",
 		AdminRating:          0,
@@ -107,7 +107,7 @@ func main() {
 	log.Debugf("query result rows [%v] results %+v", rows, log.JsonDebugString(callQuery))
 
 	//Remark: multiple record to fetch by where condition
-	//SQL: select id, access_hash, admin_id, participant_id, admin_auth_key_id, participant_auth_key_id from phone_call_sessions where id <='100'
+	//SQL: select id, access_hash, admin_id, participant_id, admin_auth_key_id, participant_auth_key_id from phone_call_sessions where id <='100' limit 5 offset 1
 	rows, err = e.Model(&callList).
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
 		//Select("id", "access_hash", "admin_id", "participant_id", "admin_auth_key_id", "participant_auth_key_id", "g_a_hash").
@@ -115,7 +115,7 @@ func main() {
 		OrderBy("created_at").
 		Desc(). //Asc().
 		//GroupBy("admin_id", "participant_id").
-		Offset(2).
+		Offset(1).
 		Limit(5).
 		Query()
 	if err != nil {
@@ -176,7 +176,7 @@ func main() {
 	rows, err = e.Model(&callUpsert).
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
 		Id(1).
-		Select("state").
+		Select("state", "connections").
 		Update()
 
 	var callRawList []PhoneCall
@@ -186,7 +186,7 @@ func main() {
 		log.Error("QueryRaw error [%v] query [%v]", err.Error(), strQueryRaw)
 		return
 	}
-	log.Debugf("QueryRaw rows [%v] query [%v] results %+v", rows, strQueryRaw, callRawList)
+	log.Debugf("QueryRaw rows [%v] results %+v", rows, callRawList)
 
 	strUpdateRaw := fmt.Sprintf("UPDATE %v SET state='%v' WHERE id='%v'", "phone_call_sessions", 9, 1)
 	rows, lastInsertId, err = e.ExecRaw(strUpdateRaw)

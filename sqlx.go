@@ -25,14 +25,13 @@ const (
 )
 
 const (
-	AdapterSqlx_MySQL      AdapterType = 1  //sqlx: mysql
-	AdapterSqlx_Postgres   AdapterType = 2  //sqlx: postgresql
-	AdapterSqlx_Sqlite     AdapterType = 3  //sqlx: sqlite
-	AdapterSqlx_Mssql      AdapterType = 4  //sqlx: mssql server
-	AdapterCache_Redis     AdapterType = 11 //cache: redis
-	AdapterCache_Memcached AdapterType = 12 //cache: memcached
-	AdapterCache_Memory    AdapterType = 13 //cache: memory
-	AdapterCache_File      AdapterType = 14 //cache: file
+	AdapterSqlx_MySQL     AdapterType = 1  //sqlx: mysql
+	AdapterSqlx_Postgres  AdapterType = 2  //sqlx: postgresql
+	AdapterSqlx_Sqlite    AdapterType = 3  //sqlx: sqlite
+	AdapterSqlx_Mssql     AdapterType = 4  //sqlx: mssql server
+	AdapterCache_Redis    AdapterType = 11 //cache: redis
+	AdapterCache_Memcache AdapterType = 12 //cache: memcached
+	AdapterCache_Memory   AdapterType = 13 //cache: memory
 )
 
 func (a AdapterType) GoString() string {
@@ -52,12 +51,10 @@ func (a AdapterType) String() string {
 		return "AdapterSqlx_Mssql"
 	case AdapterCache_Redis:
 		return "AdapterCache_Redis"
-	case AdapterCache_Memcached:
-		return "AdapterCache_Memcached"
+	case AdapterCache_Memcache:
+		return "AdapterCache_Memcache"
 	case AdapterCache_Memory:
 		return "AdapterCache_Memory"
-	case AdapterCache_File:
-		return "AdapterCache_File"
 	default:
 	}
 	return "Adapter_Unknown"
@@ -75,12 +72,10 @@ func (a AdapterType) Schema() string {
 		return "mssql"
 	case AdapterCache_Redis:
 		return "redis"
-	case AdapterCache_Memcached:
-		return "memcached"
+	case AdapterCache_Memcache:
+		return "memcache"
 	case AdapterCache_Memory:
 		return "memory"
-	case AdapterCache_File:
-		return "file"
 	default:
 	}
 	return "unknown"
@@ -146,6 +141,11 @@ func (m ModelType) String() string {
 	return "ModelType_Unknown"
 }
 
+type TableIndex struct {
+	name  string
+	value interface{}
+}
+
 // clone engine
 func (e *Engine) clone(models ...interface{}) *Engine {
 
@@ -196,6 +196,24 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 func (e *Engine) clean() *Engine {
 
 	return e
+}
+
+func (e Engine) setIndexes(name string, value interface{}) {
+
+	assert(value, "index value is nil")
+	typ := reflect.TypeOf(value)
+	switch typ.Kind() {
+	case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array, reflect.Func, reflect.Ptr, reflect.Chan, reflect.UnsafePointer:
+		assert(false, "index value type [%v] illegal", typ.Kind())
+	}
+	e.cacheIndexes = append(e.cacheIndexes, TableIndex{
+		name:  name,
+		value: value,
+	})
+}
+
+func (e Engine) getIndexes() []TableIndex {
+	return e.cacheIndexes
 }
 
 func (e *Engine) getTableName() string {
@@ -270,19 +288,41 @@ func (e *Engine) setOperType(operType OperType) {
 	e.operType = operType
 }
 
+func (e *Engine) setConflictColumns(strColumns ...string) {
+	e.conflictColumns = strColumns
+}
+
+func (e *Engine) getConflictColumns() []string {
+	return e.conflictColumns
+}
+
 // get data base driver name and data source name
-func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strScheme, strDSN string) {
+func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strScheme, strConfig string) {
 	//TODO @libin parse connect url for database
 	strScheme = adapterType.Schema()
 	// TODO parse url ....
 	//
-	//switch e.adapterSqlx {
-	//case AdapterSqlx_MySQL:
-	//case AdapterSqlx_Postgres:
-	//case AdapterSqlx_Sqlite:
-	//case AdapterSqlx_Mssql:
-	//}
-	return strScheme, strUrl
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL:
+		//sqlx.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%v)/%s?charset=utf8mb4", user,password, host,port, dbname))
+	case AdapterSqlx_Postgres:
+		//sqlx.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",host,port,user,password,dbname))
+	case AdapterSqlx_Sqlite:
+		//sqlx.Open("sqlite", dbname)
+	case AdapterSqlx_Mssql:
+		//if windows {
+		//   security="integrated security=SSPI;"
+		//}
+		//sqlx.Open("adodb", fmt.Sprintf("Provider=SQLOLEDB;Data Source=%s[\\instance=%v];%s Initial Catalog=%v;user id=%s;password=%s;port=%v",
+		//          dbname, instance, security, dbname, user, password, port))
+	case AdapterCache_Redis:
+		//newCache("redis", `{"conn":"127.0.0.1:6379"}`)
+	case AdapterCache_Memcache:
+		//newCache("memcache", `{"conn":"127.0.0.1:11211"}`)
+	case AdapterCache_Memory:
+		//newCache("memory", `{"interval":60}`)
+	}
+	return strScheme, strUrl //TODO replace strUrl to strConfig
 }
 
 func (e *Engine) getSingleQuote() (strQuote string) {
@@ -340,7 +380,7 @@ func (e *Engine) getOnConflictBackKey() (strKey string) {
 	case AdapterSqlx_Postgres:
 		return ") DO UPDATE SET"
 	case AdapterSqlx_Mssql:
-		return " "
+		return ""
 	}
 	return
 }
@@ -415,7 +455,7 @@ func (e *Engine) getQuoteConflicts(strExcepts ...string) (strQuoteConflicts stri
 
 	var cols []string
 
-	for _, v := range e.conflictColumns {
+	for _, v := range e.getConflictColumns() {
 
 		if e.isColumnSelected(v, strExcepts...) {
 			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // postgresql conflict column name format to `id`,...

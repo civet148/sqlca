@@ -281,7 +281,7 @@ func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) {
 			val.SetBool(false)
 		}
 	default:
-		fmt.Printf("can't assign value to this type [%v]\n", typ.Kind())
+		panic(fmt.Sprintf("can't assign value [%v] to variant type [%v]\n", v, typ.Kind()))
 		return
 	}
 }

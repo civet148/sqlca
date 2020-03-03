@@ -15,7 +15,7 @@ type Engine struct {
 	adapterSqlx     AdapterType       // what's adapter of sqlx
 	adapterCache    AdapterType       // what's adapter of cache
 	modelType       ModelType         // model type
-	operType        OperType          // operate type
+	operType        OperType          // operation type
 	expireTime      int               // cache expire time of seconds
 	refreshCache    bool              // can refresh cache ? true=yes false=no
 	debug           bool              // debug mode [on/off]
@@ -32,6 +32,7 @@ type Engine struct {
 	conflictColumns []string          // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string          // order by columns
 	groupByColumns  []string          // group by columns
+	cacheIndexes    []TableIndex      // index read or write cache
 }
 
 func init() {
@@ -48,30 +49,45 @@ func NewEngine(debug bool) *Engine {
 }
 
 // open a sqlx database or cache connection
-// @params expireSeconds 	cache data expire seconds, just for AdapterTypeCache_XXX
-func (e *Engine) Open(adapterType AdapterType, strDSN string, expireSeconds ...int) *Engine {
+// strConfig:
+//
+//  1. data source name when adapter type is AdapterSqlx_MySQL/AdapterSqlx_Postgres/AdapterSqlx_Sqlite/AdapterSqlx_Mssql
+// 	   [mysql]    Open(AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4")
+// 	   [postgres] Open(AdapterSqlx_Postgres, "postgres://")
+// 	   [sqlite]   Open(AdapterSqlx_Sqlite,   "sqlite:///var/lib/my.db")
+// 	   [mssql]    Open(AdapterSqlx_Mssql,    "mssql://root:123456@127.0.0.1:1433/mydb?instance=&windows=false")
+//  2. cache config when adapter type is AdapterTypeCache_Redis/AdapterTypeCache_Memcache/AdapterTypeCache_Memory
+//     [redis]    Open(AdapterTypeCache_Redis,    "redis://127.0.0.1:6379")
+//     [memcache] Open(AdapterTypeCache_Memcache, "memcache://127.0.0.1:11211")
+//     [memory]   Open(AdapterTypeCache_Memory,   "memory://interval=60")
+//
+// expireSeconds cache data expire seconds, just for AdapterTypeCache_XXX
+func (e *Engine) Open(adapterType AdapterType, strConfig string, expireSeconds ...int) *Engine {
 
 	var err error
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-		strSchema, strDSN := e.getConnUrl(adapterType, strDSN)
+		strSchema, strDSN := e.getConnUrl(adapterType, strConfig)
 		if e.db, err = sqlx.Open(strSchema, strDSN); err != nil {
-			e.panic("open schema %v DSN %v original url [%v] error [%v]", strSchema, strDSN, strDSN, err.Error())
+			assert(false, "open schema [%v] DSN %v original config [%v] error [%v]", strSchema, strDSN, strDSN, err.Error())
 		}
 		if err = e.db.Ping(); err != nil {
-			e.panic("ping database error %v, url %v", err.Error(), strDSN)
+			assert(false, "ping database url [%v] error [%v]", strDSN, err.Error())
 		}
-
 		e.adapterSqlx = adapterType
-	case AdapterCache_Redis, AdapterCache_Memcached, AdapterCache_Memory, AdapterCache_File:
+	case AdapterCache_Redis, AdapterCache_Memcache, AdapterCache_Memory:
 		// TODO @libin open beego cache conection
-		//e.cache = v.(cache.Cache)
+		var err error
+		var strName, strConfig string
+		if e.cache, err = newCache(strName, strConfig); err != nil {
+			assert(false, "new cache by name [%v] config [%v] error [%v]", strName, strConfig, err.Error())
+		}
 		e.adapterCache = adapterType
 		if len(expireSeconds) > 0 {
 			e.expireTime = expireSeconds[0]
 		}
 	default:
-		assert(false, "open adapter instance type [%v] url [%s] failed", adapterType, strDSN)
+		assert(false, "open adapter instance type [%v] config [%s] failed", adapterType, strConfig)
 	}
 
 	//log.Struct(e)
@@ -79,7 +95,7 @@ func (e *Engine) Open(adapterType AdapterType, strDSN string, expireSeconds ...i
 }
 
 // attach from a exist sqlx or beego cache instance
-// @params expireSeconds 	cache data expire seconds, just for AdapterTypeCache_XXX
+// expireSeconds cache data expire seconds, just for AdapterTypeCache_XXX
 func (e *Engine) Attach(adapterType AdapterType, v interface{}, expireSeconds ...int) *Engine {
 
 	switch adapterType {
@@ -89,11 +105,14 @@ func (e *Engine) Attach(adapterType AdapterType, v interface{}, expireSeconds ..
 			e.db = v.(*sqlx.DB)
 			e.adapterSqlx = adapterType
 		}
-	case AdapterCache_Redis, AdapterCache_Memcached, AdapterCache_Memory, AdapterCache_File:
+	case AdapterCache_Redis, AdapterCache_Memcache, AdapterCache_Memory:
 		{
 			assert(!isNilOrFalse(e.cache), "already have a [%v] beego cache instance, attach failed", adapterType)
 			e.cache = v.(cache.Cache)
 			e.adapterCache = adapterType
+			if len(expireSeconds) > 0 {
+				e.expireTime = expireSeconds[0]
+			}
 		}
 	default:
 		assert(false, "adapter type [%v] attach instance failed", adapterType)
@@ -106,12 +125,6 @@ func (e *Engine) Attach(adapterType AdapterType, v interface{}, expireSeconds ..
 // you can use it to do what you want
 func (e *Engine) DB() *sqlx.DB {
 	return e.db
-}
-
-// get internal cache instance
-// you can use it to do what you want
-func (e *Engine) Cache() cache.Cache {
-	return e.cache
 }
 
 // debug mode on or off
@@ -135,6 +148,13 @@ func (e *Engine) Model(args ...interface{}) *Engine {
 func (e *Engine) Table(strName string) *Engine {
 	assert(strName, "name is nil")
 	e.setTableName(strName)
+	return e
+}
+
+// index which select from cache or update to cache
+// if your index is not a primary key, it will create a cache index and pointer to primary key data
+func (e *Engine) Index(strColumn string, value interface{}) *Engine {
+	e.setIndexes(strColumn, value)
 	return e
 }
 
@@ -178,7 +198,7 @@ func (e *Engine) Where(strWhere string) *Engine {
 // only for postgresql
 func (e *Engine) OnConflict(strColumns ...string) *Engine {
 
-	e.conflictColumns = strColumns
+	e.setConflictColumns(strColumns...)
 	return e
 }
 
@@ -208,11 +228,13 @@ func (e *Engine) OrderBy(strColumns ...string) *Engine {
 	return e
 }
 
+// order by [field1,field2...] asc
 func (e *Engine) Asc() *Engine {
 	e.setAscOrDesc(ORDER_BY_ASC)
 	return e
 }
 
+// order by [field1,field2...] desc
 func (e *Engine) Desc() *Engine {
 	e.setAscOrDesc(ORDER_BY_DESC)
 	return e

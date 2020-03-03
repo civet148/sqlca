@@ -59,7 +59,7 @@ func main() {
 		GA:                   "",
 		GB:                   "",
 		KeyFingerprint:       0,
-		Connections:          "",
+		Connections:          "特殊字符' \"",
 		AdminDebugData:       "",
 		ParticipantDebugData: "",
 		AdminRating:          0,
@@ -126,7 +126,7 @@ func main() {
 	log.Debugf("query custom where condition result rows [%v] values %+v", rows, log.JsonDebugString(callList))
 
 	////Remark: single record to fetch by primary key which named 'id', fetch to base type variants
-	////SQL: select id, admin_id, participant_id from phone_call_sessions where id='1'
+	////SQL: select admin_id, participant_id from phone_call_sessions where id='1'
 	var adminId, participantId int64
 	rows, err = e.Model(&adminId, &participantId).
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
@@ -139,6 +139,24 @@ func main() {
 		return
 	}
 	log.Debugf("query result rows [%v] adminId [%d] participantId [%d]", rows, adminId, participantId)
+
+	////Remark: single record to fetch by primary key which named 'id', fetch to base type variants
+	////SQL: select admin_id from phone_call_sessions limit 10
+	var idList []int64
+	rows, err = e.Model(&idList).
+		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		Select("id").
+		Where("1=1").
+		OrderBy("id").
+		//Asc().
+		Limit(10).
+		Query()
+	if err != nil {
+		_ = rows
+		log.Errorf(err.Error())
+		return
+	}
+	log.Debugf("query result rows [%v] admin_id slice %v ", rows, idList)
 
 	//TODO @libin support map type model
 	//var mapResults = make(map[string]string, 1)

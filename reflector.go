@@ -31,6 +31,17 @@ func newReflector(v interface{}) *ModelReflector {
 	}
 }
 
+// handle special characters, prevent SQL inject
+func handleSpecialChars(strIn string) (strOut string) {
+
+	strIn = strings.TrimSpace(strIn) //trim blank characters
+	strIn = strings.Replace(strIn, `\`, `\\`, -1)
+	strIn = strings.Replace(strIn, `'`, `\'`, -1)
+	strIn = strings.Replace(strIn, `"`, `\"`, -1)
+
+	return strIn
+}
+
 // parse struct tag and value to map
 func (s *ModelReflector) ToMap(tagName string) (m map[string]string) {
 
@@ -86,7 +97,7 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 	tagVal := s.getTag(field, tagName)
 	if tagVal != "" {
 		strVal := fmt.Sprintf("%v", val.Interface())
-		s.dict[tagVal] = fmt.Sprintf("%v", strings.TrimSpace(strVal)) //trim the first and last blank character and save to map
+		s.dict[tagVal] = fmt.Sprintf("%v", handleSpecialChars(strVal)) //trim the first and last blank character and save to map
 	}
 }
 
@@ -119,7 +130,13 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err
 					fetcher, _ := e.getFecther(rows)
 					elemTyp := val.Type().Elem()
 					elemVal := reflect.New(elemTyp).Elem()
-					err = e.fetchToStruct(rows, fetcher, elemTyp, elemVal) //assign to struct object
+
+					if elemTyp.Kind() == reflect.Struct {
+						err = e.fetchToStruct(rows, fetcher, elemTyp, elemVal) // assign to struct type variant
+					} else {
+						err = e.fetchToBaseType(rows, fetcher, elemTyp, elemVal) // assign to base type variant
+					}
+
 					val.Set(reflect.Append(val, elemVal))
 					count++
 					if !rows.Next() {
@@ -217,7 +234,7 @@ func (e *Engine) fetchToStruct(rows *sql.Rows, fetcher *Fetcher, typ reflect.Typ
 	return
 }
 
-func (e *Engine) fetchToBaseType(rows *sql.Rows, fetcher *Fetcher, typ reflect.Type, val reflect.Value) {
+func (e *Engine) fetchToBaseType(rows *sql.Rows, fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {
 
 	v := fetcher.arrValues[fetcher.arrIndex]
 	e.setValue(typ, val, string(v))

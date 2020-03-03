@@ -230,7 +230,6 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 func (e *Engine) Query() (rows int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
 
-	// TODO @libin Query() implement
 	e.operType = OperType_Query
 	strSqlx := e.makeSqlxString()
 
@@ -266,7 +265,7 @@ func (e *Engine) Query() (rows int64, err error) {
 // Model function is must be called before call this function
 func (e *Engine) Insert() (lastInsertId int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
-	// TODO @libin Insert() implement
+
 	e.setOperType(OperType_Insert)
 	var strSqlx string
 	strSqlx = e.makeSqlxString()
@@ -292,7 +291,7 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
 	assert(e.model, "model is nil, please call Model function first")
 	assert(e.getSelectColumns(), "update columns is not set")
-	// TODO @libin Upsert() implement
+
 	e.setOperType(OperType_Upsert)
 	var strSqlx string
 	strSqlx = e.makeSqlxString()
@@ -319,7 +318,7 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 func (e *Engine) Update() (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
 	assert(e.getSelectColumns(), "update columns is not set")
-	// TODO @libin Update() implement
+
 	e.setOperType(OperType_Update)
 
 	var strSqlx string
@@ -346,7 +345,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
 	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model function first")
-	// TODO @libin QuerySQL() implement
+
 	e.setOperType(OperType_QueryRaw)
 
 	var r *sql.Rows

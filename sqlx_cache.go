@@ -303,7 +303,7 @@ func (e *Engine) getForwardQuote() (strQuote string) {
 	case AdapterSqlx_Postgres:
 		return "\""
 	case AdapterSqlx_Mssql:
-		return ""
+		return "["
 	}
 	return
 }
@@ -315,7 +315,7 @@ func (e *Engine) getBackQuote() (strQuote string) {
 	case AdapterSqlx_Postgres:
 		return "\""
 	case AdapterSqlx_Mssql:
-		return ""
+		return "]"
 	}
 	return
 }
@@ -407,7 +407,7 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 func (e *Engine) getQuoteConflicts(strExcepts ...string) (strQuoteConflicts string) {
 
 	if e.adapterSqlx != AdapterSqlx_Postgres {
-		return //TODO @libin only postgres need conflicts fields
+		return //only postgres need conflicts fields
 	}
 
 	assert(e.conflictColumns, "on conflict columns is nil")
@@ -485,12 +485,12 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 		{
 			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
 			if !isNilOrFalse(strUpdates) {
-				strDo = fmt.Sprintf("%v RETURNING id", strUpdates) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
+				strDo = fmt.Sprintf("%v RETURNING %v", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}
 		}
 	case AdapterSqlx_Mssql:
 		{
-
+			// TODO @libin MSSQL Server upsert...do...
 		}
 	}
 	return

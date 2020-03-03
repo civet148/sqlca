@@ -171,6 +171,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		case reflect.Slice: //  slice
 			engine.setModelType(ModelType_Slice)
 		case reflect.Map: // map
+			//TODO @libin support map type model
 			engine.setModelType(ModelType_Map)
 			assert(false, "map type model not support yet")
 		default: //base type
@@ -560,14 +561,14 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 
 	if isNilOrFalse(e.getCustomWhere()) {
-		//where condition by model primary key value (not include primary key like 'id')
+		//where condition by model primary key value (not include primary key `id` and created_at/updated_at)
 		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v",
 			e.getTableName(),
 			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName(), SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT),
 			e.getPkWhere(),
 			e.getLimit())
 	} else {
-		//where condition by custom condition (not include primary key like 'id')
+		//where condition by custom condition (not include primary key like `id` and created_at/updated_at)
 		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v",
 			e.getTableName(),
 			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName(), SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT),

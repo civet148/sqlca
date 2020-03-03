@@ -104,7 +104,7 @@ func main() {
 		log.Errorf(err.Error())
 		return
 	}
-	log.Debugf("query result rows [%v] values %+v", rows, log.JsonDebugString(callQuery))
+	log.Debugf("query result rows [%v] results %+v", rows, log.JsonDebugString(callQuery))
 
 	//Remark: multiple record to fetch by where condition
 	//SQL: select id, access_hash, admin_id, participant_id, admin_auth_key_id, participant_auth_key_id from phone_call_sessions where id <='100'
@@ -123,7 +123,7 @@ func main() {
 		log.Errorf(err.Error())
 		return
 	}
-	log.Debugf("query custom where condition result rows [%v] values %+v", rows, log.JsonDebugString(callList))
+	log.Debugf("query custom where condition result rows [%v] results %+v", rows, log.JsonDebugString(callList))
 
 	////Remark: single record to fetch by primary key which named 'id', fetch to base type variants
 	////SQL: select admin_id, participant_id from phone_call_sessions where id='1'
@@ -141,7 +141,7 @@ func main() {
 	log.Debugf("query result rows [%v] adminId [%d] participantId [%d]", rows, adminId, participantId)
 
 	////Remark: single record to fetch by primary key which named 'id', fetch to base type variants
-	////SQL: select admin_id from phone_call_sessions limit 10
+	////SQL: select id from phone_call_sessions where 1=1 order by id [asc] limit 10 [offset 1]
 	var idList []int64
 	rows, err = e.Model(&idList).
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
@@ -150,15 +150,15 @@ func main() {
 		OrderBy("id").
 		//Asc().
 		Limit(10).
+		//Offset(1).
 		Query()
 	if err != nil {
 		_ = rows
 		log.Errorf(err.Error())
 		return
 	}
-	log.Debugf("query result rows [%v] admin_id slice %v ", rows, idList)
+	log.Debugf("query result rows [%v] id slice %v ", rows, idList)
 
-	//TODO @libin support map type model
 	//var mapResults = make(map[string]string, 1)
 	//rows, err = e.Model(&mapResults).
 	//	Table(TABLE_NAME_PHONE_CALL_SESSIONS).

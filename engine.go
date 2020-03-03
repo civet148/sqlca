@@ -53,9 +53,9 @@ func NewEngine(debug bool) *Engine {
 //
 //  1. data source name when adapter type is AdapterSqlx_MySQL/AdapterSqlx_Postgres/AdapterSqlx_Sqlite/AdapterSqlx_Mssql
 // 	   [mysql]    Open(AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4")
-// 	   [postgres] Open(AdapterSqlx_Postgres, "postgres://")
+// 	   [postgres] Open(AdapterSqlx_Postgres, "postgres://root:123456@127.0.0.1:5432/mydb?sslmode=disable")
 // 	   [sqlite]   Open(AdapterSqlx_Sqlite,   "sqlite:///var/lib/my.db")
-// 	   [mssql]    Open(AdapterSqlx_Mssql,    "mssql://root:123456@127.0.0.1:1433/mydb?instance=&windows=false")
+// 	   [mssql]    Open(AdapterSqlx_Mssql,    "mssql://sa:123456@127.0.0.1:1433/mydb?instance=&windows=false")
 //  2. cache config when adapter type is AdapterTypeCache_Redis/AdapterTypeCache_Memcache/AdapterTypeCache_Memory
 //     [redis]    Open(AdapterTypeCache_Redis,    "redis://127.0.0.1:6379")
 //     [memcache] Open(AdapterTypeCache_Memcache, "memcache://127.0.0.1:11211")

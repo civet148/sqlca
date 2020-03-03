@@ -69,7 +69,7 @@ func (a AdapterType) Schema() string {
 	case AdapterSqlx_Sqlite:
 		return "sqlite"
 	case AdapterSqlx_Mssql:
-		return "mssql"
+		return "adodb"
 	case AdapterCache_Redis:
 		return "redis"
 	case AdapterCache_Memcache:

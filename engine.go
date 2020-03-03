@@ -10,6 +10,8 @@ import (
 	_ "github.com/lib/pq"              //postgres golang driver
 	_ "github.com/mattn/go-adodb"      //mssql golang driver
 	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
+	"net/url"
+	"strings"
 )
 
 type Engine struct {
@@ -65,32 +67,31 @@ func NewEngine(debug bool) *Engine {
 //     [memory]   Open(AdapterTypeCache_Memory,   "memory://interval=60")
 //
 // expireSeconds cache data expire seconds, just for AdapterTypeCache_XXX
-func (e *Engine) Open(adapterType AdapterType, strConfig string, expireSeconds ...int) *Engine {
+func (e *Engine) Open(adapterType AdapterType, strUrl string, expireSeconds ...int) *Engine {
 
 	var err error
+	strSchema, strDSN := e.getConnUrl(adapterType, strUrl)
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-		strSchema, strDSN := e.getConnUrl(adapterType, strConfig)
 		if e.db, err = sqlx.Open(strSchema, strDSN); err != nil {
-			assert(false, "open schema [%v] DSN %v original config [%v] error [%v]", strSchema, strDSN, strDSN, err.Error())
+			assert(false, "open url [%v] schema [%v] data source [%v] error [%v]", strUrl, strSchema, strDSN, err.Error())
 		}
 		if err = e.db.Ping(); err != nil {
-			assert(false, "ping database url [%v] error [%v]", strDSN, err.Error())
+			assert(false, "ping url [%v] schema [%v] data source [%v] error [%v]", strUrl, strSchema, strDSN, err.Error())
 		}
 		e.adapterSqlx = adapterType
 	case AdapterCache_Redis, AdapterCache_Memcache, AdapterCache_Memory:
 		// TODO @libin open beego cache conection
 		var err error
-		var strName, strConfig string
-		if e.cache, err = newCache(strName, strConfig); err != nil {
-			assert(false, "new cache by name [%v] config [%v] error [%v]", strName, strConfig, err.Error())
+		if e.cache, err = newCache(strSchema, strDSN); err != nil {
+			assert(false, "new cache by name [%v] config [%v] error [%v]", strSchema, strDSN, err.Error())
 		}
 		e.adapterCache = adapterType
 		if len(expireSeconds) > 0 {
 			e.expireTime = expireSeconds[0]
 		}
 	default:
-		assert(false, "open adapter instance type [%v] config [%s] failed", adapterType, strConfig)
+		assert(false, "adapter instance type [%v] url [%s] not support", adapterType, strUrl)
 	}
 
 	//log.Struct(e)
@@ -416,5 +417,131 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 		return
 	}
 	log.Debugf("RowsAffected [%v] LastInsertId [%v] query [%v] ", rowsAffected, lastInsertId, strQuery)
+	return
+}
+
+// get data base driver name and data source name
+func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strDriverName, strDSN string) {
+	//TODO @libin parse connect url for database
+	strDriverName = adapterType.DriverName()
+	switch adapterType {
+	case AdapterSqlx_MySQL:
+		//sqlx.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%v)/%s?charset=utf8mb4", user,password, host,port, dbname))
+		return strDriverName, e.parseMysqlUrl(strUrl)
+	case AdapterSqlx_Postgres:
+		//sqlx.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",host,port,user,password,dbname))
+		return strDriverName, e.parsePostgresUrl(strUrl)
+	case AdapterSqlx_Sqlite:
+		//sqlx.Open("sqlite3", dbname)
+		return strDriverName, e.parseSqliteUrl(strUrl)
+	case AdapterSqlx_Mssql:
+		//if windows {
+		//   security="integrated security=SSPI;"
+		//}
+		//sqlx.Open("adodb", fmt.Sprintf("Provider=SQLOLEDB;Data Source=%s[\\instance=%v];%s Initial Catalog=%v;user id=%s;password=%s;port=%v",
+		//          dbname, instance, security, dbname, user, password, port))
+		return strDriverName, e.parseMssqlUrl(strUrl)
+	case AdapterCache_Redis:
+		//newCache("redis", `{"conn":"127.0.0.1:6379"}`)
+		return strDriverName, e.parseRedisUrl(strUrl)
+	case AdapterCache_Memcache:
+		//newCache("memcache", `{"conn":"127.0.0.1:11211"}`)
+		return strDriverName, e.parseMemcacheUrl(strUrl)
+	case AdapterCache_Memory:
+		//newCache("memory", `{"interval":60}`)
+		return strDriverName, e.parseMemoryUrl(strUrl)
+	}
+	return strDriverName, strUrl //TODO replace strUrl to strDSN
+}
+
+func encodeUrl(strUrl string) (strEncodedUrl string) {
+
+	var codecs = map[string]string{
+		"`":  "%60",
+		"#":  "%23",
+		"?":  "%3f",
+		"<":  "%3c",
+		">":  "%3e",
+		"[":  "%5b",
+		"]":  "%5d",
+		"{":  "%7b",
+		"}":  "%7d",
+		"/":  "%2f",
+		"|":  "%7c",
+		"\\": "%5c",
+		"%":  "%25",
+		"^":  "%5e",
+	}
+	_ = codecs
+
+	// scheme://[userinfo@]host:port/path[?query][#fragment]
+
+	log.Debugf("strUrl [%v]", strUrl)
+	strUrl = strings.TrimSpace(strUrl)
+	if !strings.Contains(strUrl, "@") { // if a url have user+password, there must be have '@'
+		log.Debugf("strUrl [%v] have no @", strUrl)
+		return strUrl
+	}
+
+	// find first '://'
+	var strSchema string
+	index := strings.LastIndex(strUrl, "://")
+	if index > 0 {
+		strSchema = strUrl[:index]
+		strUrl = strUrl[index+3:]
+	}
+
+	// find last '@'
+	index = strings.LastIndex(strUrl, "@")
+	if index <= 0 {
+		log.Debugf("strUrl [%v] have no @", strUrl)
+		return strUrl
+	}
+	strPrefix := strUrl[:index]
+	strSuffix := strUrl[index:]
+
+	for k, v := range codecs {
+		//codec user and password special character(s) to url encode
+		log.Debugf("codec key [%v] value [%v] strPrefix [%v]", k, v, strPrefix)
+		strPrefix = strings.ReplaceAll(strPrefix, k, v)
+	}
+
+	return strSchema + "://" + strPrefix + strSuffix
+}
+
+func (e *Engine) parseMysqlUrl(strUrl string) (strDSN string) {
+	// strUrl="mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4"
+	strUrl = encodeUrl(strUrl)
+	_ = strUrl
+	if u, err := url.Parse(strUrl); err != nil {
+		assert(false, "url [%v] illegal", strUrl)
+	} else {
+		log.Info("URL host [%v] user [%+v] path [%+v] query [%+v]",
+			u.Host, u.User, u.Path, u.RawQuery)
+	}
+	return
+}
+
+func (e *Engine) parsePostgresUrl(strUrl string) (strDSN string) {
+	return
+}
+
+func (e *Engine) parseSqliteUrl(strUrl string) (strDSN string) {
+	return
+}
+
+func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
+	return
+}
+
+func (e *Engine) parseRedisUrl(strUrl string) (strDSN string) {
+	return
+}
+
+func (e *Engine) parseMemcacheUrl(strUrl string) (strDSN string) {
+	return
+}
+
+func (e *Engine) parseMemoryUrl(strUrl string) (strDSN string) {
 	return
 }

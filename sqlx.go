@@ -8,9 +8,14 @@ import (
 )
 
 const (
-	TAG_NAME_DB    = "db"
-	TAG_NAME_JSON  = "json"
-	TAG_NAME_REDIS = "redis"
+	TAG_NAME_DB          = "db"
+	DRIVER_NAME_MYSQL    = "mysql"
+	DRIVER_NAME_POSTGRES = "postgres"
+	DRIVER_NAME_SQLITE   = "sqlite3"
+	DRIVER_NAME_MSSQL    = "adodb"
+	DRIVER_NAME_REDIS    = "redis"
+	DRIVER_NAME_MEMCACHE = "memcache"
+	DRIVER_NAME_MEMORY   = "memory"
 )
 
 type AdapterType int
@@ -60,22 +65,22 @@ func (a AdapterType) String() string {
 	return "Adapter_Unknown"
 }
 
-func (a AdapterType) Schema() string {
+func (a AdapterType) DriverName() string {
 	switch a {
 	case AdapterSqlx_MySQL:
-		return "mysql"
+		return DRIVER_NAME_MYSQL
 	case AdapterSqlx_Postgres:
-		return "postges"
+		return DRIVER_NAME_POSTGRES
 	case AdapterSqlx_Sqlite:
-		return "sqlite"
+		return DRIVER_NAME_SQLITE
 	case AdapterSqlx_Mssql:
-		return "adodb"
+		return DRIVER_NAME_MSSQL
 	case AdapterCache_Redis:
-		return "redis"
+		return DRIVER_NAME_REDIS
 	case AdapterCache_Memcache:
-		return "memcache"
+		return DRIVER_NAME_MEMCACHE
 	case AdapterCache_Memory:
-		return "memory"
+		return DRIVER_NAME_MEMORY
 	default:
 	}
 	return "unknown"
@@ -294,35 +299,6 @@ func (e *Engine) setConflictColumns(strColumns ...string) {
 
 func (e *Engine) getConflictColumns() []string {
 	return e.conflictColumns
-}
-
-// get data base driver name and data source name
-func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strScheme, strConfig string) {
-	//TODO @libin parse connect url for database
-	strScheme = adapterType.Schema()
-	// TODO parse url ....
-	//
-	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL:
-		//sqlx.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%v)/%s?charset=utf8mb4", user,password, host,port, dbname))
-	case AdapterSqlx_Postgres:
-		//sqlx.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",host,port,user,password,dbname))
-	case AdapterSqlx_Sqlite:
-		//sqlx.Open("sqlite", dbname)
-	case AdapterSqlx_Mssql:
-		//if windows {
-		//   security="integrated security=SSPI;"
-		//}
-		//sqlx.Open("adodb", fmt.Sprintf("Provider=SQLOLEDB;Data Source=%s[\\instance=%v];%s Initial Catalog=%v;user id=%s;password=%s;port=%v",
-		//          dbname, instance, security, dbname, user, password, port))
-	case AdapterCache_Redis:
-		//newCache("redis", `{"conn":"127.0.0.1:6379"}`)
-	case AdapterCache_Memcache:
-		//newCache("memcache", `{"conn":"127.0.0.1:11211"}`)
-	case AdapterCache_Memory:
-		//newCache("memory", `{"interval":60}`)
-	}
-	return strScheme, strUrl //TODO replace strUrl to strConfig
 }
 
 func (e *Engine) getSingleQuote() (strQuote string) {

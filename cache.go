@@ -1,14 +1,17 @@
 package sqlca
 
 import (
-	"github.com/astaxie/beego/cache"
-	"github.com/civet148/gotools/log"
+	"encoding/json"
+	redis "github.com/gitstliu/go-redis-cluster"
+	"time"
 )
 
 type ValueType int
 
 const (
-	CACHE_INDEX_DEEP = 1 // index deep in cache
+	CACHE_INDEX_DEEP = 1           // index deep in cache
+	CACHE_REPLICATE  = "replicate" //replicate host [ip:port,...]
+	CACHE_DB_INDEX   = "db"
 )
 
 const (
@@ -30,6 +33,13 @@ func (v ValueType) String() string {
 	return "ValueType_Unknown"
 }
 
+type CacheConfig struct {
+	Password       string   `json:"password"`
+	Index          int      `json:"db_index"`
+	MasterHost     string   `json:"master_host"`
+	ReplicateHosts []string `json:"replicate_hosts"`
+}
+
 type CacheValue struct {
 	ValueType ValueType `json:"value_type"` // cache value type
 	TableName string    `json:"table_name"` // table name
@@ -42,16 +52,35 @@ type CacheIndex struct {
 	Keys []string `json:"keys"`
 }
 
-// [redis]    newCache("redis",    `{"conn":"127.0.0.1:6379"}`)
-// [memcache] newCache("memcache", `{"conn":"127.0.0.1:11211"}`)
-// [memory]   newCache("memory",   `{"interval":60}`)
-func newCache(name, config string) (c cache.Cache, err error) {
-	c, err = cache.NewCache(name, config)
-	if err != nil {
-		log.Errorf("%v", err.Error())
-		return
+type Cache struct {
+	c *redis.Cluster
+}
+
+func newCache(strScheme string, strConfig string) (cache *Cache, err error) {
+
+	var config CacheConfig
+	if err = json.Unmarshal([]byte(strConfig), &config); err != nil {
+		assert(false, "cache config [%v] illegal", strConfig)
 	}
-	return
+
+	var StartNodes []string
+	StartNodes = append(StartNodes, config.MasterHost)
+	StartNodes = append(StartNodes, config.ReplicateHosts...)
+
+	var c *redis.Cluster
+	c, err = redis.NewCluster(&redis.Options{
+		StartNodes:   StartNodes,
+		ConnTimeout:  500 * time.Millisecond,
+		ReadTimeout:  500 * time.Millisecond,
+		WriteTimeout: 500 * time.Millisecond,
+		KeepAlive:    16,
+		AliveTime:    60 * time.Second,
+	})
+
+	if err != nil {
+		assert(false, "redis cluster %v connect error [%v]", StartNodes, err.Error())
+	}
+	return &Cache{c: c}, nil
 }
 
 func (c *CacheValue) getCacheDataKey() (strKey string) {

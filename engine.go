@@ -3,7 +3,6 @@ package sqlca
 import (
 	"database/sql"
 	"fmt"
-	"github.com/astaxie/beego/cache"
 	"github.com/civet148/gotools/log"
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
 	"github.com/jmoiron/sqlx"          //sqlx package
@@ -14,7 +13,7 @@ import (
 
 type Engine struct {
 	db              *sqlx.DB          // sqlx instance
-	cache           cache.Cache       // beego cache instance
+	cache           *Cache            // redis cache instance
 	adapterSqlx     AdapterType       // what's adapter of sqlx
 	adapterCache    AdapterType       // what's adapter of cache
 	modelType       ModelType         // model type
@@ -52,7 +51,7 @@ func NewEngine(debug bool) *Engine {
 }
 
 // open a sqlx database or cache connection
-// strConfig:
+// strUrl:
 //
 //  1. data source name
 //
@@ -63,29 +62,26 @@ func NewEngine(debug bool) *Engine {
 //
 //  2. cache config
 //
-//     [redis]    Open(AdapterTypeCache_Redis,    "redis://127.0.0.1:6379")
-//     [memcache] Open(AdapterTypeCache_Memcache, "memcache://127.0.0.1:11211")
-//     [memory]   Open(AdapterTypeCache_Memory,   "memory://interval=60")
+//     [redis]    Open(AdapterTypeCache_Redis,    "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
 //
 // expireSeconds cache data expire seconds, just for AdapterTypeCache_XXX
 func (e *Engine) Open(adapterType AdapterType, strUrl string, expireSeconds ...int) *Engine {
 
 	var err error
-	strSchema, strDSN := e.getConnUrl(adapterType, strUrl)
+	strDriverName, strConfig := e.getConnConfig(adapterType, strUrl)
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-		if e.db, err = sqlx.Open(strSchema, strDSN); err != nil {
-			assert(false, "open url [%v] schema [%v] data source [%v] error [%v]", strUrl, strSchema, strDSN, err.Error())
+		if e.db, err = sqlx.Open(strDriverName, strConfig); err != nil {
+			assert(false, "open url [%v] driver name [%v] config [%v] error [%v]", strUrl, strDriverName, strConfig, err.Error())
 		}
 		if err = e.db.Ping(); err != nil {
-			assert(false, "ping url [%v] schema [%v] data source [%v] error [%v]", strUrl, strSchema, strDSN, err.Error())
+			assert(false, "ping url [%v] driver name [%v] config [%v] error [%v]", strUrl, strDriverName, strConfig, err.Error())
 		}
 		e.adapterSqlx = adapterType
-	case AdapterCache_Redis, AdapterCache_Memcache, AdapterCache_Memory:
-		// TODO @libin open beego cache conection
+	case AdapterCache_Redis:
 		var err error
-		if e.cache, err = newCache(strSchema, strDSN); err != nil {
-			assert(false, "new cache by name [%v] config [%v] error [%v]", strSchema, strDSN, err.Error())
+		if e.cache, err = newCache(strDriverName, strConfig); err != nil {
+			assert(false, "new cache by driver name [%v] config [%v] error [%v]", strDriverName, strConfig, err.Error())
 		}
 		e.adapterCache = adapterType
 		if len(expireSeconds) > 0 {
@@ -101,30 +97,30 @@ func (e *Engine) Open(adapterType AdapterType, strUrl string, expireSeconds ...i
 
 // attach from a exist sqlx or beego cache instance
 // expireSeconds cache data expire seconds, just for AdapterTypeCache_XXX
-func (e *Engine) Attach(adapterType AdapterType, v interface{}, expireSeconds ...int) *Engine {
-
-	switch adapterType {
-	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-		{
-			assert(!isNilOrFalse(e.db), "already have a [%v] sqlx instance, attach failed", adapterType)
-			e.db = v.(*sqlx.DB)
-			e.adapterSqlx = adapterType
-		}
-	case AdapterCache_Redis, AdapterCache_Memcache, AdapterCache_Memory:
-		{
-			assert(!isNilOrFalse(e.cache), "already have a [%v] beego cache instance, attach failed", adapterType)
-			e.cache = v.(cache.Cache)
-			e.adapterCache = adapterType
-			if len(expireSeconds) > 0 {
-				e.expireTime = expireSeconds[0]
-			}
-		}
-	default:
-		assert(false, "adapter type [%v] attach instance failed", adapterType)
-		return nil
-	}
-	return e
-}
+//func (e *Engine) Attach(adapterType AdapterType, v interface{}, expireSeconds ...int) *Engine {
+//
+//	switch adapterType {
+//	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
+//		{
+//			assert(!isNilOrFalse(e.db), "already have a [%v] sqlx instance, attach failed", adapterType)
+//			e.db = v.(*sqlx.DB)
+//			e.adapterSqlx = adapterType
+//		}
+//	case AdapterCache_Redis:
+//		{
+//			assert(!isNilOrFalse(e.cache), "already have a [%v] beego cache instance, attach failed", adapterType)
+//			e.cache = v.(*Cache)
+//			e.adapterCache = adapterType
+//			if len(expireSeconds) > 0 {
+//				e.expireTime = expireSeconds[0]
+//			}
+//		}
+//	default:
+//		assert(false, "adapter type [%v] attach instance failed", adapterType)
+//		return nil
+//	}
+//	return e
+//}
 
 // get internal sqlx instance
 // you can use it to do what you want
@@ -422,7 +418,7 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 }
 
 // get data base driver name and data source name
-func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strDriverName, strDSN string) {
+func (e *Engine) getConnConfig(adapterType AdapterType, strUrl string) (strDriverName, strDSN string) {
 	//TODO @libin parse connect url for database
 	strDriverName = adapterType.DriverName()
 	switch adapterType {
@@ -431,19 +427,11 @@ func (e *Engine) getConnUrl(adapterType AdapterType, strUrl string) (strDriverNa
 	case AdapterSqlx_Postgres:
 		return strDriverName, e.parsePostgresUrl(strUrl)
 	case AdapterSqlx_Sqlite:
-		//sqlx.Open("sqlite3", dbname)
 		return strDriverName, e.parseSqliteUrl(strUrl)
 	case AdapterSqlx_Mssql:
 		return strDriverName, e.parseMssqlUrl(strUrl)
 	case AdapterCache_Redis:
-		//newCache("redis", `{"conn":"127.0.0.1:6379"}`)
 		return strDriverName, e.parseRedisUrl(strUrl)
-	case AdapterCache_Memcache:
-		//newCache("memcache", `{"conn":"127.0.0.1:11211"}`)
-		return strDriverName, e.parseMemcacheUrl(strUrl)
-	case AdapterCache_Memory:
-		//newCache("memory", `{"interval":60}`)
-		return strDriverName, e.parseMemoryUrl(strUrl)
 	}
 	return strDriverName, strUrl //TODO replace strUrl to strDSN
 }

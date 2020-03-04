@@ -14,8 +14,6 @@ const (
 	DRIVER_NAME_SQLITE   = "sqlite3"
 	DRIVER_NAME_MSSQL    = "adodb"
 	DRIVER_NAME_REDIS    = "redis"
-	DRIVER_NAME_MEMCACHE = "memcache"
-	DRIVER_NAME_MEMORY   = "memory"
 )
 
 type AdapterType int
@@ -30,13 +28,11 @@ const (
 )
 
 const (
-	AdapterSqlx_MySQL     AdapterType = 1  //sqlx: mysql
-	AdapterSqlx_Postgres  AdapterType = 2  //sqlx: postgresql
-	AdapterSqlx_Sqlite    AdapterType = 3  //sqlx: sqlite
-	AdapterSqlx_Mssql     AdapterType = 4  //sqlx: mssql server
-	AdapterCache_Redis    AdapterType = 11 //cache: redis
-	AdapterCache_Memcache AdapterType = 12 //cache: memcached
-	AdapterCache_Memory   AdapterType = 13 //cache: memory
+	AdapterSqlx_MySQL    AdapterType = 1  //sqlx: mysql
+	AdapterSqlx_Postgres AdapterType = 2  //sqlx: postgresql
+	AdapterSqlx_Sqlite   AdapterType = 3  //sqlx: sqlite
+	AdapterSqlx_Mssql    AdapterType = 4  //sqlx: mssql server
+	AdapterCache_Redis   AdapterType = 11 //cache: redis
 )
 
 func (a AdapterType) GoString() string {
@@ -56,10 +52,6 @@ func (a AdapterType) String() string {
 		return "AdapterSqlx_Mssql"
 	case AdapterCache_Redis:
 		return "AdapterCache_Redis"
-	case AdapterCache_Memcache:
-		return "AdapterCache_Memcache"
-	case AdapterCache_Memory:
-		return "AdapterCache_Memory"
 	default:
 	}
 	return "Adapter_Unknown"
@@ -77,10 +69,6 @@ func (a AdapterType) DriverName() string {
 		return DRIVER_NAME_MSSQL
 	case AdapterCache_Redis:
 		return DRIVER_NAME_REDIS
-	case AdapterCache_Memcache:
-		return DRIVER_NAME_MEMCACHE
-	case AdapterCache_Memory:
-		return DRIVER_NAME_MEMORY
 	default:
 	}
 	return "unknown"

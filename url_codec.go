@@ -1,8 +1,10 @@
 package sqlca
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -211,14 +213,26 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
 	return
 }
 
+//DSN: `{"password":"123456","db_index":0,"master_host":"127.0.0.1:6379","replicate_hosts":["127.0.0.1:6380","127.0.0.1:6381"]}`
 func (e *Engine) parseRedisUrl(strUrl string) (strDSN string) {
-	return
-}
 
-func (e *Engine) parseMemcacheUrl(strUrl string) (strDSN string) {
-	return
-}
+	ui := parseUrl(strUrl)
+	cc := &CacheConfig{
+		Password:   ui.User, //redis have no user, just password
+		MasterHost: fmt.Sprintf("%v", ui.Host),
+	}
 
-func (e *Engine) parseMemoryUrl(strUrl string) (strDSN string) {
+	if v, ok := ui.Queries[CACHE_DB_INDEX]; ok {
+		cc.Index, _ = strconv.Atoi(v)
+	}
+	if v, ok := ui.Queries[CACHE_REPLICATE]; ok {
+		cc.ReplicateHosts = strings.Split(v, ",")
+	}
+
+	if jsonData, err := json.Marshal(cc); err != nil {
+		assert(false, "url [%v] illegal", strUrl)
+	} else {
+		strDSN = string(jsonData)
+	}
 	return
 }

@@ -41,11 +41,11 @@ const (
 func main() {
 
 	e := sqlca.NewEngine(true)
-	e.Open(sqlca.AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/enterprise?charset=utf8mb4")
+	//e.Open(sqlca.AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/enterprise?charset=utf8mb4")
 	//e.Open(sqlca.AdapterSqlx_Postgres, "postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/enterprise?sslmode=enable")
 	//e.Open(sqlca.AdapterSqlx_Sqlite, "sqlite:///var/lib/enterprise.db")
 	//e.Open(sqlca.AdapterSqlx_Mssql, "mssql://sa:123456@127.0.0.1:1433/enterprise?name=test&windows=false")
-	//e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/db?index=0")
+	e.Open(sqlca.AdapterCache_Redis, "redis://123456@127.0.0.1:6379/cluster?db=0")
 	e.Debug(true) //debug on
 
 	var callUpsert = PhoneCall{

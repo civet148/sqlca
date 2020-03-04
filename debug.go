@@ -33,6 +33,12 @@ func isNilOrFalse(v interface{}) bool {
 		}
 	case bool:
 		return !v.(bool)
+	case int8, int16, int, int32, int64:
+		{
+			if fmt.Sprintf("%v", v) == "0" {
+				return true
+			}
+		}
 	default:
 		{
 			val := reflect.ValueOf(v)

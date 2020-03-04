@@ -43,7 +43,7 @@ func main() {
 	e := sqlca.NewEngine(true)
 
 	e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/cluster?db=0") //redis alone mode
-	//e.Open(sqlca.AdapterCache_Redis, "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380") //redis cluster mode
+	//e.Open(sqlca.AdapterCache_Redis, "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 
 	e.Open(sqlca.AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/enterprise?charset=utf8mb4")
 	//e.Open(sqlca.AdapterSqlx_Postgres, "postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/enterprise?sslmode=enable")

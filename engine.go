@@ -20,13 +20,14 @@ type Engine struct {
 	modelType       ModelType         // model type
 	operType        OperType          // operation type
 	expireTime      int               // cache expire time of seconds
-	refreshCache    bool              // can refresh cache ? true=yes false=no
+	bUseCache       bool              // can update to cache or read from cache? (true=yes false=no)
+	bCacheFirst     bool              // cache first or database first (true=cache first; false=db first)
 	debug           bool              // debug mode [on/off]
 	model           interface{}       // data model [struct object or struct slice]
 	dict            map[string]string // data model db dictionary
 	strTableName    string            // table name
-	strPkName       string            // primary key of table, default 'id'
-	strPkValue      string            // primary key's value
+	pkName          string            // primary key of table, default 'id'
+	pkValue         interface{}       // primary key's value
 	strWhere        string            // where condition to query or update
 	strLimit        string            // limit
 	strOffset       string            // offset (only for postgres)
@@ -46,7 +47,7 @@ func NewEngine(debug bool) *Engine {
 
 	return &Engine{
 		debug:      debug,
-		strPkName:  DEFAULT_PRIMARY_KEY_NAME,
+		pkName:     DEFAULT_PRIMARY_KEY_NAME,
 		expireTime: DEFAULT_CAHCE_EXPIRE_SECONDS,
 	}
 }
@@ -56,14 +57,14 @@ func NewEngine(debug bool) *Engine {
 //
 //  1. data source name
 //
-// 	   [mysql]    Open(AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4")
+// 	   [mysql]    Open(AdapterSqlx_MySQL,    "mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4")
 // 	   [postgres] Open(AdapterSqlx_Postgres, "postgres://root:123456@127.0.0.1:5432/mydb?sslmode=disable")
 // 	   [sqlite]   Open(AdapterSqlx_Sqlite,   "sqlite:///var/lib/my.db")
 // 	   [mssql]    Open(AdapterSqlx_Mssql,    "mssql://sa:123456@127.0.0.1:1433/mydb?instance=&windows=false")
 //
 //  2. cache config
-//
-//     [redis]    Open(AdapterTypeCache_Redis,    "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
+//     [redis-alone]    Open(AdapterTypeCache_Redis,    "redis://123456@127.0.0.1:6379/cluster?db=0")
+//     [redis-cluster]  Open(AdapterTypeCache_Redis,    "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
 //
 // expireSeconds cache data expire seconds, just for AdapterTypeCache_XXX
 func (e *Engine) Open(adapterType AdapterType, strUrl string, expireSeconds ...int) *Engine {
@@ -87,6 +88,8 @@ func (e *Engine) Open(adapterType AdapterType, strUrl string, expireSeconds ...i
 		e.adapterCache = adapterType
 		if len(expireSeconds) > 0 {
 			e.expireTime = expireSeconds[0]
+		} else {
+			e.expireTime = 3600 //one hour expire
 		}
 	default:
 		assert(false, "adapter instance type [%v] url [%s] not support", adapterType, strUrl)
@@ -96,38 +99,16 @@ func (e *Engine) Open(adapterType AdapterType, strUrl string, expireSeconds ...i
 	return e
 }
 
-// attach from a exist sqlx or beego cache instance
-// expireSeconds cache data expire seconds, just for AdapterTypeCache_XXX
-//func (e *Engine) Attach(adapterType AdapterType, v interface{}, expireSeconds ...int) *Engine {
-//
-//	switch adapterType {
-//	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-//		{
-//			assert(!isNilOrFalse(e.db), "already have a [%v] sqlx instance, attach failed", adapterType)
-//			e.db = v.(*sqlx.DB)
-//			e.adapterSqlx = adapterType
-//		}
-//	case AdapterCache_Redis:
-//		{
-//			assert(!isNilOrFalse(e.cache), "already have a [%v] beego cache instance, attach failed", adapterType)
-//			e.cache = v.(*Cache)
-//			e.adapterCache = adapterType
-//			if len(expireSeconds) > 0 {
-//				e.expireTime = expireSeconds[0]
-//			}
-//		}
-//	default:
-//		assert(false, "adapter type [%v] attach instance failed", adapterType)
-//		return nil
-//	}
-//	return e
-//}
+func (e *Engine) Cache() *Engine {
+	e.setUseCache(true)
+	return e
+}
 
 // get internal sqlx instance
 // you can use it to do what you want
-func (e *Engine) DB() *sqlx.DB {
-	return e.db
-}
+//func (e *Engine) DB() *sqlx.DB {
+//	return e.db
+//}
 
 // debug mode on or off
 // if debug on, some method will panic if your condition illegal
@@ -163,12 +144,12 @@ func (e *Engine) Index(strColumn string, value interface{}) *Engine {
 // set orm primary key's name, default named 'id'
 func (e *Engine) SetPkName(strName string) *Engine {
 	assert(strName, "name is nil")
-	e.strPkName = strName
+	e.pkName = strName
 	return e
 }
 
 func (e *Engine) GetPkName() string {
-	return e.strPkName
+	return e.pkName
 }
 
 // set orm primary key's value
@@ -176,7 +157,7 @@ func (e *Engine) Id(value interface{}) *Engine {
 
 	//TODO @libin sql syntax differences of MySQL/Postgresql/Sqlite/Mssql...
 	e.setSelectColumns("*")
-	e.setPkValue(fmt.Sprintf("%v", value))
+	e.setPkValue(value)
 	return e
 }
 
@@ -253,8 +234,11 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 // Model function is must be called before call this function
 func (e *Engine) Query() (rows int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
+	if e.getCustomWhere() != "" {
+		e.setUseCache(false) //custom where condition query/update can't refresh redis
+	}
 
-	e.operType = OperType_Query
+	e.setOperType(OperType_Query)
 	strSqlx := e.makeSqlxString()
 
 	var r *sql.Rows
@@ -305,6 +289,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 		return
 	}
 	log.Debugf("lastInsertId = %v", lastInsertId)
+	e.writeToCache()
 	return
 }
 
@@ -332,6 +317,8 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 		return
 	}
 	log.Debugf("lastInsertId = %v", lastInsertId)
+	e.setPkValue(lastInsertId)
+	e.writeToCache()
 	return
 }
 
@@ -344,6 +331,10 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	assert(e.getSelectColumns(), "update columns is not set")
 
 	e.setOperType(OperType_Update)
+
+	if e.getCustomWhere() != "" {
+		e.setUseCache(false) //custom where condition query/update can't refresh redis
+	}
 
 	var strSqlx string
 	strSqlx = e.makeSqlxString()
@@ -371,6 +362,7 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	assert(e.model, "model is nil, please call Model function first")
 
 	e.setOperType(OperType_QueryRaw)
+	e.setUseCache(false) //custom where condition query/update can't refresh redis
 
 	var r *sql.Rows
 	r, err = e.db.Query(strQuery, args...)
@@ -398,6 +390,8 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	assert(strQuery, "query sql string is nil")
 
 	e.setOperType(OperType_ExecRaw)
+	e.setUseCache(false) //custom where condition query/update can't refresh redis
+
 	var r sql.Result
 	r, err = e.db.Exec(strQuery, args...)
 	if err != nil {

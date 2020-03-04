@@ -148,7 +148,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		debug:        e.debug,
 		adapterSqlx:  e.adapterSqlx,
 		adapterCache: e.adapterCache,
-		strPkName:    e.strPkName,
+		pkName:       e.pkName,
 		expireTime:   e.expireTime,
 	}
 
@@ -191,6 +191,14 @@ func (e *Engine) clean() *Engine {
 	return e
 }
 
+func (e Engine) setUseCache(ok bool) {
+	e.bUseCache = ok
+}
+
+func (e Engine) getUseCache() bool {
+	return e.bUseCache
+}
+
 func (e Engine) setIndexes(name string, value interface{}) {
 
 	assert(value, "index value is nil")
@@ -217,12 +225,12 @@ func (e *Engine) setTableName(strName string) {
 	e.strTableName = strName
 }
 
-func (e *Engine) getPkValue() string {
-	return e.strPkValue
+func (e *Engine) setPkValue(value interface{}) {
+	e.pkValue = value
 }
 
-func (e *Engine) setPkValue(strValue string) {
-	e.strPkValue = strValue
+func (e *Engine) getPkValue() interface{} {
+	return e.pkValue
 }
 
 func (e *Engine) setSelectColumns(strColumns ...string) {
@@ -249,14 +257,14 @@ func (e *Engine) getCustomWhere() string {
 // primary key value like 'id'=xxx condition
 func (e *Engine) getPkWhere() (strPkCondition string) {
 
-	strPkName := e.GetPkName()
+	pkName := e.GetPkName()
 	strPkValue := e.getPkValue()
 	if isNilOrFalse(strPkValue) {
 		//use model primary value
-		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), strPkName, e.getBackQuote(), e.getSingleQuote(), e.dict[strPkName], e.getSingleQuote())
+		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), e.dict[pkName], e.getSingleQuote())
 	} else {
 		//use custom primary value
-		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), strPkName, e.getBackQuote(), e.getSingleQuote(), strPkValue, e.getSingleQuote())
+		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), strPkValue, e.getSingleQuote())
 	}
 	return
 }
@@ -388,6 +396,14 @@ func (e *Engine) getGroupBy() (strGroupBy string) {
 	return fmt.Sprintf(" GROUP BY %v", strings.Join(e.groupByColumns, ","))
 }
 
+func (e *Engine) isPrimaryKeyInteger() bool {
+	switch e.pkValue.(type) {
+	case int8, int16, int, int32, int64:
+		return true
+	}
+	return false
+}
+
 func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 
 	for _, v := range strExcepts {
@@ -480,15 +496,19 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		{
-			strDo = fmt.Sprintf("`%v`=LAST_INSERT_ID(`%v`)", e.strPkName, e.strPkName)
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
+			strDo = fmt.Sprintf("`%v`=LAST_INSERT_ID(`%v`)", e.pkName, e.pkName)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.pkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
 			if !isNilOrFalse(strUpdates) {
-				strDo = fmt.Sprintf("%v, %v", strDo, strUpdates)
+				if e.isPrimaryKeyInteger() { // primary key type is a integer
+					strDo = fmt.Sprintf("%v, %v", strDo, strUpdates)
+				} else {
+					strDo = strUpdates
+				}
 			}
 		}
 	case AdapterSqlx_Postgres:
 		{
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.pkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v RETURNING %v", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}
@@ -552,6 +572,7 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 
 	if isNilOrFalse(e.getCustomWhere()) {
+
 		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v %v",
 			e.getQuoteColumns(), e.getTableName(), e.getPkWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by model primary key value
 	} else {
@@ -565,6 +586,7 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 
 	if isNilOrFalse(e.getCustomWhere()) {
+
 		//where condition by model primary key value (not include primary key `id` and created_at/updated_at)
 		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v",
 			e.getTableName(),
@@ -594,7 +616,14 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 
 	strColumns, strValues := e.getInsertColumnsAndValues()
 	strOnConflictUpdates := e.getOnConflictUpdates()
-	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) %v",
-		e.strTableName, strColumns, strValues, strOnConflictUpdates)
+	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) %v", e.strTableName, strColumns, strValues, strOnConflictUpdates)
 	return
+}
+
+func (e *Engine) readFromCache() {
+
+}
+
+func (e *Engine) writeToCache() {
+
 }

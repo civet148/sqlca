@@ -24,7 +24,7 @@ func isPtrType(v interface{}) bool {
 	return false
 }
 
-// judgement: bool, string, struct, slice, map is nil or false?
+// judgement: bool, integer, string, struct, slice, map is nil or false?
 func isNilOrFalse(v interface{}) bool {
 	switch v.(type) {
 	case string:
@@ -33,7 +33,7 @@ func isNilOrFalse(v interface{}) bool {
 		}
 	case bool:
 		return !v.(bool)
-	case int8, int16, int, int32, int64:
+	case int8, int16, int, int32, int64, uint8, uint16, uint, uint32, uint64:
 		{
 			if fmt.Sprintf("%v", v) == "0" {
 				return true

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/civet148/gotools/log"
+	"github.com/civet148/redigogo"
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
 	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
@@ -13,7 +14,7 @@ import (
 
 type Engine struct {
 	db              *sqlx.DB          // sqlx instance
-	cache           *Cache            // redis cache instance
+	cache           redigogo.Cache    // redis cache instance
 	adapterSqlx     AdapterType       // what's adapter of sqlx
 	adapterCache    AdapterType       // what's adapter of cache
 	modelType       ModelType         // model type

@@ -2,8 +2,9 @@ package sqlca
 
 import (
 	"encoding/json"
-	redis "github.com/gitstliu/go-redis-cluster"
-	"time"
+	"github.com/civet148/redigogo"
+	_ "github.com/civet148/redigogo/alone"
+	_ "github.com/civet148/redigogo/cluster"
 )
 
 type ValueType int
@@ -33,13 +34,6 @@ func (v ValueType) String() string {
 	return "ValueType_Unknown"
 }
 
-type CacheConfig struct {
-	Password       string   `json:"password"`
-	Index          int      `json:"db_index"`
-	MasterHost     string   `json:"master_host"`
-	ReplicateHosts []string `json:"replicate_hosts"`
-}
-
 type CacheValue struct {
 	ValueType ValueType `json:"value_type"` // cache value type
 	TableName string    `json:"table_name"` // table name
@@ -52,35 +46,18 @@ type CacheIndex struct {
 	Keys []string `json:"keys"`
 }
 
-type Cache struct {
-	c *redis.Cluster
-}
+func newCache(strScheme string, strConfig string) (cache redigogo.Cache, err error) {
 
-func newCache(strScheme string, strConfig string) (cache *Cache, err error) {
-
-	var config CacheConfig
+	var config redigogo.Config
 	if err = json.Unmarshal([]byte(strConfig), &config); err != nil {
 		assert(false, "cache config [%v] illegal", strConfig)
 	}
 
-	var StartNodes []string
-	StartNodes = append(StartNodes, config.MasterHost)
-	StartNodes = append(StartNodes, config.ReplicateHosts...)
-
-	var c *redis.Cluster
-	c, err = redis.NewCluster(&redis.Options{
-		StartNodes:   StartNodes,
-		ConnTimeout:  500 * time.Millisecond,
-		ReadTimeout:  500 * time.Millisecond,
-		WriteTimeout: 500 * time.Millisecond,
-		KeepAlive:    16,
-		AliveTime:    60 * time.Second,
-	})
-
+	cache = redigogo.NewCache(&config)
 	if err != nil {
-		assert(false, "redis cluster %v connect error [%v]", StartNodes, err.Error())
+		assert(false, "redis cache with config [%+v] create error [%v]", config, err.Error())
 	}
-	return &Cache{c: c}, nil
+	return
 }
 
 func (c *CacheValue) getCacheDataKey() (strKey string) {

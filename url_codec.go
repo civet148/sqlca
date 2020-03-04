@@ -3,6 +3,7 @@ package sqlca
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/civet148/redigogo"
 	"net/url"
 	"strconv"
 	"strings"
@@ -217,7 +218,7 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
 func (e *Engine) parseRedisUrl(strUrl string) (strDSN string) {
 
 	ui := parseUrl(strUrl)
-	cc := &CacheConfig{
+	cc := &redigogo.Config{
 		Password:   ui.User, //redis have no user, just password
 		MasterHost: fmt.Sprintf("%v", ui.Host),
 	}

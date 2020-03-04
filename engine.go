@@ -13,30 +13,30 @@ import (
 )
 
 type Engine struct {
-	db              *sqlx.DB          // sqlx instance
-	cache           redigogo.Cache    // redis cache instance
-	adapterSqlx     AdapterType       // what's adapter of sqlx
-	adapterCache    AdapterType       // what's adapter of cache
-	modelType       ModelType         // model type
-	operType        OperType          // operation type
-	expireTime      int               // cache expire time of seconds
-	bUseCache       bool              // can update to cache or read from cache? (true=yes false=no)
-	bCacheFirst     bool              // cache first or database first (true=cache first; false=db first)
-	debug           bool              // debug mode [on/off]
-	model           interface{}       // data model [struct object or struct slice]
-	dict            map[string]string // data model db dictionary
-	strTableName    string            // table name
-	pkName          string            // primary key of table, default 'id'
-	pkValue         interface{}       // primary key's value
-	strWhere        string            // where condition to query or update
-	strLimit        string            // limit
-	strOffset       string            // offset (only for postgres)
-	strAscOrDesc    string            // order by ... [asc|desc]
-	selectColumns   []string          // columns to query: select
-	conflictColumns []string          // conflict key on duplicate set (just for postgresql)
-	orderByColumns  []string          // order by columns
-	groupByColumns  []string          // group by columns
-	cacheIndexes    []TableIndex      // index read or write cache
+	db              *sqlx.DB               // sqlx instance
+	cache           redigogo.Cache         // redis cache instance
+	adapterSqlx     AdapterType            // what's adapter of sqlx
+	adapterCache    AdapterType            // what's adapter of cache
+	modelType       ModelType              // model type
+	operType        OperType               // operation type
+	expireTime      int                    // cache expire time of seconds
+	bUseCache       bool                   // can update to cache or read from cache? (true=yes false=no)
+	bCacheFirst     bool                   // cache first or database first (true=cache first; false=db first)
+	debug           bool                   // debug mode [on/off]
+	model           interface{}            // data model [struct object or struct slice]
+	dict            map[string]interface{} // data model db dictionary
+	strTableName    string                 // table name
+	pkName          string                 // primary key of table, default 'id'
+	pkValue         interface{}            // primary key's value
+	strWhere        string                 // where condition to query or update
+	strLimit        string                 // limit
+	strOffset       string                 // offset (only for postgres)
+	strAscOrDesc    string                 // order by ... [asc|desc]
+	selectColumns   []string               // columns to query: select
+	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
+	orderByColumns  []string               // order by columns
+	groupByColumns  []string               // group by columns
+	cacheIndexes    []TableIndex           // index read or write cache
 }
 
 func init() {

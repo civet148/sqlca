@@ -9,8 +9,8 @@ import (
 )
 
 type ModelReflector struct {
-	value interface{}       //value
-	dict  map[string]string //dictionary of structure tag and value
+	value interface{}            //value
+	dict  map[string]interface{} //dictionary of structure tag and value
 }
 
 type Fetcher struct {
@@ -27,7 +27,7 @@ func newReflector(v interface{}) *ModelReflector {
 
 	return &ModelReflector{
 		value: v,
-		dict:  make(map[string]string),
+		dict:  make(map[string]interface{}),
 	}
 }
 
@@ -43,7 +43,7 @@ func handleSpecialChars(strIn string) (strOut string) {
 }
 
 // parse struct tag and value to map
-func (s *ModelReflector) ToMap(tagName string) (m map[string]string) {
+func (s *ModelReflector) ToMap(tagName string) map[string]interface{} {
 
 	typ := reflect.TypeOf(s.value)
 	val := reflect.ValueOf(s.value)
@@ -96,8 +96,7 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 
 	tagVal := s.getTag(field, tagName)
 	if tagVal != "" {
-		strVal := fmt.Sprintf("%v", val.Interface())
-		s.dict[tagVal] = fmt.Sprintf("%v", handleSpecialChars(strVal)) //trim the first and last blank character and save to map
+		s.dict[tagVal] = val.Interface()
 	}
 }
 

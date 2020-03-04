@@ -481,7 +481,8 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 	for _, v := range strColumns {
 
 		if e.isColumnSelected(v, strExcepts...) {
-			c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), v, e.getBackQuote(), e.getSingleQuote(), e.dict[v], e.getSingleQuote()) // column name format to `date`='1583055138',...
+			strVal := handleSpecialChars(fmt.Sprintf("%v", e.dict[v]))
+			c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), v, e.getBackQuote(), e.getSingleQuote(), strVal, e.getSingleQuote()) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
 		}
 	}

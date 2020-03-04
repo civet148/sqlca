@@ -65,11 +65,11 @@ func main() {
 		GA:                   "",
 		GB:                   "",
 		KeyFingerprint:       0,
-		Connections:          "\"{\"protocol\": \"relay\", \"port\":50001}\"",
+		Connections:          "{\"protocol\": \"relay\", \"port\":50001}",
 		AdminDebugData:       "",
 		ParticipantDebugData: "",
 		AdminRating:          0,
-		AdminComment:         "",
+		AdminComment:         "````''''",
 		ParticipantRating:    0,
 		ParticipantComment:   "",
 		Date:                 0,
@@ -182,7 +182,7 @@ func main() {
 	rows, err = e.Model(&callUpsert).
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
 		Id(1).
-		Select("state", "connections").
+		Select("state", "admin_comment").
 		Update()
 
 	var callRawList []PhoneCall

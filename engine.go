@@ -328,13 +328,13 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 // use raw sql to query results
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
-func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
+func (e *Engine) QueryRaw(strFmt string, args ...interface{}) (rowsAffected int64, err error) {
 	assert(e.db, "sqlx db instance is nil")
-	assert(strQuery, "query sql string is nil")
+	assert(strFmt, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model method first")
 
 	e.setOperType(OperType_QueryRaw)
-	strQuery = fmt.Sprintf(strQuery, args...)
+	strQuery := fmt.Sprintf(strFmt, args...)
 	log.Debugf("query [%v]", strQuery)
 	var r *sql.Rows
 	r, err = e.db.Query(strQuery)
@@ -349,11 +349,11 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 
 // use raw sql to query results into a map slice
 // return results and error
-func (e *Engine) QueryMap(strQuery string, args ...interface{}) (results []map[string]string, err error) {
-	assert(strQuery, "query sql string is nil")
+func (e *Engine) QueryMap(strFmt string, args ...interface{}) (results []map[string]string, err error) {
+	assert(strFmt, "query sql string is nil")
 	e.setOperType(OperType_QueryMap)
 	var r *sql.Rows
-	strQuery = fmt.Sprintf(strQuery, args...)
+	strQuery := fmt.Sprintf(strFmt, args...)
 	log.Debugf("query [%v]", strQuery)
 	r, err = e.db.Query(strQuery)
 	if err != nil {
@@ -370,9 +370,9 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (results []map[s
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
-func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
+func (e *Engine) ExecRaw(strFmt string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
 	assert(e.db, "sqlx db instance is nil")
-	assert(strQuery, "query sql string is nil")
+	assert(strFmt, "query sql string is nil")
 
 	e.setOperType(OperType_ExecRaw)
 	if e.getUseCache() {
@@ -380,7 +380,8 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	}
 
 	var r sql.Result
-	r, err = e.db.Exec(fmt.Sprintf(strQuery, args...))
+	strQuery := fmt.Sprintf(strFmt, args...)
+	r, err = e.db.Exec(strQuery)
 	if err != nil {
 		log.Errorf("error [%v] model [%+v]", err, e.model)
 		return

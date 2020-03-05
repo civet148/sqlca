@@ -137,6 +137,11 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 			strCachePrimaryKey := e.makeCacheKey(e.GetPkName(), vv[e.GetPkName()])
 			pkValues = append(pkValues, strCachePrimaryKey)
 		}
+
+		if len(pkValues) == 0 {
+			continue
+		}
+
 		data, _ := json.Marshal(pkValues) //marshal []string to json string
 
 		kv := &cacheKeyValue{

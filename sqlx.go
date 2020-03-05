@@ -411,7 +411,7 @@ func (e *Engine) getGroupBy() (strGroupBy string) {
 
 func (e *Engine) isPrimaryKeyInteger() bool {
 	switch e.pkValue.(type) {
-	case int8, int16, int, int32, int64:
+	case int8, int16, int, int32, int64, uint8, uint16, uint, uint32, uint64:
 		return true
 	}
 	return false

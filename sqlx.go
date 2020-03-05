@@ -268,13 +268,13 @@ func (e *Engine) getCustomWhere() string {
 func (e *Engine) getPkWhere() (strPkCondition string) {
 
 	pkName := e.GetPkName()
-	strPkValue := e.getPkValue()
-	if isNilOrFalse(strPkValue) {
+	pkValue := e.getPkValue()
+	if pkValue == nil {
 		//use model primary value
 		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), e.getModelValue(pkName), e.getSingleQuote())
 	} else {
 		//use custom primary value
-		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), strPkValue, e.getSingleQuote())
+		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), pkValue, e.getSingleQuote())
 	}
 	return
 }

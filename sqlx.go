@@ -240,6 +240,9 @@ func (e *Engine) setPkValue(value interface{}) {
 }
 
 func (e *Engine) getPkValue() interface{} {
+	if e.pkValue == nil {
+		e.pkValue = e.getModelValue(e.GetPkName()) //get primary value from model dictionary
+	}
 	return e.pkValue
 }
 

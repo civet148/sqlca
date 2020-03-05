@@ -325,7 +325,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 		log.Errorf("get last insert id error [%v] query [%v] model [%+v]", err, strSqlx, e.model)
 		return
 	}
-	log.Debugf("RowsAffected [%v] query [%v] model [%+v]", rowsAffected, strSqlx, e.model)
+	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
 	return
 }
 
@@ -336,9 +336,6 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	assert(e.db, "sqlx db instance is nil")
 	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model function first")
-	if e.getUseCache() {
-		assert(false, "ExecRaw method can't use cache")
-	}
 
 	e.setOperType(OperType_QueryRaw)
 
@@ -351,6 +348,24 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 
 	defer r.Close()
 	return e.fetchRows(r)
+}
+
+// use raw sql to query results into a map slice
+// return results and error
+func (e *Engine) QueryMap(strQuery string, args ...interface{}) (results []map[string]string, err error) {
+	assert(strQuery, "query sql string is nil")
+	e.setOperType(OperType_QueryMap)
+	var r *sql.Rows
+	r, err = e.db.Query(strQuery, args...)
+	if err != nil {
+		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
+		return
+	}
+	for r.Next() {
+		fetcher, _ := e.getFecther(r)
+		results = append(results, fetcher.mapValues)
+	}
+	return
 }
 
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...

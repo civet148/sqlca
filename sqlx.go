@@ -81,8 +81,9 @@ const (
 	OperType_Update   OperType = 2 // orm: update sql
 	OperType_Insert   OperType = 3 // orm: insert sql
 	OperType_Upsert   OperType = 4 // orm: insert or update sql
-	OperType_QueryRaw OperType = 5 // raw: query sql
+	OperType_QueryRaw OperType = 5 // raw: query sql into model
 	OperType_ExecRaw  OperType = 6 // raw: insert/update sql
+	OperType_QueryMap OperType = 7 // raw: query sql into map
 )
 
 func (o OperType) GoString() string {
@@ -182,7 +183,6 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 	for k, _ := range engine.dict {
 		engine.selectColumns = append(engine.selectColumns, k)
 	}
-
 	return engine
 }
 

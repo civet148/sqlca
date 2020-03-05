@@ -153,9 +153,9 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err
 					elemVal := reflect.New(elemTyp).Elem()
 
 					if elemTyp.Kind() == reflect.Struct {
-						err = e.fetchToStruct(rows, fetcher, elemTyp, elemVal) // assign to struct type variant
+						err = e.fetchToStruct(fetcher, elemTyp, elemVal) // assign to struct type variant
 					} else {
-						err = e.fetchToBaseType(rows, fetcher, elemTyp, elemVal) // assign to base type variant
+						err = e.fetchToBaseType(fetcher, elemTyp, elemVal) // assign to base type variant
 					}
 
 					val.Set(reflect.Append(val, elemVal))
@@ -167,12 +167,12 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err
 			}
 		case reflect.Struct:
 			{
-				err = e.fetchToStruct(rows, fetcher, typ, val)
+				err = e.fetchToStruct(fetcher, typ, val)
 				count++
 			}
 		default:
 			{
-				e.fetchToBaseType(rows, fetcher, typ, val)
+				e.fetchToBaseType(fetcher, typ, val)
 				count++
 			}
 		}
@@ -222,7 +222,7 @@ func (e *Engine) fetchToMap(fetcher *Fetcher, arg interface{}) (err error) {
 }
 
 //fetch row data to struct/slice
-func (e *Engine) fetchToStruct(rows *sql.Rows, fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {
+func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {
 
 	kind := typ.Kind()
 	if kind == reflect.Struct {
@@ -242,7 +242,7 @@ func (e *Engine) fetchToStruct(rows *sql.Rows, fetcher *Fetcher, typ reflect.Typ
 			switch typField.Type.Kind() {
 			case reflect.Struct:
 				{
-					e.fetchToStruct(rows, fetcher, typField.Type, valField)
+					e.fetchToStruct(fetcher, typField.Type, valField)
 				}
 			default:
 				{
@@ -255,7 +255,7 @@ func (e *Engine) fetchToStruct(rows *sql.Rows, fetcher *Fetcher, typ reflect.Typ
 	return
 }
 
-func (e *Engine) fetchToBaseType(rows *sql.Rows, fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {
+func (e *Engine) fetchToBaseType(fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {
 
 	v := fetcher.arrValues[fetcher.arrIndex]
 	e.setValue(typ, val, string(v))

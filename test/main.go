@@ -165,6 +165,10 @@ func main() {
 	}
 	log.Debugf("query result rows [%v] id slice %v ", rows, idList)
 
+	strQueryMap := fmt.Sprintf("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS)
+	results, _ := e.QueryMap(strQueryMap)
+	log.Debugf("QueryMap results %+v query string [%v]", results, strQueryMap)
+
 	//var mapResults = make(map[string]string, 1)
 	//rows, err = e.Model(&mapResults).
 	//	Table(TABLE_NAME_PHONE_CALL_SESSIONS).
@@ -186,7 +190,7 @@ func main() {
 		Update()
 
 	var callRawList []PhoneCall
-	strQueryRaw := fmt.Sprintf("SELECT * FROM %v", "phone_call_sessions")
+	strQueryRaw := fmt.Sprintf("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS)
 	rows, err = e.Model(&callRawList).QueryRaw(strQueryRaw)
 	if err != nil {
 		log.Error("QueryRaw error [%v] query [%v]", err.Error(), strQueryRaw)

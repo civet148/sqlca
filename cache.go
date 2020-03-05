@@ -42,8 +42,8 @@ type cacheValue struct {
 	ValueType  valueType `json:"value_type"`  // cache value type
 	TableName  string    `json:"table_name"`  // table name
 	ColumnName string    `json:"column_name"` // table column name
-	CreatedAt  string    `json:"created_at"`  // cache data create time
-	ExpiredAt  string    `json:"expired_at"`  // cache data expire time
+	CreateTime string    `json:"create_time"` // cache data create time
+	ExpireSec  int       `json:"expire_sec"`  // cache data expire time
 	Data       string    `json:"data"`        // index or data json in redis/memcached...
 }
 
@@ -94,29 +94,26 @@ func (e *Engine) getDateTime() string {
 	return time.Now().Format("2006-01-02 15:04:05")
 }
 
-func (e *Engine) queryCacheData(strCondition string) (res []map[string]string, err error) {
-
-	strQuery := fmt.Sprintf("SELECT * FROM %v WHERE %v", e.getTableName(), strCondition)
-	log.Debugf("query sql [%v]", strQuery)
-	return e.QueryMap(strQuery)
-}
-
 func (e *Engine) makeCacheData() (kv *cacheKeyValue) {
 
 	//get current datetime
 	strDateTime := e.getDateTime()
 	//make cache key and data
-	strDataKey := e.makeCacheKey(e.GetPkName(), e.getPkValue())
-
+	strPrimaryCacheKey := e.makeCacheKey(e.GetPkName(), e.getPkValue())
+	m, _ := e.QueryMap("SELECT * FROM %v WHERE %v%v%v=%v%v%v",
+		e.getTableName(),
+		e.getForwardQuote(), e.GetPkName(), e.getBackQuote(),
+		e.getSingleQuote(), e.getPkValue(), e.getSingleQuote())
+	data, _ := json.Marshal(m) //marshal map to json string
 	return &cacheKeyValue{
-		Key: strDataKey,
+		Key: strPrimaryCacheKey,
 		Value: cacheValue{
 			ValueType:  ValueType_Data,
 			TableName:  e.getTableName(),
 			ColumnName: e.GetPkName(),
-			CreatedAt:  strDateTime,
-			ExpiredAt:  strDateTime,
-			Data:       e.marshalModel(),
+			CreateTime: strDateTime,
+			ExpireSec:  e.expireTime,
+			Data:       string(data),
 		},
 	}
 }
@@ -126,9 +123,20 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 	//get current datetime
 	strDateTime := e.getDateTime()
 	//make cache key and data
-	strDataKey := e.makeCacheKey(e.GetPkName(), e.getPkValue())
-
 	for _, v := range e.getIndexes() {
+		//eg. "select `id` from users where `phone`='8615439905001'"
+		//`id` is primary key and `phone` is an index (maybe exist multiple records)
+		m, _ := e.QueryMap("SELECT %v%v%v FROM %v WHERE %v%v%v=%v%v%v",
+			e.getForwardQuote(), e.GetPkName(), e.getBackQuote(),
+			e.getTableName(),
+			e.getForwardQuote(), v.name, e.getBackQuote(),
+			e.getSingleQuote(), v.value, e.getSingleQuote())
+
+		var pkValues []string
+		for _, vv := range m {
+			pkValues = append(pkValues, vv[e.GetPkName()])
+		}
+		data, _ := json.Marshal(pkValues) //marshal []string to json string
 
 		kv := &cacheKeyValue{
 			Key: e.makeCacheKey(v.name, v.value), //index key in cache
@@ -136,9 +144,9 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 				ValueType:  ValueType_Index,
 				TableName:  e.getTableName(),
 				ColumnName: v.name, //index column name in table
-				CreatedAt:  strDateTime,
-				ExpiredAt:  strDateTime,
-				Data:       strDataKey, //pointer to primary key name in cache
+				CreateTime: strDateTime,
+				ExpireSec:  e.expireTime,
+				Data:       string(data), //pointer to primary key name in cache
 			},
 		}
 		kvs = append(kvs, kv)
@@ -149,10 +157,45 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 
 func (e *Engine) makeCache() (kvs []*cacheKeyValue) {
 
-	assert(e.pkValue, "primary key [%v] value is nil, please call Id() method", e.GetPkName())
+	if isNilOrFalse(e.getPkValue()) {
+		e.setPkValue(e.getModelValue(e.GetPkName()))
+	}
+
+	assert(e.getPkValue(), "primary key [%v] value is nil, please call Id() method", e.GetPkName())
 
 	kvs = append(kvs, e.makeCacheData())
 	kvs = append(kvs, e.makeCacheIndexes()...)
-	log.Debugf("makeCache kvs [%+v]", kvs)
 	return
+}
+
+func (e *Engine) updateCache() {
+
+	if isNilOrFalse(e.cache) {
+		log.Warnf("cache instance is nil, can't update to cache")
+	}
+
+	if !e.getUseCache() {
+		log.Debugf("use cache is false, ignore it")
+		return
+	}
+
+	kvs := e.makeCache()
+	for _, v := range kvs {
+		data, _ := json.Marshal(v.Value)
+		if _, err := e.cache.Do("SETEX", v.Key, e.expireTime, string(data)); err != nil {
+			log.Errorf("set key [%v] value [%v] error [%v]", v.Key, string(data), err.Error())
+		} else {
+			//test read from cache
+			kv := cacheKeyValue{
+				Key: v.Key,
+			}
+			var reply interface{}
+			reply, err = e.cache.String(e.cache.Do("GET", v.Key))
+			if err = e.cache.Unmarshal(&kv.Value, reply, err); err != nil {
+				log.Errorf("cache GET key [%v] error %v", v.Key, err.Error())
+			} else {
+				log.Debugf("cache GET key [%v] value %+v", v.Key, kv)
+			}
+		}
+	}
 }

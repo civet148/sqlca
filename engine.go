@@ -104,12 +104,6 @@ func (e *Engine) UseCache() *Engine {
 	return e
 }
 
-// get internal sqlx instance
-// you can use it to do what you want
-//func (e *Engine) DB() *sqlx.DB {
-//	return e.db
-//}
-
 // debug mode on or off
 // if debug on, some method will panic if your condition illegal
 func (e *Engine) Debug(ok bool) {
@@ -121,7 +115,7 @@ func (e *Engine) Debug(ok bool) {
 // notice: will clone a new engine object for orm operations(query/update/insert/upsert)
 func (e *Engine) Model(args ...interface{}) *Engine {
 	assert(args, "model is nil")
-	assert(e.db, "sqlx instance is nil, please call Open or Attach function first")
+	assert(e.db, "sqlx instance is nil, please call Open method first")
 
 	return e.clone(args...)
 }
@@ -137,6 +131,7 @@ func (e *Engine) Table(strName string) *Engine {
 // index which select from cache or update to cache
 // if your index is not a primary key, it will create a cache index and pointer to primary key data
 func (e *Engine) Index(strColumn string, value interface{}) *Engine {
+
 	e.setIndexes(strColumn, value)
 	return e
 }
@@ -233,7 +228,7 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Query() (rowsAffected int64, err error) {
-	assert(e.model, "model is nil, please call Model function first")
+	assert(e.model, "model is nil, please call Model method first")
 	e.setOperType(OperType_Query)
 	strSqlx := e.makeSqlxString()
 
@@ -251,7 +246,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 // return last insert id and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Insert() (lastInsertId int64, err error) {
-	assert(e.model, "model is nil, please call Model function first")
+	assert(e.model, "model is nil, please call Model method first")
 
 	e.setOperType(OperType_Insert)
 	var strSqlx string
@@ -268,7 +263,6 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 		return
 	}
 	log.Debugf("lastInsertId = %v", lastInsertId)
-	e.writeToCache()
 	return
 }
 
@@ -277,7 +271,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 // NOTE: Model function is must be called before call this function and call OnConflict function when you are on postgresql
 func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
-	assert(e.model, "model is nil, please call Model function first")
+	assert(e.model, "model is nil, please call Model method first")
 	assert(e.getSelectColumns(), "update columns is not set")
 
 	e.setOperType(OperType_Upsert)
@@ -296,8 +290,6 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 		return
 	}
 	log.Debugf("lastInsertId = %v", lastInsertId)
-	e.setPkValue(lastInsertId)
-	e.writeToCache()
 	return
 }
 
@@ -306,8 +298,8 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Update() (rowsAffected int64, err error) {
-	assert(e.model, "model is nil, please call Model function first")
-	assert(e.getSelectColumns(), "update columns is not set")
+	assert(e.model, "model is nil, please call Model method first")
+	assert(e.getSelectColumns(), "update columns is not set, please call Select method")
 
 	e.setOperType(OperType_Update)
 
@@ -326,6 +318,10 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 		return
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
+
+	if rowsAffected > 0 {
+		e.updateCache()
+	}
 	return
 }
 
@@ -335,12 +331,13 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
 	assert(e.db, "sqlx db instance is nil")
 	assert(strQuery, "query sql string is nil")
-	assert(e.model, "model is nil, please call Model function first")
+	assert(e.model, "model is nil, please call Model method first")
 
 	e.setOperType(OperType_QueryRaw)
-
+	strQuery = fmt.Sprintf(strQuery, args...)
+	log.Debugf("query [%v]", strQuery)
 	var r *sql.Rows
-	r, err = e.db.Query(strQuery, args...)
+	r, err = e.db.Query(strQuery)
 	if err != nil {
 		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
 		return
@@ -356,7 +353,9 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (results []map[s
 	assert(strQuery, "query sql string is nil")
 	e.setOperType(OperType_QueryMap)
 	var r *sql.Rows
-	r, err = e.db.Query(strQuery, args...)
+	strQuery = fmt.Sprintf(strQuery, args...)
+	log.Debugf("query [%v]", strQuery)
+	r, err = e.db.Query(strQuery)
 	if err != nil {
 		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
 		return
@@ -381,7 +380,7 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	}
 
 	var r sql.Result
-	r, err = e.db.Exec(strQuery, args...)
+	r, err = e.db.Exec(fmt.Sprintf(strQuery, args...))
 	if err != nil {
 		log.Errorf("error [%v] model [%+v]", err, e.model)
 		return

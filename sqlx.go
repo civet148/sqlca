@@ -179,9 +179,15 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		break //only check first argument
 	}
 
+	var selectColumns []string
 	engine.dict = newReflector(engine.model).ToMap(TAG_NAME_DB)
 	for k, _ := range engine.dict {
-		engine.selectColumns = append(engine.selectColumns, k)
+		selectColumns = append(selectColumns, k)
+	}
+	if len(selectColumns) == 0 {
+		engine.setSelectColumns("*")
+	} else {
+		engine.setSelectColumns(selectColumns...)
 	}
 	return engine
 }
@@ -191,15 +197,19 @@ func (e *Engine) clean() *Engine {
 	return e
 }
 
-func (e Engine) setUseCache(ok bool) {
-	e.bUseCache = ok
+func (e *Engine) setUseCache(enable bool) {
+	e.bUseCache = enable
 }
 
-func (e Engine) getUseCache() bool {
+func (e *Engine) getUseCache() bool {
 	return e.bUseCache
 }
 
-func (e Engine) setIndexes(name string, value interface{}) {
+func (e *Engine) getModelValue(strKey string) interface{} {
+	return e.dict[strKey]
+}
+
+func (e *Engine) setIndexes(name string, value interface{}) {
 
 	assert(value, "index value is nil")
 	typ := reflect.TypeOf(value)
@@ -213,7 +223,7 @@ func (e Engine) setIndexes(name string, value interface{}) {
 	})
 }
 
-func (e Engine) getIndexes() []TableIndex {
+func (e *Engine) getIndexes() []TableIndex {
 	return e.cacheIndexes
 }
 
@@ -261,7 +271,7 @@ func (e *Engine) getPkWhere() (strPkCondition string) {
 	strPkValue := e.getPkValue()
 	if isNilOrFalse(strPkValue) {
 		//use model primary value
-		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), e.dict[pkName], e.getSingleQuote())
+		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), e.getModelValue(pkName), e.getSingleQuote())
 	} else {
 		//use custom primary value
 		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), strPkValue, e.getSingleQuote())
@@ -481,7 +491,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 	for _, v := range strColumns {
 
 		if e.isColumnSelected(v, strExcepts...) {
-			strVal := handleSpecialChars(fmt.Sprintf("%v", e.dict[v]))
+			strVal := handleSpecialChars(fmt.Sprintf("%v", e.getModelValue(v)))
 			c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), v, e.getBackQuote(), e.getSingleQuote(), strVal, e.getSingleQuote()) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
 		}
@@ -619,12 +629,4 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 	strOnConflictUpdates := e.getOnConflictUpdates()
 	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) %v", e.strTableName, strColumns, strValues, strOnConflictUpdates)
 	return
-}
-
-func (e *Engine) readFromCache() {
-
-}
-
-func (e *Engine) writeToCache() {
-
 }

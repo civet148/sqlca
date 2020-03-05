@@ -69,7 +69,7 @@ func main() {
 		AdminDebugData:       "",
 		ParticipantDebugData: "",
 		AdminRating:          0,
-		AdminComment:         "````''''",
+		AdminComment:         "````'|\\;:<>?/!@#$%^&*()_+*",
 		ParticipantRating:    0,
 		ParticipantComment:   "",
 		Date:                 0,
@@ -167,33 +167,21 @@ func main() {
 
 	strQueryMap := fmt.Sprintf("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS)
 	results, _ := e.QueryMap(strQueryMap)
-	log.Debugf("QueryMap results %+v query string [%v]", results, strQueryMap)
-
-	//var mapResults = make(map[string]string, 1)
-	//rows, err = e.Model(&mapResults).
-	//	Table(TABLE_NAME_PHONE_CALL_SESSIONS).
-	//	Id(1).
-	//	Select("admin_id", "participant_id").
-	//	Query()
-	//if err != nil {
-	//	_ = rows
-	//	log.Errorf(err.Error())
-	//	return
-	//}
-	//log.Debugf("query result rows [%v] map [%+v]", rows, mapResults)
+	log.Debugf("QueryMap results %+v query string [%v]", log.JsonDebugString(results), strQueryMap)
 
 	callUpsert.State = 3
 	rows, err = e.Model(&callUpsert).
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
 		Id(1).
-		Select("state", "admin_comment").
+		Select("state").
+		UseCache().
+		Index("admin_comment", "888888888").
 		Update()
 
 	var callRawList []PhoneCall
-	strQueryRaw := fmt.Sprintf("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS)
-	rows, err = e.Model(&callRawList).QueryRaw(strQueryRaw)
+	rows, err = e.Model(&callRawList).QueryRaw("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS)
 	if err != nil {
-		log.Error("QueryRaw error [%v] query [%v]", err.Error(), strQueryRaw)
+		log.Error("QueryRaw error [%v]", err.Error())
 		return
 	}
 	log.Debugf("QueryRaw rows [%v] results %+v", rows, callRawList)

@@ -31,11 +31,11 @@ func (v valueType) GoString() string {
 func (v valueType) String() string {
 	switch v {
 	case ValueType_Data:
-		return "ValueType_Data"
+		return "Data"
 	case ValueType_Index:
-		return "ValueType_Index"
+		return "Index"
 	}
-	return "ValueType_Unknown"
+	return "Unknown"
 }
 
 type cacheValue struct {
@@ -44,7 +44,7 @@ type cacheValue struct {
 	ColumnName string    `json:"column_name"` // table column name
 	CreateTime string    `json:"create_time"` // cache data create time
 	ExpireSec  int       `json:"expire_sec"`  // cache data expire time
-	Data       string    `json:"data"`        // index or data json in redis/memcached...
+	Data       string    `json:"data"`        // index or data json in redis
 }
 
 type cacheIndex struct {
@@ -134,7 +134,8 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 
 		var pkValues []string
 		for _, vv := range m {
-			pkValues = append(pkValues, vv[e.GetPkName()])
+			strCachePrimaryKey := e.makeCacheKey(e.GetPkName(), vv[e.GetPkName()])
+			pkValues = append(pkValues, strCachePrimaryKey)
 		}
 		data, _ := json.Marshal(pkValues) //marshal []string to json string
 
@@ -194,7 +195,7 @@ func (e *Engine) updateCache() {
 			if err = e.cache.Unmarshal(&kv.Value, reply, err); err != nil {
 				log.Errorf("cache GET key [%v] error %v", v.Key, err.Error())
 			} else {
-				log.Debugf("cache GET key [%v] value %+v", v.Key, kv)
+				log.Debugf("cache GET key [%v] value %+v", v.Key, kv.Value)
 			}
 		}
 	}

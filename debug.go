@@ -73,6 +73,13 @@ func fmtParentCaller(strFmt string) string {
 	return strFmt
 }
 
+func (e *Engine) isCacheNil() bool {
+	if e.cache == nil {
+		return true
+	}
+	return false
+}
+
 func (e *Engine) setDebug(ok bool) {
 	e.debug = ok
 	log.SetLevel(log.LEVEL_DEBUG)

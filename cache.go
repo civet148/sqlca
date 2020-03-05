@@ -171,8 +171,9 @@ func (e *Engine) makeCache() (kvs []*cacheKeyValue) {
 
 func (e *Engine) updateCache() {
 
-	if isNilOrFalse(e.cache) {
+	if e.isCacheNil() {
 		log.Warnf("cache instance is nil, can't update to cache")
+		return
 	}
 
 	if !e.getUseCache() {

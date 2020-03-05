@@ -3,6 +3,7 @@ package sqlca
 import (
 	"database/sql"
 	"fmt"
+	"github.com/civet148/gotools/log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -98,6 +99,27 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 	if tagVal != "" {
 		s.dict[tagVal] = val.Interface()
 	}
+}
+
+func (e *Engine) fetchRows(r *sql.Rows) (count int64, err error) {
+
+	for r.Next() {
+		var c int64
+
+		if e.getModelType() == ModelType_BaseType {
+			if c, err = e.fetchRow(r, e.model.([]interface{})...); err != nil {
+				log.Errorf("fetchRow error [%v]", err.Error())
+				return
+			}
+		} else {
+			if c, err = e.fetchRow(r, e.model); err != nil {
+				log.Errorf("fetchRow error [%v]", err.Error())
+				return
+			}
+		}
+		count += c
+	}
+	return
 }
 
 //fetch row to struct or slice, must call rows.Next() before call this function

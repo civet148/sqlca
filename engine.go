@@ -99,7 +99,7 @@ func (e *Engine) Open(adapterType AdapterType, strUrl string, expireSeconds ...i
 	return e
 }
 
-func (e *Engine) Cache() *Engine {
+func (e *Engine) UseCache() *Engine {
 	e.setUseCache(true)
 	return e
 }
@@ -231,13 +231,9 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 
 // orm query
 // return rows affected and error, if err is not nil must be something wrong
-// Model function is must be called before call this function
-func (e *Engine) Query() (rows int64, err error) {
+// NOTE: Model function is must be called before call this function
+func (e *Engine) Query() (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
-	if e.getCustomWhere() != "" {
-		e.setUseCache(false) //custom where condition query/update can't refresh redis
-	}
-
 	e.setOperType(OperType_Query)
 	strSqlx := e.makeSqlxString()
 
@@ -248,29 +244,12 @@ func (e *Engine) Query() (rows int64, err error) {
 	}
 
 	defer r.Close()
-
-	for r.Next() {
-		var c int64
-
-		if e.getModelType() == ModelType_BaseType {
-			if c, err = e.fetchRow(r, e.model.([]interface{})...); err != nil {
-				log.Error("fetchRow error [%v]", err.Error())
-				return
-			}
-		} else {
-			if c, err = e.fetchRow(r, e.model); err != nil {
-				log.Error("fetchRow error [%v]", err.Error())
-				return
-			}
-		}
-		rows += c
-	}
-	return
+	return e.fetchRows(r)
 }
 
 // orm insert
 // return last insert id and error, if err is not nil must be something wrong
-// Model function is must be called before call this function
+// NOTE: Model function is must be called before call this function
 func (e *Engine) Insert() (lastInsertId int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
 
@@ -295,7 +274,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 
 // orm insert or update if key(s) conflict
 // return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe id return 0
-// Model function is must be called before call this function and call OnConflict function when you are on postgresql
+// NOTE: Model function is must be called before call this function and call OnConflict function when you are on postgresql
 func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
 	assert(e.model, "model is nil, please call Model function first")
@@ -325,16 +304,12 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 // orm update from model
 // strColumns... if set, columns will be updated, if none all columns in model will be updated except primary key
 // return rows affected and error, if err is not nil must be something wrong
-// Model function is must be called before call this function
+// NOTE: Model function is must be called before call this function
 func (e *Engine) Update() (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model function first")
 	assert(e.getSelectColumns(), "update columns is not set")
 
 	e.setOperType(OperType_Update)
-
-	if e.getCustomWhere() != "" {
-		e.setUseCache(false) //custom where condition query/update can't refresh redis
-	}
 
 	var strSqlx string
 	strSqlx = e.makeSqlxString()
@@ -355,14 +330,17 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 }
 
 // use raw sql to query results
-// return rows and error, if err is not nil must be something wrong
-// Model function is must be called before call this function
+// return rows affected and error, if err is not nil must be something wrong
+// NOTE: Model function is must be called before call this function
 func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
+	assert(e.db, "sqlx db instance is nil")
 	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model function first")
+	if e.getUseCache() {
+		assert(false, "ExecRaw method can't use cache")
+	}
 
 	e.setOperType(OperType_QueryRaw)
-	e.setUseCache(false) //custom where condition query/update can't refresh redis
 
 	var r *sql.Rows
 	r, err = e.db.Query(strQuery, args...)
@@ -372,25 +350,20 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	}
 
 	defer r.Close()
-	for r.Next() {
-		var c int64
-		if c, err = e.fetchRow(r, e.model); err != nil {
-			log.Errorf("%v", err.Error())
-			return
-		}
-		rowsAffected += c
-	}
-	log.Debugf("rowsAffected [%v] query [%v]", rowsAffected, strQuery)
-	return
+	return e.fetchRows(r)
 }
 
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
-// return rows and error, if err is not nil must be something wrong
+// return rows affected and error, if err is not nil must be something wrong
+// NOTE: Model function is must be called before call this function
 func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
+	assert(e.db, "sqlx db instance is nil")
 	assert(strQuery, "query sql string is nil")
 
 	e.setOperType(OperType_ExecRaw)
-	e.setUseCache(false) //custom where condition query/update can't refresh redis
+	if e.getUseCache() {
+		assert(false, "ExecRaw method can't use cache")
+	}
 
 	var r sql.Result
 	r, err = e.db.Exec(strQuery, args...)

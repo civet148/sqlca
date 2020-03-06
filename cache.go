@@ -100,11 +100,18 @@ func (e *Engine) makeCacheData() (kv *cacheKeyValue) {
 	strDateTime := e.getDateTime()
 	//make cache key and data
 	strPrimaryCacheKey := e.makeCacheKey(e.GetPkName(), e.getPkValue())
-	m, _ := e.QueryMap("SELECT * FROM %v WHERE %v%v%v=%v%v%v",
+	var results []map[string]string
+	_, err := e.Model(&results).QueryMap("SELECT * FROM %v WHERE %v%v%v=%v%v%v",
 		e.getTableName(),
 		e.getForwardQuote(), e.GetPkName(), e.getBackQuote(),
 		e.getSingleQuote(), e.getPkValue(), e.getSingleQuote())
-	data, _ := json.Marshal(m) //marshal map to json string
+
+	if err != nil {
+		log.Errorf("%s", err)
+		return
+	}
+
+	data, _ := json.Marshal(results) //marshal map to json string
 	return &cacheKeyValue{
 		Key: strPrimaryCacheKey,
 		Value: cacheValue{
@@ -126,14 +133,16 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 	for _, v := range e.getIndexes() {
 		//eg. "select `id` from users where `phone`='8615439905001'"
 		//`id` is primary key and `phone` is an index (maybe exist multiple records)
-		m, _ := e.QueryMap("SELECT %v%v%v FROM %v WHERE %v%v%v=%v%v%v",
-			e.getForwardQuote(), e.GetPkName(), e.getBackQuote(),
-			e.getTableName(),
-			e.getForwardQuote(), v.name, e.getBackQuote(),
-			e.getSingleQuote(), v.value, e.getSingleQuote())
-
+		var results []map[string]string
+		_, err := e.Model(&results).QueryMap("SELECT %v%v%v FROM %v WHERE %v%v%v=%v%v%v",
+			e.getForwardQuote(), e.GetPkName(), e.getBackQuote(), e.getTableName(),
+			e.getForwardQuote(), v.name, e.getBackQuote(), e.getSingleQuote(), v.value, e.getSingleQuote())
+		if err != nil {
+			log.Errorf("%s", err)
+			return
+		}
 		var pkValues []string
-		for _, vv := range m {
+		for _, vv := range results {
 			strCachePrimaryKey := e.makeCacheKey(e.GetPkName(), vv[e.GetPkName()])
 			pkValues = append(pkValues, strCachePrimaryKey)
 		}

@@ -166,8 +166,12 @@ func main() {
 	log.Debugf("query result rows [%v] id slice %v ", rows, idList)
 
 	strQueryMap := fmt.Sprintf("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS)
-	results, _ := e.QueryMap(strQueryMap)
-	log.Debugf("QueryMap results %+v query string [%v]", log.JsonDebugString(results), strQueryMap)
+	var results []map[string]string
+	if rows, err = e.Model(&results).QueryMap(strQueryMap); err != nil {
+		log.Debugf("QueryMap rows [%v] error [%v] query sql [%+v] ", rows, err.Error(), strQueryMap)
+	} else {
+		log.Debugf("QueryMap rows [%v] results %+v ", rows, log.JsonDebugString(results))
+	}
 
 	callUpsert.State = 3
 	rows, err = e.Model(&callUpsert).

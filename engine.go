@@ -347,10 +347,13 @@ func (e *Engine) QueryRaw(strFmt string, args ...interface{}) (rowsAffected int6
 	return e.fetchRows(r)
 }
 
-// use raw sql to query results into a map slice
+// use raw sql to query results into a map slice (model type is []map[string]string)
 // return results and error
-func (e *Engine) QueryMap(strFmt string, args ...interface{}) (results []map[string]string, err error) {
+// NOTE: Model function is must be called before call this function
+func (e *Engine) QueryMap(strFmt string, args ...interface{}) (rowsAffected int64, err error) {
 	assert(strFmt, "query sql string is nil")
+	assert(e.model, "model is nil, please call Model method first")
+
 	e.setOperType(OperType_QueryMap)
 	var r *sql.Rows
 	strQuery := fmt.Sprintf(strFmt, args...)
@@ -360,16 +363,17 @@ func (e *Engine) QueryMap(strFmt string, args ...interface{}) (results []map[str
 		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
 		return
 	}
+
 	for r.Next() {
+		rowsAffected++
 		fetcher, _ := e.getFecther(r)
-		results = append(results, fetcher.mapValues)
+		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
 	}
 	return
 }
 
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows affected and error, if err is not nil must be something wrong
-// NOTE: Model function is must be called before call this function
 func (e *Engine) ExecRaw(strFmt string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
 	assert(e.db, "sqlx db instance is nil")
 	assert(strFmt, "query sql string is nil")

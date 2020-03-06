@@ -26,7 +26,7 @@ type UrlInfo struct {
 }
 
 //URL have some special characters in password(支持URL中密码包含特殊字符)
-func parseUrl(strUrl string) (ui *UrlInfo) {
+func ParseUrl(strUrl string) (ui *UrlInfo) {
 
 	ui = &UrlInfo{Queries: make(map[string]string, 1)}
 
@@ -142,7 +142,7 @@ func getHostPort(strHost string) (ip, port string) {
 //DSN="root:123456@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4"
 func (e *Engine) parseMysqlUrl(strUrl string) (strDSN string) {
 
-	ui := parseUrl(strUrl)
+	ui := ParseUrl(strUrl)
 	strDSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
 	var queries []string
 	for k, v := range ui.Queries {
@@ -157,7 +157,7 @@ func (e *Engine) parseMysqlUrl(strUrl string) (strDSN string) {
 //DSN="host=127.0.0.1 port=5432 user=root password=123456 dbname=mydb sslmode=disable"
 func (e *Engine) parsePostgresUrl(strUrl string) (strDSN string) {
 
-	ui := parseUrl(strUrl)
+	ui := ParseUrl(strUrl)
 	strDatabase := getDatabaseName(ui.Path)
 	strIP, strPort := getHostPort(ui.Host)
 
@@ -186,7 +186,7 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
 	var isWindowsAuth bool
 	var dsnArgs []string
 
-	ui := parseUrl(strUrl)
+	ui := ParseUrl(strUrl)
 	if strWindowsAuth, ok := ui.Queries["windows"]; ok {
 		if strWindowsAuth == "true" {
 			isWindowsAuth = true
@@ -217,7 +217,7 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
 //DSN: `{"password":"123456","db_index":0,"master_host":"127.0.0.1:6379","replicate_hosts":["127.0.0.1:6380","127.0.0.1:6381"]}`
 func (e *Engine) parseRedisUrl(strUrl string) (strDSN string) {
 
-	ui := parseUrl(strUrl)
+	ui := ParseUrl(strUrl)
 	cc := &redigogo.Config{
 		Password:   ui.User, //redis have no user, just password
 		MasterHost: fmt.Sprintf("%v", ui.Host),

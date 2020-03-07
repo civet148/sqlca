@@ -26,8 +26,8 @@ type Engine struct {
 	model           interface{}            // data model [struct object or struct slice]
 	dict            map[string]interface{} // data model db dictionary
 	strTableName    string                 // table name
-	pkName          string                 // primary key of table, default 'id'
-	pkValue         interface{}            // primary key's value
+	strPkName       string                 // primary key of table, default 'id'
+	strPkValue      string                 // primary key's value
 	strWhere        string                 // where condition to query or update
 	strLimit        string                 // limit
 	strOffset       string                 // offset (only for postgres)
@@ -47,7 +47,7 @@ func NewEngine(debug bool) *Engine {
 
 	return &Engine{
 		debug:      debug,
-		pkName:     DEFAULT_PRIMARY_KEY_NAME,
+		strPkName:  DEFAULT_PRIMARY_KEY_NAME,
 		expireTime: DEFAULT_CAHCE_EXPIRE_SECONDS,
 	}
 }
@@ -130,6 +130,7 @@ func (e *Engine) Table(strName string) *Engine {
 
 // index which select from cache or update to cache
 // if your index is not a primary key, it will create a cache index and pointer to primary key data
+// index or data in cache key is 'sqlx:cache:[table name]:[column name]:[column value]', eg. 'sqlx:cache:users:phone:8613055556666'
 func (e *Engine) Index(strColumn string, value interface{}) *Engine {
 
 	e.setIndexes(strColumn, value)
@@ -139,12 +140,12 @@ func (e *Engine) Index(strColumn string, value interface{}) *Engine {
 // set orm primary key's name, default named 'id'
 func (e *Engine) SetPkName(strName string) *Engine {
 	assert(strName, "name is nil")
-	e.pkName = strName
+	e.strPkName = strName
 	return e
 }
 
 func (e *Engine) GetPkName() string {
-	return e.pkName
+	return e.strPkName
 }
 
 // set orm primary key's value
@@ -319,9 +320,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
 
-	if rowsAffected > 0 {
-		e.updateCache()
-	}
+	e.updateCache()
 	return
 }
 

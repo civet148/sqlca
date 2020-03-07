@@ -149,7 +149,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		debug:        e.debug,
 		adapterSqlx:  e.adapterSqlx,
 		adapterCache: e.adapterCache,
-		pkName:       e.pkName,
+		strPkName:    e.strPkName,
 		expireTime:   e.expireTime,
 	}
 
@@ -212,6 +212,10 @@ func (e *Engine) getModelValue(strKey string) interface{} {
 func (e *Engine) setIndexes(name string, value interface{}) {
 
 	assert(value, "index value is nil")
+
+	if name == e.GetPkName() {
+		return
+	}
 	typ := reflect.TypeOf(value)
 	switch typ.Kind() {
 	case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array, reflect.Func, reflect.Ptr, reflect.Chan, reflect.UnsafePointer:
@@ -236,14 +240,32 @@ func (e *Engine) setTableName(strName string) {
 }
 
 func (e *Engine) setPkValue(value interface{}) {
-	e.pkValue = value
+
+	var strValue string
+	switch value.(type) {
+	case string:
+		strValue = value.(string)
+		if strValue == "" {
+			assert(false, "primary key's value is nil")
+		}
+	case int8, int16, int, int32, int64, uint8, uint16, uint, uint32, uint64:
+		{
+			strValue = fmt.Sprintf("%v", value)
+			if strValue == "0" {
+				assert(false, "primary key's value is 0")
+			}
+		}
+	default:
+		assert(false, "primary key's value type illegal")
+	}
+	e.strPkValue = strValue
 }
 
-func (e *Engine) getPkValue() interface{} {
-	if e.pkValue == nil {
-		e.pkValue = e.getModelValue(e.GetPkName()) //get primary value from model dictionary
+func (e *Engine) getPkValue() string {
+	if e.strPkValue == "" {
+		e.strPkValue = fmt.Sprintf("%v", e.getModelValue(e.GetPkName())) //get primary value from model dictionary
 	}
-	return e.pkValue
+	return e.strPkValue
 }
 
 func (e *Engine) setSelectColumns(strColumns ...string) {
@@ -270,15 +292,11 @@ func (e *Engine) getCustomWhere() string {
 // primary key value like 'id'=xxx condition
 func (e *Engine) getPkWhere() (strPkCondition string) {
 
-	pkName := e.GetPkName()
-	pkValue := e.getPkValue()
-	if pkValue == nil {
-		//use model primary value
-		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), e.getModelValue(pkName), e.getSingleQuote())
-	} else {
-		//use custom primary value
-		strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), pkName, e.getBackQuote(), e.getSingleQuote(), pkValue, e.getSingleQuote())
+	if e.isPkValueNil() {
+		assert(false, "primary key's value is nil")
 	}
+	strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v",
+		e.getForwardQuote(), e.GetPkName(), e.getBackQuote(), e.getSingleQuote(), e.getPkValue(), e.getSingleQuote())
 	return
 }
 
@@ -409,8 +427,19 @@ func (e *Engine) getGroupBy() (strGroupBy string) {
 	return fmt.Sprintf(" GROUP BY %v", strings.Join(e.groupByColumns, ","))
 }
 
-func (e *Engine) isPrimaryKeyInteger() bool {
-	switch e.pkValue.(type) {
+func (e *Engine) isPkValueNil() bool {
+
+	if e.getPkValue() == "" {
+		return true
+	}
+
+	return false
+}
+
+func (e *Engine) isPkInteger() bool {
+
+	id := e.getModelValue(e.GetPkName())
+	switch id.(type) {
 	case int8, int16, int, int32, int64, uint8, uint16, uint, uint32, uint64:
 		return true
 	}
@@ -510,10 +539,10 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		{
-			strDo = fmt.Sprintf("`%v`=LAST_INSERT_ID(`%v`)", e.pkName, e.pkName)
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.pkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
+			strDo = fmt.Sprintf("`%v`=LAST_INSERT_ID(`%v`)", e.strPkName, e.strPkName)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
 			if !isNilOrFalse(strUpdates) {
-				if e.isPrimaryKeyInteger() { // primary key type is a integer
+				if e.isPkInteger() { // primary key type is a integer
 					strDo = fmt.Sprintf("%v, %v", strDo, strUpdates)
 				} else {
 					strDo = strUpdates
@@ -522,7 +551,7 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 		}
 	case AdapterSqlx_Postgres:
 		{
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.pkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v RETURNING %v", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}

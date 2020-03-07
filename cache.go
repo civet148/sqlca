@@ -201,17 +201,59 @@ func (e *Engine) updateCache() {
 		if _, err := e.cache.Do("SETEX", v.Key, e.expireTime, string(data)); err != nil {
 			log.Errorf("set key [%v] value [%v] error [%v]", v.Key, string(data), err.Error())
 		} else {
-			//test read from cache
-			kv := cacheKeyValue{
-				Key: v.Key,
-			}
-			var reply interface{}
-			reply, err = e.cache.String(e.cache.Do("GET", v.Key))
-			if err = e.cache.Unmarshal(&kv.Value, reply, err); err != nil {
-				log.Errorf("cache GET key [%v] error %v", v.Key, err.Error())
-			} else {
-				log.Debugf("cache GET key [%v] value %+v", v.Key, kv.Value)
+			if e.isDebug() {
+				e.getCacheValue(v.Key)
 			}
 		}
 	}
+}
+
+func (e *Engine) queryCache() (ok bool) {
+
+	if e.isCacheNil() && e.isDebug() {
+		log.Warnf("cache instance is nil, can't update to cache")
+		return
+	}
+
+	if !e.getUseCache() && e.isDebug() {
+		log.Warnf("use cache is disabled, ignore it")
+		return
+	}
+
+	if e.isPkValueNil() && len(e.getIndexes()) == 0 && e.isDebug() {
+		log.Warnf("query condition primary key's value and index not set")
+		return
+	}
+
+	if e.isPkValueNil() {
+		return e.queryCacheByIndex()
+	}
+	return e.queryCacheById()
+}
+
+func (e *Engine) getCacheValue(strKey string) (kv cacheKeyValue, ok bool) {
+	kv = cacheKeyValue{
+		Key: strKey,
+	}
+	var err error
+	var reply interface{}
+	reply, err = e.cache.String(e.cache.Do("GET", strKey))
+	if err = e.cache.Unmarshal(&kv.Value, reply, err); err != nil {
+		log.Warnf("cache GET key [%v] error %v", strKey, err.Error())
+		return kv, false
+	}
+	log.Debugf("cache GET key [%v] value %+v", strKey, kv.Value)
+	return kv, true
+}
+
+func (e *Engine) queryCacheById() (ok bool) {
+
+	//strKey := e.makeCacheKey(e.GetPkName(), e.getPkValue())
+
+	return
+}
+
+func (e *Engine) queryCacheByIndex() (ok bool) {
+
+	return
 }

@@ -10,6 +10,7 @@ import (
 	_ "github.com/lib/pq"              //postgres golang driver
 	_ "github.com/mattn/go-adodb"      //mssql golang driver
 	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
+	"strings"
 )
 
 type Engine struct {
@@ -345,45 +346,55 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 // use raw sql to query results
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
-func (e *Engine) QueryRaw(strFmt string, args ...interface{}) (rowsAffected int64, err error) {
+func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
 	assert(e.db, "sqlx db instance is nil")
-	assert(strFmt, "query sql string is nil")
+	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model method first")
 
 	e.setOperType(OperType_QueryRaw)
-	strQuery := fmt.Sprintf(strFmt, args...)
-	log.Debugf("query [%v]", strQuery)
-	var r *sql.Rows
-	r, err = e.db.Query(strQuery)
+
+	var r *sqlx.Rows
+	if e.isDebug() {
+		log.Debugf("query [%v] args %+v", strQuery, args)
+	}
+	count := strings.Count(strQuery, "?")
+	if count > 0 && count == len(args) { //question placeholder exist
+		r, err = e.db.Queryx(strQuery, args...)
+	} else {
+		r, err = e.db.Queryx(fmt.Sprintf(strQuery, args...))
+	}
+
 	if err != nil {
 		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
 		return
 	}
 
 	defer r.Close()
-	return e.fetchRows(r)
+	return e.fetchRows(r.Rows)
 }
 
 // use raw sql to query results into a map slice (model type is []map[string]string)
 // return results and error
 // NOTE: Model function is must be called before call this function
-func (e *Engine) QueryMap(strFmt string, args ...interface{}) (rowsAffected int64, err error) {
-	assert(strFmt, "query sql string is nil")
+func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
+	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model method first")
 
 	e.setOperType(OperType_QueryMap)
-	var r *sql.Rows
-	strQuery := fmt.Sprintf(strFmt, args...)
-	log.Debugf("query [%v]", strQuery)
-	r, err = e.db.Query(strQuery)
-	if err != nil {
-		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
-		return
+	var r *sqlx.Rows
+	if e.isDebug() {
+		log.Debugf("query [%v] args %+v", strQuery, args)
+	}
+	count := strings.Count(strQuery, "?")
+	if count > 0 && count == len(args) { //question placeholder exist
+		r, err = e.db.Queryx(strQuery, args...)
+	} else {
+		r, err = e.db.Queryx(fmt.Sprintf(strQuery, args...))
 	}
 
 	for r.Next() {
 		rowsAffected++
-		fetcher, _ := e.getFecther(r)
+		fetcher, _ := e.getFecther(r.Rows)
 		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
 	}
 	return
@@ -391,18 +402,22 @@ func (e *Engine) QueryMap(strFmt string, args ...interface{}) (rowsAffected int6
 
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows affected and error, if err is not nil must be something wrong
-func (e *Engine) ExecRaw(strFmt string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
+func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
 	assert(e.db, "sqlx db instance is nil")
-	assert(strFmt, "query sql string is nil")
+	assert(strQuery, "query sql string is nil")
 
 	e.setOperType(OperType_ExecRaw)
-	if e.getUseCache() {
-		assert(false, "ExecRaw method can't use cache")
-	}
 
 	var r sql.Result
-	strQuery := fmt.Sprintf(strFmt, args...)
-	r, err = e.db.Exec(strQuery)
+	if e.isDebug() {
+		log.Debugf("query [%v] args %+v", strQuery, args)
+	}
+	count := strings.Count(strQuery, "?")
+	if count > 0 && count == len(args) { //question placeholder exist
+		r, err = e.db.Exec(strQuery, args...)
+	} else {
+		r, err = e.db.Exec(fmt.Sprintf(strQuery, args...))
+	}
 	if err != nil {
 		log.Errorf("error [%v] model [%+v]", err, e.model)
 		return
@@ -417,7 +432,6 @@ func (e *Engine) ExecRaw(strFmt string, args ...interface{}) (rowsAffected, last
 		log.Errorf("get last insert id error [%v] query [%v]", err.Error(), strQuery)
 		return
 	}
-	log.Debugf("RowsAffected [%v] LastInsertId [%v] query [%v] ", rowsAffected, lastInsertId, strQuery)
 	return
 }
 

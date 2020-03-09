@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca"
 	"time"
@@ -89,7 +88,8 @@ func main() {
 	var lastInsertId int64
 
 	_ = lastInsertId
-
+	_ = callQuery
+	_ = callList
 	// insert a record
 	lastInsertId, err = e.Model(&callUpsert).
 		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
@@ -189,29 +189,27 @@ func main() {
 	}
 	log.Debugf("query result rows [%v] id slice %v ", rows, idList)
 
-	strQueryMap := fmt.Sprintf("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS)
 	var results []map[string]string
-	if rows, err = e.Model(&results).QueryMap(strQueryMap); err != nil {
-		log.Debugf("QueryMap rows [%v] error [%v] query sql [%+v] ", rows, err.Error(), strQueryMap)
+	if rows, err = e.Model(&results).QueryMap("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS); err != nil {
+		log.Debugf("QueryMap rows [%v] error [%v]", rows, err.Error())
 	} else {
 		log.Debugf("QueryMap rows [%v] results %+v ", rows, log.JsonDebugString(results))
 	}
 
 	var callRawList []PhoneCall
-	rows, err = e.Model(&callRawList).QueryRaw("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS)
+	rows, err = e.Model(&callRawList).QueryRaw("SELECT * FROM phone_call_sessions WHERE id=?", 1)
 	if err != nil {
 		log.Error("QueryRaw error [%v]", err.Error())
 		return
 	}
 	log.Debugf("QueryRaw rows [%v] results %+v", rows, callRawList)
 
-	strUpdateRaw := fmt.Sprintf("UPDATE %v SET state='%v' WHERE id='%v'", "phone_call_sessions", 9, 1)
-	rows, lastInsertId, err = e.ExecRaw(strUpdateRaw)
+	rows, lastInsertId, err = e.ExecRaw("UPDATE %v SET state=%v WHERE id=%v", TABLE_NAME_PHONE_CALL_SESSIONS, 9, 1)
 	if err != nil {
-		log.Error("ExecRaw error [%v] query [%v]", err.Error(), strUpdateRaw)
+		log.Error("ExecRaw error [%v]", err.Error())
 		return
 	}
-	log.Debugf("ExecRaw rows [%v] last insert id [%v] query [%v]", rows, lastInsertId, strUpdateRaw)
+	log.Debugf("ExecRaw rows [%v] last insert id [%v]", rows, lastInsertId)
 
 	//e.Update("123456") //not call Model(), this is a wrong operation, will panic
 

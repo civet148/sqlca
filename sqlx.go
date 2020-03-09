@@ -558,11 +558,10 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		{
-			strDo = fmt.Sprintf("`%v`=LAST_INSERT_ID(`%v`)", e.strPkName, e.strPkName)
 			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
 			if !isNilOrFalse(strUpdates) {
 				if e.isPkInteger() { // primary key type is a integer
-					strDo = fmt.Sprintf("%v, %v", strDo, strUpdates)
+					strDo = fmt.Sprintf("%v", strUpdates)
 				} else {
 					strDo = strUpdates
 				}

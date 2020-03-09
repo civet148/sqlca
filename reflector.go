@@ -15,10 +15,9 @@ type ModelReflector struct {
 }
 
 type Fetcher struct {
-	count     int               //column count
-	row       *sql.Row          //first row
-	cols      []string          //column names
-	types     []*sql.ColumnType //column types
+	count     int               //column count in db table
+	cols      []string          //column names in db table
+	types     []*sql.ColumnType //column types in db table
 	arrValues [][]byte          //value slice
 	mapValues map[string]string //value map
 	arrIndex  int               //fetch index
@@ -30,6 +29,15 @@ func newReflector(v interface{}) *ModelReflector {
 		value: v,
 		dict:  make(map[string]interface{}),
 	}
+}
+
+// map[string]string to [][]byte
+func mapToBytesSlice(m map[string]string) (arrays [][]byte) {
+	for _, v := range m {
+		arr := []byte(v)
+		arrays = append(arrays, arr)
+	}
+	return
 }
 
 // handle special characters, prevent SQL inject
@@ -146,7 +154,9 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err
 			}
 		case reflect.Slice:
 			{
-				val.Set(reflect.MakeSlice(val.Type(), 0, 0)) //make slice for storage
+				if val.IsNil() {
+					val.Set(reflect.MakeSlice(val.Type(), 0, 0)) //make slice for storage
+				}
 				for {
 					fetcher, _ := e.getFecther(rows)
 					elemTyp := val.Type().Elem()
@@ -174,6 +184,68 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err
 			{
 				e.fetchToBaseType(fetcher, typ, val)
 				count++
+			}
+		}
+	}
+	return
+}
+
+//fetch cache data to struct or slice or map
+func (e *Engine) fetchCache(fetchers []*Fetcher, args ...interface{}) (count int64, err error) {
+
+	for i, fetcher := range fetchers {
+
+		for _, arg := range args {
+
+			typ := reflect.TypeOf(arg)
+			val := reflect.ValueOf(arg)
+
+			if typ.Kind() == reflect.Ptr {
+
+				typ = typ.Elem()
+				val = val.Elem()
+			}
+
+			switch typ.Kind() {
+			case reflect.Map:
+				{
+					err = e.fetchToMap(fetcher, arg)
+					count++
+				}
+			case reflect.Slice:
+				{
+					if val.IsNil() {
+						val.Set(reflect.MakeSlice(val.Type(), 0, 0)) //make slice for storage
+					}
+					for {
+						fetcher = fetchers[i]
+						elemTyp := val.Type().Elem()
+						elemVal := reflect.New(elemTyp).Elem()
+
+						if elemTyp.Kind() == reflect.Struct {
+							err = e.fetchToStruct(fetcher, elemTyp, elemVal) // assign to struct type variant
+						} else {
+							err = e.fetchToBaseType(fetcher, elemTyp, elemVal) // assign to base type variant
+						}
+
+						val.Set(reflect.Append(val, elemVal))
+						count++
+						if len(fetchers) == i+1 {
+							break
+						}
+						i++
+					}
+				}
+			case reflect.Struct:
+				{
+					err = e.fetchToStruct(fetcher, typ, val)
+					count++
+				}
+			default:
+				{
+					e.fetchToBaseType(fetcher, typ, val)
+					count++
+				}
 			}
 		}
 	}

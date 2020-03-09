@@ -136,7 +136,7 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 		var results []map[string]string
 		_, err := e.Model(&results).QueryMap("SELECT %v%v%v FROM %v WHERE %v%v%v=%v%v%v",
 			e.getForwardQuote(), e.GetPkName(), e.getBackQuote(), e.getTableName(),
-			e.getForwardQuote(), v.name, e.getBackQuote(), e.getSingleQuote(), v.value, e.getSingleQuote())
+			e.getForwardQuote(), v.Name, e.getBackQuote(), e.getSingleQuote(), v.Value, e.getSingleQuote())
 		if err != nil {
 			log.Errorf("%s", err)
 			return
@@ -154,11 +154,11 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 		data, _ := json.Marshal(pkValues) //marshal []string to json string
 
 		kv := &cacheKeyValue{
-			Key: e.makeCacheKey(v.name, v.value), //index key in cache
+			Key: e.makeCacheKey(v.Name, v.Value), //index key in cache
 			Value: cacheValue{
 				ValueType:  ValueType_Index,
 				TableName:  e.getTableName(),
-				ColumnName: v.name, //index column name in table
+				ColumnName: v.Name, //index column name in table
 				CreateTime: strDateTime,
 				ExpireSec:  e.expireTime,
 				Data:       string(data), //pointer to primary key name in cache
@@ -208,7 +208,7 @@ func (e *Engine) updateCache() {
 	}
 }
 
-func (e *Engine) queryCache() (ok bool) {
+func (e *Engine) queryCache() (count int64, ok bool) {
 
 	if e.isCacheNil() && e.isDebug() {
 		log.Warnf("cache instance is nil, can't update to cache")
@@ -225,14 +225,21 @@ func (e *Engine) queryCache() (ok bool) {
 		return
 	}
 
+	if e.getOrderBy() != "" || e.getAscOrDesc() != "" || e.getGroupBy() != "" || e.getLimit() != "" || e.getOffset() != "" {
+		if e.isDebug() {
+			log.Warnf("query from cache can't use ORDER BY/GROUP BY/LIMIT/OFFSET key words")
+		}
+		return 0, false
+	}
+
 	if e.isPkValueNil() {
 		return e.queryCacheByIndex()
 	}
 	return e.queryCacheById()
 }
 
-func (e *Engine) getCacheValue(strKey string) (kv cacheKeyValue, ok bool) {
-	kv = cacheKeyValue{
+func (e *Engine) getCacheValue(strKey string) (kv *cacheKeyValue, ok bool) {
+	kv = &cacheKeyValue{
 		Key: strKey,
 	}
 	var err error
@@ -246,14 +253,105 @@ func (e *Engine) getCacheValue(strKey string) (kv cacheKeyValue, ok bool) {
 	return kv, true
 }
 
-func (e *Engine) queryCacheById() (ok bool) {
+func (e *Engine) queryCacheById() (count int64, ok bool) {
 
-	//strKey := e.makeCacheKey(e.GetPkName(), e.getPkValue())
+	strKey := e.makeCacheKey(e.GetPkName(), e.getPkValue())
+	var kv *cacheKeyValue
 
-	return
+	if kv, ok = e.getCacheValue(strKey); !ok {
+		return 0, false
+	}
+
+	fetchers := e.makeCacheFetcher(kv)
+	if len(fetchers) == 0 {
+		log.Warnf("nothing found by id %+v value [%v] in cache", e.GetPkName(), e.getPkValue())
+		return 0, false
+	}
+
+	return e.assignCacheToModel(fetchers)
 }
 
-func (e *Engine) queryCacheByIndex() (ok bool) {
+func (e *Engine) queryCacheByIndex() (count int64, ok bool) {
+
+	var fetchers []*Fetcher
+	for _, v := range e.getIndexes() {
+
+		var kv *cacheKeyValue
+		strKey := e.makeCacheKey(v.Name, v.Value)
+
+		log.Debugf("cache GET [%v] ready", strKey)
+
+		if kv, ok = e.getCacheValue(strKey); !ok {
+			log.Warnf("cache index GET [%v] value nil", strKey)
+			return
+		}
+
+		var cacheIdx cacheIndex
+		if err := json.Unmarshal([]byte(kv.Value.Data), &cacheIdx.Keys); err != nil {
+			log.Errorf("unmarshal [%v] to cache index error [%v]", kv.Value.Data, err.Error())
+			return
+		}
+
+		for _, vv := range cacheIdx.Keys {
+			log.Debugf("cache GET [%v] ready", vv)
+			if kv, ok = e.getCacheValue(vv); !ok {
+				log.Warnf("cache index GET [%v] value nil", vv)
+				return 0, false
+			}
+			f := e.makeCacheFetcher(kv)
+			fetchers = append(fetchers, f...)
+		}
+	}
+
+	if len(fetchers) == 0 {
+		log.Warnf("nothing found by index %+v in cache", e.getIndexes())
+		return 0, false
+	}
+
+	return e.assignCacheToModel(fetchers)
+}
+
+func (e *Engine) assignCacheToModel(fetchers []*Fetcher) (count int64, ok bool) {
+
+	var err error
+	log.Debugf("assign cache data to fetchers")
+	if e.getModelType() == ModelType_BaseType {
+		if count, err = e.fetchCache(fetchers, e.model.([]interface{})...); err != nil {
+			log.Errorf("fetchRow error [%v]", err.Error())
+			return 0, false
+		}
+	} else {
+		if count, err = e.fetchCache(fetchers, e.model); err != nil {
+			log.Errorf("fetchRow error [%v]", err.Error())
+			return 0, false
+		}
+	}
+	log.Debugf("model [%+v] count [%v] ok [%v]", e.model, count, ok)
+	return count, true
+}
+
+func (e *Engine) makeCacheFetcher(kvs ...*cacheKeyValue) (fetchers []*Fetcher) {
+
+	for _, v := range kvs {
+		var mapValues []map[string]string
+		if err := json.Unmarshal([]byte(v.Value.Data), &mapValues); err != nil {
+			log.Errorf("cache value [%v] unmarshal to map[string]string error [%+v]", v.Value, err.Error())
+			continue
+		}
+
+		for _, vv := range mapValues {
+			count := len(vv)
+			fetcher := &Fetcher{
+				count:     count,
+				cols:      nil,
+				types:     nil,
+				arrValues: mapToBytesSlice(vv),
+				mapValues: vv,
+				arrIndex:  0,
+			}
+			fetchers = append(fetchers, fetcher)
+		}
+	}
 
 	return
 }

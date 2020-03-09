@@ -135,9 +135,9 @@ func (m ModelType) String() string {
 	return "ModelType_Unknown"
 }
 
-type TableIndex struct {
-	name  string
-	value interface{}
+type tableIndex struct {
+	Name  string      `json:"name"`
+	Value interface{} `json:"value"`
 }
 
 // clone engine
@@ -221,13 +221,13 @@ func (e *Engine) setIndexes(name string, value interface{}) {
 	case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array, reflect.Func, reflect.Ptr, reflect.Chan, reflect.UnsafePointer:
 		assert(false, "index value type [%v] illegal", typ.Kind())
 	}
-	e.cacheIndexes = append(e.cacheIndexes, TableIndex{
-		name:  name,
-		value: value,
+	e.cacheIndexes = append(e.cacheIndexes, tableIndex{
+		Name:  name,
+		Value: value,
 	})
 }
 
-func (e *Engine) getIndexes() []TableIndex {
+func (e *Engine) getIndexes() []tableIndex {
 	return e.cacheIndexes
 }
 
@@ -263,7 +263,11 @@ func (e *Engine) setPkValue(value interface{}) {
 
 func (e *Engine) getPkValue() string {
 	if e.strPkValue == "" {
-		e.strPkValue = fmt.Sprintf("%v", e.getModelValue(e.GetPkName())) //get primary value from model dictionary
+
+		modelValue := e.getModelValue(e.GetPkName())
+		if modelValue != nil {
+			e.strPkValue = fmt.Sprintf("%v", modelValue) //get primary value from model dictionary
+		}
 	}
 	return e.strPkValue
 }
@@ -289,13 +293,28 @@ func (e *Engine) getCustomWhere() string {
 	return e.strWhere
 }
 
+func (e *Engine) getIndexWhere() (strCondition string) {
+	if e.getOperType() == OperType_Query && len(e.getIndexes()) > 0 {
+
+		var conditions []string
+		for _, v := range e.getIndexes() {
+			cond := fmt.Sprintf("%v%v%v=%v%v%v",
+				e.getForwardQuote(), v.Name, e.getBackQuote(), e.getSingleQuote(), v.Value, e.getSingleQuote())
+			conditions = append(conditions, cond)
+		}
+		strCondition = strings.Join(conditions, " AND ")
+	}
+	return
+}
+
 // primary key value like 'id'=xxx condition
-func (e *Engine) getPkWhere() (strPkCondition string) {
+func (e *Engine) getPkWhere() (strCondition string) {
 
 	if e.isPkValueNil() {
-		assert(false, "primary key's value is nil")
+		log.Debugf("query condition primary key or index is nil")
+		return
 	}
-	strPkCondition = fmt.Sprintf("%v%v%v=%v%v%v",
+	strCondition = fmt.Sprintf("%v%v%v=%v%v%v",
 		e.getForwardQuote(), e.GetPkName(), e.getBackQuote(), e.getSingleQuote(), e.getPkValue(), e.getSingleQuote())
 	return
 }
@@ -616,8 +635,14 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 
 	if isNilOrFalse(e.getCustomWhere()) {
 
+		var strWhere string
+		if isNilOrFalse(e.getPkValue()) {
+			strWhere = e.getIndexWhere()
+		} else {
+			strWhere = e.getPkWhere()
+		}
 		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v %v",
-			e.getQuoteColumns(), e.getTableName(), e.getPkWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by model primary key value
+			e.getQuoteColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by model primary key value
 	} else {
 		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v %v",
 			e.getQuoteColumns(), e.getTableName(), e.getCustomWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()

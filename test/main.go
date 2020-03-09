@@ -42,7 +42,7 @@ func main() {
 
 	e := sqlca.NewEngine(true)
 
-	e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/cluster?db=0", 60) //redis alone mode
+	e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/cluster?db=0", 3600) //redis alone mode
 	//e.Open(sqlca.AdapterCache_Redis, "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 
 	e.Open(sqlca.AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/enterprise?charset=utf8mb4")
@@ -69,7 +69,7 @@ func main() {
 		AdminDebugData:       "",
 		ParticipantDebugData: "",
 		AdminRating:          0,
-		AdminComment:         "````'|\\;:<>?/!@#$%^&*()_+*",
+		AdminComment:         "888888888",
 		ParticipantRating:    0,
 		ParticipantComment:   "",
 		Date:                 0,
@@ -99,6 +99,21 @@ func main() {
 	lastInsertId, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Select("state", "date").Upsert()
 	_ = lastInsertId
 
+	callUpsert.State = 3
+	rows, err = e.Model(&callUpsert).
+		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		Id(1).
+		Select("admin_comment").
+		UseCache().
+		Index("admin_comment", "888888888").
+		Update()
+	rows, err = e.Model(&callUpsert).
+		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		Id(312).
+		Select("admin_comment").
+		UseCache().
+		Index("admin_comment", "888888888").
+		Update()
 	//Remark: single record to fetch by primary key which named 'id'
 	//SQL: select * from phone_call_sessions where id='1'
 	rows, err = e.Model(&callQuery).Table(TABLE_NAME_PHONE_CALL_SESSIONS).
@@ -173,15 +188,6 @@ func main() {
 		log.Debugf("QueryMap rows [%v] results %+v ", rows, log.JsonDebugString(results))
 	}
 
-	callUpsert.State = 3
-	rows, err = e.Model(&callUpsert).
-		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
-		Id(1).
-		Select("state").
-		UseCache().
-		Index("admin_comment", "888888888").
-		Update()
-
 	var callRawList []PhoneCall
 	rows, err = e.Model(&callRawList).QueryRaw("SELECT * FROM %v", TABLE_NAME_PHONE_CALL_SESSIONS)
 	if err != nil {
@@ -200,5 +206,13 @@ func main() {
 
 	//e.Update("123456") //not call Model(), this is a wrong operation, will panic
 
+	var callsCache []PhoneCall
+	rows, err = e.Model(&callsCache).
+		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		//Id(1).
+		UseCache().
+		Index("admin_comment", "888888888").
+		Query()
+	log.Debugf("query by index [%+v]", callsCache)
 	log.Info("program exit...")
 }

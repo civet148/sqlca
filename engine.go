@@ -36,7 +36,7 @@ type Engine struct {
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string               // order by columns
 	groupByColumns  []string               // group by columns
-	cacheIndexes    []TableIndex           // index read or write cache
+	cacheIndexes    []tableIndex           // index read or write cache
 }
 
 func init() {
@@ -231,6 +231,16 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 func (e *Engine) Query() (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model method first")
 	e.setOperType(OperType_Query)
+
+	if e.getUseCache() {
+
+		var ok bool
+		if rowsAffected, ok = e.queryCache(); ok {
+			log.Debugf("query from cache ok, rows affected [%v]", rowsAffected)
+			return
+		}
+	}
+
 	strSqlx := e.makeSqlxString()
 
 	var r *sql.Rows
@@ -291,6 +301,7 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 		return
 	}
 	log.Debugf("lastInsertId = %v", lastInsertId)
+	e.updateCache()
 	return
 }
 
@@ -319,7 +330,6 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 		return
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
-
 	e.updateCache()
 	return
 }

@@ -91,12 +91,27 @@ func main() {
 	_ = lastInsertId
 
 	// insert a record
-	lastInsertId, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Insert()
+	lastInsertId, err = e.Model(&callUpsert).
+		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		UseCache().
+		Insert()
+
+	rows, err = e.Model(&callUpsert).
+		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		Id(312).
+		Select("admin_comment").
+		UseCache().
+		Index("admin_comment", "888888888").
+		Update()
 
 	// insert if not exist, otherwise update state and date
 	callUpsert.State = 1
 	callUpsert.Date = int32(time.Now().Unix())
-	lastInsertId, err = e.Model(&callUpsert).Table(TABLE_NAME_PHONE_CALL_SESSIONS).Select("state", "date").Upsert()
+	lastInsertId, err = e.Model(&callUpsert).
+		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
+		Select("state", "date").
+		UseCache().
+		Upsert()
 	_ = lastInsertId
 
 	callUpsert.State = 3
@@ -107,13 +122,7 @@ func main() {
 		UseCache().
 		Index("admin_comment", "888888888").
 		Update()
-	rows, err = e.Model(&callUpsert).
-		Table(TABLE_NAME_PHONE_CALL_SESSIONS).
-		Id(312).
-		Select("admin_comment").
-		UseCache().
-		Index("admin_comment", "888888888").
-		Update()
+
 	//Remark: single record to fetch by primary key which named 'id'
 	//SQL: select * from phone_call_sessions where id='1'
 	rows, err = e.Model(&callQuery).Table(TABLE_NAME_PHONE_CALL_SESSIONS).

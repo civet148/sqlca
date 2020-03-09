@@ -141,6 +141,10 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 			log.Errorf("%s", err)
 			return
 		}
+
+		if len(results) == 0 {
+			continue
+		}
 		var pkValues []string
 		for _, vv := range results {
 			strCachePrimaryKey := e.makeCacheKey(e.GetPkName(), vv[e.GetPkName()])
@@ -170,10 +174,11 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 	return
 }
 
-func (e *Engine) makeCache() (kvs []*cacheKeyValue) {
+func (e *Engine) makeUpdateCache() (kvs []*cacheKeyValue) {
 
 	if isNilOrFalse(e.getPkValue()) {
-		e.setPkValue(e.getModelValue(e.GetPkName()))
+		log.Warnf("primary key's value is nil")
+		return
 	}
 
 	assert(e.getPkValue(), "primary key [%v] value is nil, please call Id() method", e.GetPkName())
@@ -181,6 +186,29 @@ func (e *Engine) makeCache() (kvs []*cacheKeyValue) {
 	kvs = append(kvs, e.makeCacheData())
 	kvs = append(kvs, e.makeCacheIndexes()...)
 	return
+}
+
+func (e *Engine) upsertCache(lastInsertId int64) {
+
+	if e.isCacheNil() && e.isDebug() {
+		log.Debugf("cache instance is nil, can't update to cache")
+		return
+	}
+
+	if !e.getUseCache() && e.isDebug() {
+		log.Debugf("use cache is disabled, ignore it")
+		return
+	}
+
+	if e.isPkInteger() {
+		if lastInsertId == 0 {
+			log.Errorf("got last insert id is 0")
+			return
+		}
+		e.setPkValue(lastInsertId)
+	}
+
+	e.updateCache()
 }
 
 func (e *Engine) updateCache() {
@@ -195,7 +223,7 @@ func (e *Engine) updateCache() {
 		return
 	}
 
-	kvs := e.makeCache()
+	kvs := e.makeUpdateCache()
 	for _, v := range kvs {
 		data, _ := json.Marshal(v.Value)
 		if _, err := e.cache.Do("SETEX", v.Key, e.expireTime, string(data)); err != nil {
@@ -279,8 +307,6 @@ func (e *Engine) queryCacheByIndex() (count int64, ok bool) {
 		var kv *cacheKeyValue
 		strKey := e.makeCacheKey(v.Name, v.Value)
 
-		log.Debugf("cache GET [%v] ready", strKey)
-
 		if kv, ok = e.getCacheValue(strKey); !ok {
 			log.Warnf("cache index GET [%v] value nil", strKey)
 			return
@@ -293,7 +319,7 @@ func (e *Engine) queryCacheByIndex() (count int64, ok bool) {
 		}
 
 		for _, vv := range cacheIdx.Keys {
-			log.Debugf("cache GET [%v] ready", vv)
+			//log.Debugf("cache GET [%v] ready", vv)
 			if kv, ok = e.getCacheValue(vv); !ok {
 				log.Warnf("cache index GET [%v] value nil", vv)
 				return 0, false
@@ -314,7 +340,7 @@ func (e *Engine) queryCacheByIndex() (count int64, ok bool) {
 func (e *Engine) assignCacheToModel(fetchers []*Fetcher) (count int64, ok bool) {
 
 	var err error
-	log.Debugf("assign cache data to fetchers")
+	//log.Debugf("assign cache data to fetchers")
 	if e.getModelType() == ModelType_BaseType {
 		if count, err = e.fetchCache(fetchers, e.model.([]interface{})...); err != nil {
 			log.Errorf("fetchRow error [%v]", err.Error())
@@ -326,7 +352,7 @@ func (e *Engine) assignCacheToModel(fetchers []*Fetcher) (count int64, ok bool) 
 			return 0, false
 		}
 	}
-	log.Debugf("model [%+v] count [%v] ok [%v]", e.model, count, ok)
+	//log.Debugf("model [%+v] count [%v] ok [%v]", e.model, count, ok)
 	return count, true
 }
 

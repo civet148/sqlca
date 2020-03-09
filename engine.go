@@ -274,6 +274,9 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 		return
 	}
 	log.Debugf("lastInsertId = %v", lastInsertId)
+	if lastInsertId > 0 {
+		e.upsertCache(lastInsertId)
+	}
 	return
 }
 
@@ -301,7 +304,9 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 		return
 	}
 	log.Debugf("lastInsertId = %v", lastInsertId)
-	e.updateCache()
+	if lastInsertId > 0 {
+		e.upsertCache(lastInsertId)
+	}
 	return
 }
 
@@ -330,7 +335,10 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 		return
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
-	e.updateCache()
+
+	if rowsAffected > 0 {
+		e.updateCache()
+	}
 	return
 }
 

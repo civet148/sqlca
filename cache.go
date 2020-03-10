@@ -180,9 +180,6 @@ func (e *Engine) makeUpdateCache() (kvs []*cacheKeyValue) {
 		log.Warnf("primary key's value is nil")
 		return
 	}
-
-	assert(e.getPkValue(), "primary key [%v] value is nil, please call Id() method", e.GetPkName())
-
 	kvs = append(kvs, e.makeCacheData())
 	kvs = append(kvs, e.makeCacheIndexes()...)
 	return

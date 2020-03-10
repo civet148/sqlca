@@ -165,7 +165,7 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 	strTableName := camelCaseConvert(table.TableName)
 	strContent += fmt.Sprintf("var TableName%v = \"%v\" //%v \n\n", strTableName, table.TableName, table.TableComment)
 
-	strContent += fmt.Sprintf("type %v struct { \n", strTableName)
+	strContent += fmt.Sprintf("type %vDO struct { \n", strTableName)
 	for _, v := range TableCols {
 
 		var tagValues []string

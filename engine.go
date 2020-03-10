@@ -454,23 +454,25 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	return
 }
 
+//tx multiple sql by orm
 func (e *Engine) Tx(args ...*sqlcaTx) (err error) {
 
 	if err = e.txExec(args...); err != nil {
 		log.Errorf("tx exec error [%v]", err.Error())
 		return err
 	}
-	//update to cache
+	//update to cache if exist
 	for _, v := range args {
 		e.saveToCache(v.kvs...)
 	}
 	return nil
 }
 
-func (e *Engine) TxRaw(strSQL ...string) (err error) {
+//tx multiple sql by raw sql
+func (e *Engine) TxRaw(sqls ...string) (err error) {
 
 	var args []*sqlcaTx
-	for _, v := range strSQL {
+	for _, v := range sqls {
 		args = append(args, newTx(v))
 	}
 

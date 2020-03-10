@@ -21,7 +21,7 @@ type AdapterType int
 const (
 	ORDER_BY_ASC                 = "asc"
 	ORDER_BY_DESC                = "desc"
-	DEFAULT_CAHCE_EXPIRE_SECONDS = 60 * 60
+	DEFAULT_CAHCE_EXPIRE_SECONDS = 24 * 60 * 60
 	DEFAULT_PRIMARY_KEY_NAME     = "id"
 	SQLX_IGNORE_CREATED_AT       = "created_at"
 	SQLX_IGNORE_UPDATED_AT       = "updated_at"
@@ -81,9 +81,11 @@ const (
 	OperType_Update   OperType = 2 // orm: update sql
 	OperType_Insert   OperType = 3 // orm: insert sql
 	OperType_Upsert   OperType = 4 // orm: insert or update sql
-	OperType_QueryRaw OperType = 5 // raw: query sql into model
-	OperType_ExecRaw  OperType = 6 // raw: insert/update sql
-	OperType_QueryMap OperType = 7 // raw: query sql into map
+	OperType_Tx       OperType = 5 // orm: tx sql
+	OperType_QueryRaw OperType = 6 // raw: query sql into model
+	OperType_ExecRaw  OperType = 7 // raw: insert/update sql
+	OperType_QueryMap OperType = 8 // raw: query sql into map
+	OperType_TxRaw    OperType = 9 // raw: tx sql
 )
 
 func (o OperType) GoString() string {
@@ -104,6 +106,10 @@ func (o OperType) String() string {
 		return "OperType_QueryRaw"
 	case OperType_ExecRaw:
 		return "OperType_ExecRaw"
+	case OperType_Tx:
+		return "OperType_Tx"
+	case OperType_TxRaw:
+		return "OperType_TxRaw"
 	}
 	return "OperType_Unknown"
 }

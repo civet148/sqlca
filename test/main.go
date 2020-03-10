@@ -73,8 +73,8 @@ func main() {
 		ParticipantComment:   "",
 		Date:                 0,
 		State:                0,
-		CreatedAt:            "", //created_at column ignore by insert/upsert/update
-		UpdatedAt:            "", //updated_at column ignore by insert/upsert/update
+		CreatedAt:            "",
+		UpdatedAt:            "",
 	}
 
 	_ = callUpsert
@@ -211,7 +211,7 @@ func main() {
 	}
 	log.Debugf("ExecRaw rows [%v] last insert id [%v]", rows, lastInsertId)
 
-	//e.Update("123456") //not call Model(), this is a wrong operation, will panic
+	//e.Update("123456") //have not call Model(), this is a wrong operation, will panic
 
 	var callsCache []PhoneCall
 	rows, err = e.Model(&callsCache).

@@ -188,6 +188,21 @@ func (e *Engine) makeUpdateCache() (kvs []*cacheKeyValue) {
 	return
 }
 
+func (e *Engine) saveToCache(kvs ...*cacheKeyValue) (ok bool) {
+	for _, v := range kvs {
+		data, _ := json.Marshal(v.Value)
+		if _, err := e.cache.Do("SETEX", v.Key, e.expireTime, string(data)); err != nil {
+			log.Errorf("set key [%v] value [%v] error [%v]", v.Key, string(data), err.Error())
+			return false
+		} else {
+			if e.isDebug() {
+				e.getCacheValue(v.Key)
+			}
+		}
+	}
+	return true
+}
+
 func (e *Engine) upsertCache(lastInsertId int64) {
 
 	if e.isCacheNil() && e.isDebug() {
@@ -211,7 +226,7 @@ func (e *Engine) upsertCache(lastInsertId int64) {
 	e.updateCache()
 }
 
-func (e *Engine) updateCache() {
+func (e *Engine) updateCache() (ok bool) {
 
 	if e.isCacheNil() && e.isDebug() {
 		log.Debugf("cache instance is nil, can't update to cache")
@@ -223,17 +238,7 @@ func (e *Engine) updateCache() {
 		return
 	}
 
-	kvs := e.makeUpdateCache()
-	for _, v := range kvs {
-		data, _ := json.Marshal(v.Value)
-		if _, err := e.cache.Do("SETEX", v.Key, e.expireTime, string(data)); err != nil {
-			log.Errorf("set key [%v] value [%v] error [%v]", v.Key, string(data), err.Error())
-		} else {
-			if e.isDebug() {
-				e.getCacheValue(v.Key)
-			}
-		}
-	}
+	return e.saveToCache(e.makeUpdateCache()...)
 }
 
 func (e *Engine) queryCache() (count int64, ok bool) {

@@ -53,6 +53,25 @@ func NewEngine(debug bool) *Engine {
 	}
 }
 
+// get data base driver name and data source name
+func (e *Engine) getConnConfig(adapterType AdapterType, strUrl string) (strDriverName, strDSN string) {
+
+	strDriverName = adapterType.DriverName()
+	switch adapterType {
+	case AdapterSqlx_MySQL:
+		return strDriverName, e.parseMysqlUrl(strUrl)
+	case AdapterSqlx_Postgres:
+		return strDriverName, e.parsePostgresUrl(strUrl)
+	case AdapterSqlx_Sqlite:
+		return strDriverName, e.parseSqliteUrl(strUrl)
+	case AdapterSqlx_Mssql:
+		return strDriverName, e.parseMssqlUrl(strUrl)
+	case AdapterCache_Redis:
+		return strDriverName, e.parseRedisUrl(strUrl)
+	}
+	return strDriverName, strUrl
+}
+
 // open a sqlx database or cache connection
 // strUrl:
 //
@@ -435,21 +454,53 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	return
 }
 
-// get data base driver name and data source name
-func (e *Engine) getConnConfig(adapterType AdapterType, strUrl string) (strDriverName, strDSN string) {
-	//TODO @libin parse connect url for database
-	strDriverName = adapterType.DriverName()
-	switch adapterType {
-	case AdapterSqlx_MySQL:
-		return strDriverName, e.parseMysqlUrl(strUrl)
-	case AdapterSqlx_Postgres:
-		return strDriverName, e.parsePostgresUrl(strUrl)
-	case AdapterSqlx_Sqlite:
-		return strDriverName, e.parseSqliteUrl(strUrl)
-	case AdapterSqlx_Mssql:
-		return strDriverName, e.parseMssqlUrl(strUrl)
-	case AdapterCache_Redis:
-		return strDriverName, e.parseRedisUrl(strUrl)
+func (e *Engine) Tx(args ...*sqlcaTx) (err error) {
+
+	if err = e.txExec(args...); err != nil {
+		log.Errorf("tx exec error [%v]", err.Error())
+		return err
 	}
-	return strDriverName, strUrl //TODO replace strUrl to strDSN
+	//update to cache
+	for _, v := range args {
+		e.saveToCache(v.kvs...)
+	}
+	return nil
+}
+
+func (e *Engine) TxRaw(strSQL ...string) (err error) {
+
+	var args []*sqlcaTx
+	for _, v := range strSQL {
+		args = append(args, newTx(v))
+	}
+
+	if err = e.txExec(args...); err != nil {
+		log.Errorf("tx exec error [%v]", err.Error())
+		return err
+	}
+	return nil
+}
+
+// make orm tx sql: insert
+func (e *Engine) ToTxInsert() *sqlcaTx {
+
+	return newTx(e.makeSqlxInsert())
+}
+
+// make orm tx sql: upsert
+func (e *Engine) ToTxUpsert() *sqlcaTx {
+
+	return newTx(e.makeSqlxUpsert())
+}
+
+// make orm tx sql: update
+func (e *Engine) ToTxUpdate() *sqlcaTx {
+
+	return newTx(e.makeSqlxUpdate(), e.makeUpdateCache()...)
+}
+
+// make orm tx sql: query
+func (e *Engine) ToTxQuery() *sqlcaTx {
+
+	return newTx(e.makeSqlxQuery())
 }

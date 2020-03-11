@@ -28,7 +28,7 @@ func main() {
 	e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
 	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable")
 	//e.Open("sqlite:///var/lib/test.db")
-	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?name=test&windows=false")
+	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=&windows=false")
 
 	//OrmInsertByModel(e)
 	//OrmUpsertByModel(e)

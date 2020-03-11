@@ -76,16 +76,16 @@ func (e *Engine) getConnConfig(adapterType AdapterType, strUrl string) (strDrive
 //
 //  1. data source name
 //
-// 	   [mysql]    Open(AdapterSqlx_MySQL,    "mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4")
-// 	   [postgres] Open(AdapterSqlx_Postgres, "postgres://root:123456@127.0.0.1:5432/mydb?sslmode=disable")
-// 	   [sqlite]   Open(AdapterSqlx_Sqlite,   "sqlite:///var/lib/my.db")
-// 	   [mssql]    Open(AdapterSqlx_Mssql,    "mssql://sa:123456@127.0.0.1:1433/mydb?instance=&windows=false")
+// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4")
+// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/mydb?sslmode=disable")
+// 	   [sqlite]   Open("sqlite:///var/lib/my.db")
+// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=&windows=false")
 //
 //  2. cache config
-//     [redis-alone]    Open(AdapterTypeCache_Redis,    "redis://123456@127.0.0.1:6379/cluster?db=0")
-//     [redis-cluster]  Open(AdapterTypeCache_Redis,    "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
+//     [redis-alone]    Open("redis://123456@127.0.0.1:6379/cluster?db=0")
+//     [redis-cluster]  Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
 //
-// expireSeconds cache data expire seconds, just for AdapterTypeCache_XXX
+// expireSeconds cache data expire seconds, just for redis
 func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 
 	var err error

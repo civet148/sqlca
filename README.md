@@ -54,10 +54,10 @@ e := sqlca.NewEngine()
 e.Debug(true) //debug mode on
 
 // open database driver (requred)
-e.Open(sqlca.AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
+e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
 
 // open redis driver for cache (optional)
-e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/cluster?db=0", 3600) //redis standalone mode
+e.Open("redis://127.0.0.1:6379/cluster?db=0", 3600) //redis standalone mode
 ``` 
 
 # global variants 
@@ -203,10 +203,10 @@ e := sqlca.NewEngine()
 e.Debug(true) //debug mode on
 
 // open database driver (requred)
-e.Open(sqlca.AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
+e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
 
 // open redis driver for cache (requred)
-e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/cluster?db=0", 3600) //redis standalone mode
+e.Open("redis://127.0.0.1:6379/cluster?db=0", 3600) //redis standalone mode
 
 user := UserDO{
     Id:    0, 
@@ -215,7 +215,7 @@ user := UserDO{
     Sex:   1,
     Email: "john@gmail.com",
 }
-e.Model(&user).Table(TABLE_NAME_USERS).UseCache().Insert()
+e.Model(&user).Table(TABLE_NAME_USERS).Cache().Insert()
 ```
 
 ## tx: orm and raw
@@ -255,3 +255,27 @@ if err := e.TxRaw(tx1, tx2); err != nil {
     log.Debugf("tx raw ok")
 }
 ```
+
+## index record to cache
+```golang
+user := UserDO{
+    Id:    1,
+    Name:  "john3",
+    Phone: "8615011111114",
+    Sex:   1,
+    Email: "john3@gmail.com",
+}
+
+//SQL: update users set name='john3', phone='8615011111114', sex='1', email='john3@gmail.com' where id='1'
+//index: name, phone
+//redis key:  sqlx:cache:[table]:[column]:[column value]
+if rowsAffected, err := e.Model(&user).
+    Table(TABLE_NAME_USERS).
+    Select("name", "phone", "email", "sex").
+    Cache("name", "phone").
+    Update(); err != nil {
+    log.Errorf("update data model [%+v] error [%v]", user, err.Error())
+} else {
+    log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
+}
+``` 

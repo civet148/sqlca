@@ -40,8 +40,8 @@ func main() {
 	//RawQueryIntoMap(e)
 	//RawExec(e)
 	//TxExec(e)
-	RawTxExec(e)
-
+	//RawTxExec(e)
+	OrmUpdateIndexToCache(e)
 	log.Info("program exit...")
 }
 
@@ -200,5 +200,28 @@ func RawTxExec(e *sqlca.Engine) {
 		log.Errorf("tx raw error [%v]", err.Error())
 	} else {
 		log.Debugf("tx raw ok")
+	}
+}
+
+func OrmUpdateIndexToCache(e *sqlca.Engine) {
+	user := UserDO{
+		Id:    1,
+		Name:  "john3",
+		Phone: "8615011111114",
+		Sex:   1,
+		Email: "john3@gmail.com",
+	}
+
+	//SQL: update users set name='john3', phone='8615011111114', sex='1', email='john3@gmail.com' where id='1'
+	//index: name, phone
+	//redis key:  sqlx:cache:[table]:[column]:[column value]
+	if rowsAffected, err := e.Model(&user).
+		Table(TABLE_NAME_USERS).
+		Select("name", "phone", "email", "sex").
+		Cache("name", "phone").
+		Update(); err != nil {
+		log.Errorf("update data model [%+v] error [%v]", user, err.Error())
+	} else {
+		log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
 	}
 }

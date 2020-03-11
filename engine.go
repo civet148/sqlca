@@ -126,8 +126,11 @@ func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 	return e
 }
 
-func (e *Engine) UseCache() *Engine {
+func (e *Engine) Cache(indexes ...string) *Engine {
 	e.setUseCache(true)
+	for _, v := range indexes {
+		e.setIndexes(v, e.getModelValue(v))
+	}
 	return e
 }
 
@@ -152,15 +155,6 @@ func (e *Engine) Model(args ...interface{}) *Engine {
 func (e *Engine) Table(strName string) *Engine {
 	assert(strName, "name is nil")
 	e.setTableName(strName)
-	return e
-}
-
-// index which select from cache or update to cache
-// if your index is not a primary key, it will create a cache index and pointer to primary key data
-// index or data in cache key is 'sqlx:cache:[table name]:[column name]:[column value]', eg. 'sqlx:cache:users:phone:8613055556666'
-func (e *Engine) Index(strColumn string, value interface{}) *Engine {
-
-	e.setIndexes(strColumn, value)
 	return e
 }
 

@@ -171,7 +171,14 @@ if rowsAffected, err := e.Model(&users).QueryRaw("select * from %v where id < %v
 
 ## raw: query results into data model map[string]string slice  
 ```golang
+var users []map[string]string
 
+//SQL: select * from users where id < 5
+if rowsAffected, err := e.Model(&users).QueryMap("select * from %v where id < %v", TABLE_NAME_USERS, 5); err != nil {
+    log.Errorf("query into map [%+v] error [%v]", users, err.Error())
+} else {
+    log.Debugf("query into map [%+v] ok, rows affected [%v]", users, rowsAffected)
+}
 ```
 
 ## raw: exec without data model

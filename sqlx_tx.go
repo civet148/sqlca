@@ -39,7 +39,7 @@ func (e *Engine) txExec(args ...*sqlcaTx) error {
 
 	if e.isDebug() {
 		for i, v := range args {
-			log.Debugf("tx[%v] = '%v'", i, v)
+			log.Debugf("tx[%v] = '%v'", i, v.strTxSQL)
 		}
 		log.Debugf("commit ok")
 	}

@@ -22,13 +22,13 @@ func main() {
 	e := sqlca.NewEngine(true)
 	e.Debug(true) //debug on
 
-	e.Open(sqlca.AdapterCache_Redis, "redis://127.0.0.1:6379/cluster?db=0", 3600) //redis alone mode
+	e.Open("redis://127.0.0.1:6379/cluster?db=0", 3600) //redis alone mode
 	//e.Open(sqlca.AdapterCache_Redis, "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 
-	e.Open(sqlca.AdapterSqlx_MySQL, "mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
-	//e.Open(sqlca.AdapterSqlx_Postgres, "postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable")
-	//e.Open(sqlca.AdapterSqlx_Sqlite, "sqlite:///var/lib/test.db")
-	//e.Open(sqlca.AdapterSqlx_Mssql, "mssql://sa:123456@127.0.0.1:1433/test?name=test&windows=false")
+	e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
+	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable")
+	//e.Open("sqlite:///var/lib/test.db")
+	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?name=test&windows=false")
 
 	//OrmInsertByModel(e)
 	//OrmUpsertByModel(e)
@@ -38,7 +38,10 @@ func main() {
 	//RawQueryIntoModel(e)
 	//RawQueryIntoModelSlice(e)
 	//RawQueryIntoMap(e)
-	RawExec(e)
+	//RawExec(e)
+	//TxExec(e)
+	RawTxExec(e)
+
 	log.Info("program exit...")
 }
 
@@ -160,5 +163,42 @@ func RawExec(e *sqlca.Engine) {
 		log.Errorf("exec raw sql error [%v]", err.Error())
 	} else {
 		log.Debugf("exec raw sql ok, rows affected [%v] last insert id [%v]", rowsAffected, lasteInsertId)
+	}
+}
+
+func TxExec(e *sqlca.Engine) {
+	user1 := UserDO{
+		//Id:    0,
+		Name:  "user1",
+		Phone: "8618600000001",
+		Sex:   1,
+		Email: "user1@hotmail.com",
+	}
+
+	user2 := UserDO{
+		//Id:    0,
+		Name:  "user2",
+		Phone: "8618600000002",
+		Sex:   1,
+		Email: "user2@hotmail.com",
+	}
+	tx1 := e.Model(&user1).Table(TABLE_NAME_USERS).ToTxInsert()
+	tx2 := e.Model(&user2).Table(TABLE_NAME_USERS).ToTxInsert()
+	if err := e.Tx(tx1, tx2); err != nil {
+		log.Errorf("tx error [%v]", err.Error())
+	} else {
+		log.Debugf("tx ok")
+	}
+}
+
+func RawTxExec(e *sqlca.Engine) {
+
+	tx1 := "INSERT INTO users (`name`,`phone`,`sex`,`email`) VALUES ('user3','8618600000003','1','user3@hotmail.com')"
+	tx2 := "INSERT INTO users (`name`,`phone`,`sex`,`email`) VALUES ('user4','8618600000004','2','user4@hotmail.com')"
+
+	if err := e.TxRaw(tx1, tx2); err != nil {
+		log.Errorf("tx raw error [%v]", err.Error())
+	} else {
+		log.Debugf("tx raw ok")
 	}
 }

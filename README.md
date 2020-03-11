@@ -219,6 +219,39 @@ e.Model(&user).Table(TABLE_NAME_USERS).UseCache().Insert()
 ```
 
 ## tx: orm and raw
-```golang
 
+```golang
+user1 := UserDO{
+    //Id:    0,
+    Name:  "user1",
+    Phone: "8618600000001",
+    Sex:   1,
+    Email: "user1@hotmail.com",
+}
+
+user2 := UserDO{
+    //Id:    0,
+    Name:  "user2",
+    Phone: "8618600000002",
+    Sex:   1,
+    Email: "user2@hotmail.com",
+}
+tx1 := e.Model(&user1).Table(TABLE_NAME_USERS).ToTxInsert()
+tx2 := e.Model(&user2).Table(TABLE_NAME_USERS).ToTxInsert()
+if err := e.Tx(tx1, tx2); err != nil {
+    log.Errorf("tx error [%v]", err.Error())
+} else {
+    log.Debugf("tx ok")
+}
+```
+
+```golang
+tx1 := "INSERT INTO users (`name`,`phone`,`sex`,`email`) VALUES ('user3','8618600000003','1','user3@hotmail.com')"
+tx2 := "INSERT INTO users (`name`,`phone`,`sex`,`email`) VALUES ('user4','8618600000004','2','user4@hotmail.com')"
+
+if err := e.TxRaw(tx1, tx2); err != nil {
+    log.Errorf("tx raw error [%v]", err.Error())
+} else {
+    log.Debugf("tx raw ok")
+}
 ```

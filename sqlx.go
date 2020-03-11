@@ -24,8 +24,6 @@ const (
 	ORDER_BY_DESC                = "desc"
 	DEFAULT_CAHCE_EXPIRE_SECONDS = 24 * 60 * 60
 	DEFAULT_PRIMARY_KEY_NAME     = "id"
-	SQLX_IGNORE_CREATED_AT       = "created_at"
-	SQLX_IGNORE_UPDATED_AT       = "updated_at"
 )
 
 const (
@@ -74,6 +72,21 @@ func (a AdapterType) DriverName() string {
 	}
 	return "unknown"
 }
+
+var adapterNames = map[string]AdapterType{
+	DRIVER_NAME_MYSQL:    AdapterSqlx_MySQL,
+	DRIVER_NAME_POSTGRES: AdapterSqlx_Postgres,
+	DRIVER_NAME_SQLITE:   AdapterSqlx_Sqlite,
+	DRIVER_NAME_MSSQL:    AdapterSqlx_Mssql,
+	DRIVER_NAME_REDIS:    AdapterCache_Redis,
+}
+
+func getAdapterType(name string) AdapterType {
+
+	return adapterNames[name]
+}
+
+//------------------------------------------------------------------------------------------------------
 
 type OperType int
 
@@ -565,7 +578,7 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
 		{
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 			if !isNilOrFalse(strUpdates) {
 				if e.isPkInteger() { // primary key type is a integer
 					strDo = fmt.Sprintf("%v", strUpdates)
@@ -576,7 +589,7 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 		}
 	case AdapterSqlx_Postgres:
 		{
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName, SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT)
+			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v RETURNING %v", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}
@@ -592,13 +605,10 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues string) {
 	var cols, vals []string
 
-	for k, _ := range e.dict {
+	for k, v := range e.dict {
 
-		if k == SQLX_IGNORE_CREATED_AT || k == SQLX_IGNORE_UPDATED_AT {
-			continue
-		}
-		c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
-		v := fmt.Sprintf(":%v", k)                                           // column value format to :id,...
+		c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote())  // column name format to `id`,...
+		v := fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()) // column value format to :id,...
 		cols = append(cols, c)
 		vals = append(vals, v)
 	}
@@ -669,14 +679,14 @@ func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 		//where condition by model primary key value (not include primary key `id` and created_at/updated_at)
 		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v",
 			e.getTableName(),
-			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName(), SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT),
+			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()),
 			e.getPkWhere(),
 			e.getLimit())
 	} else {
 		//where condition by custom condition (not include primary key like `id` and created_at/updated_at)
 		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v",
 			e.getTableName(),
-			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName(), SQLX_IGNORE_CREATED_AT, SQLX_IGNORE_UPDATED_AT),
+			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()),
 			e.getCustomWhere(),
 			e.getLimit())
 	}

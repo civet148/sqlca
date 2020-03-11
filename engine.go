@@ -86,9 +86,17 @@ func (e *Engine) getConnConfig(adapterType AdapterType, strUrl string) (strDrive
 //     [redis-cluster]  Open(AdapterTypeCache_Redis,    "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
 //
 // expireSeconds cache data expire seconds, just for AdapterTypeCache_XXX
-func (e *Engine) Open(adapterType AdapterType, strUrl string, expireSeconds ...int) *Engine {
+func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 
 	var err error
+	var adapterType AdapterType
+
+	us := strings.Split(strUrl, URL_SCHEME_SEP)
+	if len(us) != 2 {
+		assert(false, "open url '%v' required", URL_SCHEME_SEP)
+	}
+	adapterType = getAdapterType(us[0])
+
 	strDriverName, strConfig := e.getConnConfig(adapterType, strUrl)
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:

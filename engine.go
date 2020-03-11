@@ -44,10 +44,9 @@ func init() {
 	log.SetLevel(log.LEVEL_INFO)
 }
 
-func NewEngine(debug bool) *Engine {
+func NewEngine(args ...interface{}) *Engine {
 
 	return &Engine{
-		debug:      debug,
 		strPkName:  DEFAULT_PRIMARY_KEY_NAME,
 		expireTime: DEFAULT_CAHCE_EXPIRE_SECONDS,
 	}
@@ -250,6 +249,8 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Query() (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model method first")
+	assert(e.strTableName, "table name not found")
+
 	e.setOperType(OperType_Query)
 
 	if e.getUseCache() {
@@ -278,6 +279,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Insert() (lastInsertId int64, err error) {
 	assert(e.model, "model is nil, please call Model method first")
+	assert(e.strTableName, "table name not found")
 
 	e.setOperType(OperType_Insert)
 	var strSqlx string
@@ -306,6 +308,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
 	assert(e.model, "model is nil, please call Model method first")
+	assert(e.strTableName, "table name not found")
 	assert(e.getSelectColumns(), "update columns is not set")
 
 	e.setOperType(OperType_Upsert)
@@ -336,6 +339,7 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Update() (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model method first")
+	assert(e.strTableName, "table name not found")
 	assert(e.getSelectColumns(), "update columns is not set, please call Select method")
 
 	e.setOperType(OperType_Update)
@@ -485,24 +489,28 @@ func (e *Engine) TxRaw(sqls ...string) (err error) {
 
 // make orm tx sql: insert
 func (e *Engine) ToTxInsert() *sqlcaTx {
-
+	assert(e.model, "model is nil, please call Model method first")
+	assert(e.strTableName, "table name not found")
 	return newTx(e.makeSqlxInsert())
 }
 
 // make orm tx sql: upsert
 func (e *Engine) ToTxUpsert() *sqlcaTx {
-
+	assert(e.model, "model is nil, please call Model method first")
+	assert(e.strTableName, "table name not found")
 	return newTx(e.makeSqlxUpsert())
 }
 
 // make orm tx sql: update
 func (e *Engine) ToTxUpdate() *sqlcaTx {
-
+	assert(e.model, "model is nil, please call Model method first")
+	assert(e.strTableName, "table name not found")
 	return newTx(e.makeSqlxUpdate(), e.makeUpdateCache()...)
 }
 
 // make orm tx sql: query
 func (e *Engine) ToTxQuery() *sqlcaTx {
-
+	assert(e.model, "model is nil, please call Model method first")
+	assert(e.strTableName, "table name not found")
 	return newTx(e.makeSqlxQuery())
 }

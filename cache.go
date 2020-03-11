@@ -176,6 +176,11 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 
 func (e *Engine) makeUpdateCache() (kvs []*cacheKeyValue) {
 
+	if !e.getUseCache() && e.isDebug() {
+		log.Debugf("use cache is disabled, ignore it")
+		return
+	}
+
 	if isNilOrFalse(e.getPkValue()) {
 		log.Warnf("primary key's value is nil")
 		return
@@ -227,11 +232,6 @@ func (e *Engine) updateCache() (ok bool) {
 
 	if e.isCacheNil() && e.isDebug() {
 		log.Debugf("cache instance is nil, can't update to cache")
-		return
-	}
-
-	if !e.getUseCache() && e.isDebug() {
-		log.Debugf("use cache is disabled, ignore it")
 		return
 	}
 

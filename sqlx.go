@@ -8,12 +8,13 @@ import (
 )
 
 const (
-	TAG_NAME_DB          = "db"
-	DRIVER_NAME_MYSQL    = "mysql"
-	DRIVER_NAME_POSTGRES = "postgres"
-	DRIVER_NAME_SQLITE   = "sqlite3"
-	DRIVER_NAME_MSSQL    = "adodb"
-	DRIVER_NAME_REDIS    = "redis"
+	TAG_NAME_DB             = "db"
+	DRIVER_NAME_MYSQL       = "mysql"
+	DRIVER_NAME_POSTGRES    = "postgres"
+	DRIVER_NAME_SQLITE      = "sqlite3"
+	DRIVER_NAME_MSSQL       = "adodb"
+	DRIVER_NAME_REDIS       = "redis"
+	DATABASE_KEY_NAME_WHERE = "WHERE"
 )
 
 type AdapterType int
@@ -637,20 +638,25 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 }
 
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
-
+	var strWhere string
 	if isNilOrFalse(e.getCustomWhere()) {
 
-		var strWhere string
 		if isNilOrFalse(e.getPkValue()) {
-			strWhere = e.getIndexWhere()
+
+			strIndexCond := e.getIndexWhere()
+			if strIndexCond != "" {
+				strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getIndexWhere()
+			}
 		} else {
-			strWhere = e.getPkWhere()
+			strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getPkWhere()
 		}
-		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v %v",
+		strSqlx = fmt.Sprintf("SELECT %v FROM %v %v %v %v %v %v",
 			e.getQuoteColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by model primary key value
 	} else {
-		strSqlx = fmt.Sprintf("SELECT %v FROM %v WHERE %v %v %v %v %v",
-			e.getQuoteColumns(), e.getTableName(), e.getCustomWhere(), e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
+
+		strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getCustomWhere()
+		strSqlx = fmt.Sprintf("SELECT %v FROM %v %v %v %v %v %v",
+			e.getQuoteColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
 	}
 	assert(strSqlx, "query sql is nil")
 	return

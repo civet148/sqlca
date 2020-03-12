@@ -2,7 +2,6 @@
 
 ## Usage
 
-parameters
 --url       connection url of database [required]
 
 --db        databases to export, eg. "db1,db2" [required]

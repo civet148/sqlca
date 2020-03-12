@@ -47,7 +47,7 @@ func Export(si *schema.SchemaInfo) (err error) {
 
 	e := sqlca.NewEngine(false)
 	e.Debug(true)
-	e.Open(sqlca.AdapterSqlx_MySQL, si.ConnUrl)
+	e.Open(si.ConnUrl)
 	var strQuery string
 	var tableSchemas []TableSchema
 

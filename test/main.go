@@ -18,6 +18,12 @@ type UserDO struct {
 	Disable bool   `db:"disable"`
 }
 
+type ClassDo struct {
+	Id      int32  `db:"id"`
+	UserId  int32  `db:"user_id"`
+	ClassNo string `db:"class_no"`
+}
+
 func main() {
 
 	e := sqlca.NewEngine(true)
@@ -34,18 +40,18 @@ func main() {
 	//OrmInsertByModel(e)
 	//OrmUpsertByModel(e)
 	//OrmUpdateByModel(e)
-	//OrmQueryIntoModel(e)
+	OrmQueryIntoModel(e)
 	//OrmQueryIntoModelSlice(e)
 	//OrmUpdateIndexToCache(e)
-	//OrmSelectMultiTable(e)
+	OrmSelectMultiTable(e)
 
 	//RawQueryIntoModel(e)
 	//RawQueryIntoModelSlice(e)
 	//RawQueryIntoMap(e)
 	//RawExec(e)
 
-	TxGetExec(e)
-	TxRollback(e)
+	//TxGetExec(e)
+	//TxRollback(e)
 	log.Info("program exit...")
 }
 
@@ -194,8 +200,23 @@ func OrmUpdateIndexToCache(e *sqlca.Engine) {
 }
 
 func OrmSelectMultiTable(e *sqlca.Engine) {
+
+	type UserClass struct {
+		UserInfo  UserDO
+		ClassInfo ClassDo
+	}
+	var ucs []UserClass
 	//SQL: SELECT a.*, b.class_no FROM users a, classes b WHERE a.id=b.user_id
-	//e.Model()
+	_, err := e.Model(&ucs).
+		Select("a.id", "a.name", "a.phone", "b.class_no").
+		Table("users a", "classes b").
+		Where("a.id=b.user_id").
+		Query()
+	if err != nil {
+		log.Errorf("query error [%v]", err.Error())
+	} else {
+		log.Debugf("user class info [%+v]", ucs)
+	}
 }
 
 func TxGetExec(e *sqlca.Engine) (err error) {

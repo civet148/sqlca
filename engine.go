@@ -151,11 +151,11 @@ func (e *Engine) Model(args ...interface{}) *Engine {
 	return e.clone(args...)
 }
 
-// set orm query table name
+// set orm query table name(s)
 // when your struct type name is not a table name
-func (e *Engine) Table(strName string) *Engine {
-	assert(strName, "name is nil")
-	e.setTableName(strName)
+func (e *Engine) Table(strNames ...string) *Engine {
+	assert(strNames, "table name is nil")
+	e.setTableName(strNames...)
 	return e
 }
 

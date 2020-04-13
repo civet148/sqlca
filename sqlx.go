@@ -211,7 +211,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		expireTime:   e.expireTime,
 	}
 
-	e.setModel(models...)
+	engine.setModel(models...)
 	return engine
 }
 
@@ -264,8 +264,8 @@ func (e *Engine) getTableName() string {
 	return e.strTableName
 }
 
-func (e *Engine) setTableName(strName string) {
-	e.strTableName = strName
+func (e *Engine) setTableName(strNames ...string) {
+	e.strTableName = strings.Join(strNames, ",")
 }
 
 func (e *Engine) setPkValue(value interface{}) {

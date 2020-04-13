@@ -45,6 +45,7 @@ func main() {
 	//RawExec(e)
 
 	TxGetExec(e)
+	TxRollback(e)
 	log.Info("program exit...")
 }
 
@@ -169,6 +170,34 @@ func RawExec(e *sqlca.Engine) {
 	}
 }
 
+func OrmUpdateIndexToCache(e *sqlca.Engine) {
+	user := UserDO{
+		Id:    1,
+		Name:  "john3",
+		Phone: "8615011111114",
+		Sex:   1,
+		Email: "john3@gmail.com",
+	}
+
+	//SQL: update users set name='john3', phone='8615011111114', sex='1', email='john3@gmail.com' where id='1'
+	//index: name, phone
+	//redis key:  sqlx:cache:[table]:[column]:[column value]
+	if rowsAffected, err := e.Model(&user).
+		Table(TABLE_NAME_USERS).
+		Select("name", "phone", "email", "sex").
+		Cache("name", "phone").
+		Update(); err != nil {
+		log.Errorf("update data model [%+v] error [%v]", user, err.Error())
+	} else {
+		log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
+	}
+}
+
+func OrmSelectMultiTable(e *sqlca.Engine) {
+	//SQL: SELECT a.*, b.class_no FROM users a, classes b WHERE a.id=b.user_id
+	//e.Model()
+}
+
 func TxGetExec(e *sqlca.Engine) (err error) {
 
 	var tx *sqlca.Engine
@@ -214,34 +243,32 @@ func TxGetExec(e *sqlca.Engine) (err error) {
 		log.Debugf("struct user data object [%+v]", do)
 	}
 
-	err = tx.TxCommit()
+	if err = tx.TxCommit(); err != nil {
+		log.Errorf("TxCommit error [%v]", err.Error())
+		return
+	}
 	return
 }
 
-func OrmUpdateIndexToCache(e *sqlca.Engine) {
-	user := UserDO{
-		Id:    1,
-		Name:  "john3",
-		Phone: "8615011111114",
-		Sex:   1,
-		Email: "john3@gmail.com",
+func TxRollback(e *sqlca.Engine) (err error) {
+
+	var tx *sqlca.Engine
+	//transaction: insert and rollback
+	if tx, err = e.TxBegin(); err != nil {
+		log.Errorf("TxBegin error [%v]", err.Error())
+		return
 	}
 
-	//SQL: update users set name='john3', phone='8615011111114', sex='1', email='john3@gmail.com' where id='1'
-	//index: name, phone
-	//redis key:  sqlx:cache:[table]:[column]:[column value]
-	if rowsAffected, err := e.Model(&user).
-		Table(TABLE_NAME_USERS).
-		Select("name", "phone", "email", "sex").
-		Cache("name", "phone").
-		Update(); err != nil {
-		log.Errorf("update data model [%+v] error [%v]", user, err.Error())
-	} else {
-		log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
+	_, _, err = tx.TxExec("INSERT INTO users(id, name, phone, sex, email) VALUES(1, 'john3', '8618600000000', 2, 'john3@gmail.com')")
+	if err != nil {
+		log.Errorf("TxExec error %v, rollback", err.Error())
+		_ = tx.TxRollback()
+		return
 	}
-}
 
-func OrmSelectMultiTable(e *sqlca.Engine) {
-	//SQL: SELECT a.*, b.class_no FROM users a, classes b WHERE a.id=b.user_id
-	e.Model()
+	if err = tx.TxCommit(); err != nil {
+		log.Errorf("TxCommit error [%v]", err.Error())
+		return
+	}
+	return
 }

@@ -15,7 +15,7 @@ type UserDO struct {
 	Phone   string `db:"phone"`
 	Sex     int8   `db:"sex"`
 	Email   string `db:"email"`
-	Disable bool   `db:"disable"`
+	Disable int8   `db:"disable"`
 }
 
 type ClassDo struct {
@@ -38,12 +38,12 @@ func main() {
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=&windows=false")
 
 	//OrmInsertByModel(e)
-	//OrmUpsertByModel(e)
+	OrmUpsertByModel(e)
 	//OrmUpdateByModel(e)
-	OrmQueryIntoModel(e)
+	//OrmQueryIntoModel(e)
 	//OrmQueryIntoModelSlice(e)
 	//OrmUpdateIndexToCache(e)
-	OrmSelectMultiTable(e)
+	//OrmSelectMultiTable(e)
 
 	//RawQueryIntoModel(e)
 	//RawQueryIntoModelSlice(e)
@@ -88,11 +88,12 @@ func OrmUpsertByModel(e *sqlca.Engine) {
 
 func OrmUpdateByModel(e *sqlca.Engine) {
 	user := UserDO{
-		Id:    1,
-		Name:  "john",
-		Phone: "8618699999999",
-		Sex:   1,
-		Email: "john@gmail.com",
+		Id:      1,
+		Name:    "john",
+		Phone:   "8618699999999",
+		Sex:     1,
+		Email:   "john@gmail.com",
+		Disable: 1,
 	}
 
 	//SQL: update users set name='john', phone='8618699999999', sex='1', email='john@gmail.com' where id='1'
@@ -202,13 +203,15 @@ func OrmUpdateIndexToCache(e *sqlca.Engine) {
 func OrmSelectMultiTable(e *sqlca.Engine) {
 
 	type UserClass struct {
-		UserInfo  UserDO
-		ClassInfo ClassDo
+		UserId   int32  `db:"user_id"`
+		UserName string `db:"user_name"`
+		Phone    string `db:"phone"`
+		ClassNo  string `db:"class_no"`
 	}
 	var ucs []UserClass
 	//SQL: SELECT a.*, b.class_no FROM users a, classes b WHERE a.id=b.user_id
 	_, err := e.Model(&ucs).
-		Select("a.id", "a.name", "a.phone", "b.class_no").
+		Select("a.id as user_id", "a.name", "a.phone", "b.class_no").
 		Table("users a", "classes b").
 		Where("a.id=b.user_id").
 		Query()

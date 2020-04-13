@@ -15,6 +15,7 @@ import (
 
 type Engine struct {
 	db              *sqlx.DB               // sqlx instance
+	tx              *sql.Tx                // sql tx instance
 	cache           redigogo.Cache         // redis cache instance
 	adapterSqlx     AdapterType            // what's adapter of sqlx
 	adapterCache    AdapterType            // what's adapter of cache
@@ -382,8 +383,8 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	if e.isDebug() {
 		log.Debugf("query [%v] args %+v", strQuery, args)
 	}
-	count := strings.Count(strQuery, "?")
-	if count > 0 && count == len(args) { //question placeholder exist
+
+	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
 		r, err = e.db.Queryx(strQuery, args...)
 	} else {
 		r, err = e.db.Queryx(fmt.Sprintf(strQuery, args...))
@@ -410,8 +411,8 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 	if e.isDebug() {
 		log.Debugf("query [%v] args %+v", strQuery, args)
 	}
-	count := strings.Count(strQuery, "?")
-	if count > 0 && count == len(args) { //question placeholder exist
+
+	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
 		r, err = e.db.Queryx(strQuery, args...)
 	} else {
 		r, err = e.db.Queryx(fmt.Sprintf(strQuery, args...))
@@ -437,8 +438,7 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	if e.isDebug() {
 		log.Debugf("query [%v] args %+v", strQuery, args)
 	}
-	count := strings.Count(strQuery, "?")
-	if count > 0 && count == len(args) { //question placeholder exist
+	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
 		r, err = e.db.Exec(strQuery, args...)
 	} else {
 		r, err = e.db.Exec(fmt.Sprintf(strQuery, args...))
@@ -460,59 +460,57 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	return
 }
 
-//tx multiple sql by orm
-func (e *Engine) Tx(args ...*sqlcaTx) (err error) {
-
-	if err = e.txExec(args...); err != nil {
-		log.Errorf("tx exec error [%v]", err.Error())
-		return err
-	}
-	//update to cache if exist
-	for _, v := range args {
-		e.saveToCache(v.kvs...)
-	}
-	return nil
+func (e *Engine) TxBegin() (*Engine, error) {
+	return e.newTx()
 }
 
-//tx multiple sql by raw sql
-func (e *Engine) TxRaw(sqls ...string) (err error) {
+func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
+	assert(e.tx, "TxGet tx instance is nil, please call TxBegin to create a tx instance")
+	var rows *sql.Rows
 
-	var args []*sqlcaTx
-	for _, v := range sqls {
-		args = append(args, newTx(v))
+	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
+		rows, err = e.tx.Query(strQuery, args...)
+	} else {
+		rows, err = e.tx.Query(fmt.Sprintf(strQuery, args...))
 	}
 
-	if err = e.txExec(args...); err != nil {
-		log.Errorf("tx exec error [%v]", err.Error())
-		return err
+	if err != nil {
+		log.Errorf("TxGet sql [%v] args %v query error [%v]", strQuery, args, err.Error())
+		return
 	}
-	return nil
+	e.setModel(dest)
+	if count, err = e.fetchRows(rows); err != nil {
+		log.Errorf("TxGet sql [%v] args %v fetch row error [%v]", strQuery, args, err.Error())
+		return
+	}
+	return
 }
 
-// make orm tx sql: insert
-func (e *Engine) ToTxInsert() *sqlcaTx {
-	assert(e.model, "model is nil, please call Model method first")
-	assert(e.strTableName, "table name not found")
-	return newTx(e.makeSqlxInsert())
+func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
+	assert(e.tx, "TxExec tx instance is nil, please call TxBegin to create a tx instance")
+	var result sql.Result
+
+	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
+		result, err = e.tx.Exec(strQuery, args...)
+	} else {
+		result, err = e.tx.Exec(fmt.Sprintf(strQuery, args...))
+	}
+
+	if err != nil {
+		log.Errorf("TxExec exec query [%v] args %+v error [%+v]", strQuery, args, err.Error())
+		return
+	}
+	lastInsertId, _ = result.LastInsertId()
+	rowsAffected, _ = result.RowsAffected()
+	return
 }
 
-// make orm tx sql: upsert
-func (e *Engine) ToTxUpsert() *sqlcaTx {
-	assert(e.model, "model is nil, please call Model method first")
-	assert(e.strTableName, "table name not found")
-	return newTx(e.makeSqlxUpsert())
+func (e *Engine) TxRollback() error {
+	assert(e.tx, "TxRollback tx instance is nil, please call TxBegin to create a tx instance")
+	return e.tx.Rollback()
 }
 
-// make orm tx sql: update
-func (e *Engine) ToTxUpdate() *sqlcaTx {
-	assert(e.model, "model is nil, please call Model method first")
-	assert(e.strTableName, "table name not found")
-	return newTx(e.makeSqlxUpdate(), e.makeUpdateCache()...)
-}
-
-// make orm tx sql: query
-func (e *Engine) ToTxQuery() *sqlcaTx {
-	assert(e.model, "model is nil, please call Model method first")
-	assert(e.strTableName, "table name not found")
-	return newTx(e.makeSqlxQuery())
+func (e *Engine) TxCommit() error {
+	assert(e.tx, "TxCommit tx instance is nil, please call TxBegin to create a tx instance")
+	return e.tx.Commit()
 }

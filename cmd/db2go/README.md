@@ -8,7 +8,7 @@
 
 --table     tables to export, eg. "users, devices" [optional]
 
---out       output directory, default . [required]
+--out       output directory, default . [optional]
 
 --package   export to a directory which used to be a package name in golang [optional]
 

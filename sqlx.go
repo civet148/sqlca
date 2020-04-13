@@ -99,7 +99,6 @@ const (
 	OperType_QueryRaw OperType = 6 // raw: query sql into model
 	OperType_ExecRaw  OperType = 7 // raw: insert/update sql
 	OperType_QueryMap OperType = 8 // raw: query sql into map
-	OperType_TxRaw    OperType = 9 // raw: tx sql
 )
 
 func (o OperType) GoString() string {
@@ -122,8 +121,8 @@ func (o OperType) String() string {
 		return "OperType_ExecRaw"
 	case OperType_Tx:
 		return "OperType_Tx"
-	case OperType_TxRaw:
-		return "OperType_TxRaw"
+	case OperType_QueryMap:
+		return "OperType_QueryMap"
 	}
 	return "OperType_Unknown"
 }
@@ -160,6 +159,45 @@ type tableIndex struct {
 	Value interface{} `json:"value"`
 }
 
+func (e *Engine) setModel(models ...interface{}) *Engine {
+
+	for _, v := range models {
+
+		typ := reflect.TypeOf(v)
+		if typ.Kind() == reflect.Ptr {
+			typ = typ.Elem()
+		}
+		switch typ.Kind() {
+		case reflect.Struct: // struct
+			e.setModelType(ModelType_Struct)
+		case reflect.Slice: //  slice
+			e.setModelType(ModelType_Slice)
+		case reflect.Map: // map
+			e.setModelType(ModelType_Map)
+			assert(false, "map type model not support yet")
+		default: //base type
+			e.setModelType(ModelType_BaseType)
+		}
+		if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice {
+			e.model = models[0] //map, struct or slice
+		} else {
+			e.model = models //base type argument like int/string/float32...
+		}
+		var selectColumns []string
+		e.dict = newReflector(e.model).ToMap(TAG_NAME_DB)
+		for k, _ := range e.dict {
+			selectColumns = append(selectColumns, k)
+		}
+		if len(selectColumns) == 0 {
+			e.setSelectColumns("*")
+		} else {
+			e.setSelectColumns(selectColumns...)
+		}
+		break //only check first argument
+	}
+	return e
+}
+
 // clone engine
 func (e *Engine) clone(models ...interface{}) *Engine {
 
@@ -173,48 +211,19 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		expireTime:   e.expireTime,
 	}
 
-	for _, v := range models {
-
-		typ := reflect.TypeOf(v)
-		if typ.Kind() == reflect.Ptr {
-			typ = typ.Elem()
-		}
-		switch typ.Kind() {
-		case reflect.Struct: // struct
-			engine.setModelType(ModelType_Struct)
-		case reflect.Slice: //  slice
-			engine.setModelType(ModelType_Slice)
-		case reflect.Map: // map
-			//TODO @libin support map type model
-			engine.setModelType(ModelType_Map)
-			assert(false, "map type model not support yet")
-		default: //base type
-			engine.setModelType(ModelType_BaseType)
-		}
-		if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice {
-			engine.model = models[0] //map, struct or slice
-		} else {
-			engine.model = models //base type argument like int/string/float32...
-		}
-		break //only check first argument
-	}
-
-	var selectColumns []string
-	engine.dict = newReflector(engine.model).ToMap(TAG_NAME_DB)
-	for k, _ := range engine.dict {
-		selectColumns = append(selectColumns, k)
-	}
-	if len(selectColumns) == 0 {
-		engine.setSelectColumns("*")
-	} else {
-		engine.setSelectColumns(selectColumns...)
-	}
+	e.setModel(models...)
 	return engine
 }
 
-func (e *Engine) clean() *Engine {
+func (e *Engine) newTx() (txEngine *Engine, err error) {
 
-	return e
+	txEngine = e.clone()
+	if txEngine.tx, err = e.db.Begin(); err != nil {
+		log.Errorf("newTx error [%+v]", err.Error())
+		return nil, err
+	}
+	txEngine.operType = OperType_Tx
+	return
 }
 
 func (e *Engine) setUseCache(enable bool) {
@@ -707,4 +716,12 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 	strOnConflictUpdates := e.getOnConflictUpdates()
 	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) %v", e.strTableName, strColumns, strValues, strOnConflictUpdates)
 	return
+}
+
+func (e *Engine) isQuestionPlaceHolder(query string, args ...interface{}) bool {
+	count := strings.Count(query, "?")
+	if count > 0 && count == len(args) {
+		return true
+	}
+	return false
 }

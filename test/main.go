@@ -10,11 +10,12 @@ const (
 )
 
 type UserDO struct {
-	Id    int32  `db:"id"`    // int(11) NOT NULL AUTO_INCREMENT COMMENT 'auto inc id',
-	Name  string `db:"name"`  // varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
-	Phone string `db:"phone"` // varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-	Sex   int8   `db:"sex"`   // tinyint(1) NOT NULL DEFAULT 1,
-	Email string `db:"email"` // varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
+	Id      int32  `db:"id"`
+	Name    string `db:"name"`
+	Phone   string `db:"phone"`
+	Sex     int8   `db:"sex"`
+	Email   string `db:"email"`
+	Disable bool   `db:"disable"`
 }
 
 func main() {
@@ -35,13 +36,15 @@ func main() {
 	//OrmUpdateByModel(e)
 	//OrmQueryIntoModel(e)
 	//OrmQueryIntoModelSlice(e)
+	//OrmUpdateIndexToCache(e)
+	//OrmSelectMultiTable(e)
+
 	//RawQueryIntoModel(e)
 	//RawQueryIntoModelSlice(e)
 	//RawQueryIntoMap(e)
 	//RawExec(e)
-	//TxExec(e)
-	//RawTxExec(e)
-	OrmUpdateIndexToCache(e)
+
+	TxGetExec(e)
 	log.Info("program exit...")
 }
 
@@ -166,41 +169,53 @@ func RawExec(e *sqlca.Engine) {
 	}
 }
 
-func TxExec(e *sqlca.Engine) {
-	user1 := UserDO{
-		//Id:    0,
-		Name:  "user1",
-		Phone: "8618600000001",
-		Sex:   1,
-		Email: "user1@hotmail.com",
+func TxGetExec(e *sqlca.Engine) (err error) {
+
+	var tx *sqlca.Engine
+	//transaction: select user id form users where phone is '8618600000000' and update users disable to 1 by user id
+	if tx, err = e.TxBegin(); err != nil {
+		log.Errorf("TxBegin error [%v]", err.Error())
+		return
 	}
 
-	user2 := UserDO{
-		//Id:    0,
-		Name:  "user2",
-		Phone: "8618600000002",
-		Sex:   1,
-		Email: "user2@hotmail.com",
-	}
-	tx1 := e.Model(&user1).Table(TABLE_NAME_USERS).ToTxInsert()
-	tx2 := e.Model(&user2).Table(TABLE_NAME_USERS).ToTxInsert()
-	if err := e.Tx(tx1, tx2); err != nil {
-		log.Errorf("tx error [%v]", err.Error())
-	} else {
-		log.Debugf("tx ok")
-	}
-}
+	var UserId int32
 
-func RawTxExec(e *sqlca.Engine) {
-
-	tx1 := "INSERT INTO users (`name`,`phone`,`sex`,`email`) VALUES ('user3','8618600000003','1','user3@hotmail.com')"
-	tx2 := "INSERT INTO users (`name`,`phone`,`sex`,`email`) VALUES ('user4','8618600000004','2','user4@hotmail.com')"
-
-	if err := e.TxRaw(tx1, tx2); err != nil {
-		log.Errorf("tx raw error [%v]", err.Error())
-	} else {
-		log.Debugf("tx raw ok")
+	//query results into base variants
+	_, err = tx.TxGet(&UserId, "SELECT id FROM users WHERE phone='%v'", "8618600000000")
+	if err != nil {
+		log.Errorf("TxGet error %v", err.Error())
+		_ = tx.TxRollback()
+		return
 	}
+	var lastInsertId, rowsAffected int64
+	if UserId == 0 {
+		log.Warnf("select id users by phone number but user not exist")
+		_ = tx.TxRollback()
+		return
+	}
+	log.Debugf("base variant of user id [%+v]", UserId)
+	lastInsertId, rowsAffected, err = tx.TxExec("UPDATE users SET disable=? WHERE id=?", 1, UserId)
+	if err != nil {
+		log.Errorf("TxExec error %v", err.Error())
+		_ = tx.TxRollback()
+		return
+	}
+	log.Debugf("user id [%v] disabled, last insert id [%v] rows affected [%v]", UserId, lastInsertId, rowsAffected)
+
+	//query results into a struct object or slice
+	var dos []UserDO
+	_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1")
+	if err != nil {
+		log.Errorf("TxGet error %v", err.Error())
+		_ = tx.TxRollback()
+		return
+	}
+	for _, do := range dos {
+		log.Debugf("struct user data object [%+v]", do)
+	}
+
+	err = tx.TxCommit()
+	return
 }
 
 func OrmUpdateIndexToCache(e *sqlca.Engine) {
@@ -224,4 +239,9 @@ func OrmUpdateIndexToCache(e *sqlca.Engine) {
 	} else {
 		log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
 	}
+}
+
+func OrmSelectMultiTable(e *sqlca.Engine) {
+	//SQL: SELECT a.*, b.class_no FROM users a, classes b WHERE a.id=b.user_id
+	e.Model()
 }

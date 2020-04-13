@@ -9,30 +9,88 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 
 # database schema
 ```mysql
-CREATE DATABASE IF NOT EXISTS test DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;
+/*
+SQLyog Ultimate v13.1.1 (64 bit)
+MySQL - 8.0.18 : Database - test
+*********************************************************************
+*/
 
-USE test;
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
+/*!40101 SET NAMES utf8 */;
 
-CREATE TABLE `users`  (
+/*!40101 SET SQL_MODE=''*/;
+
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+CREATE DATABASE /*!32312 IF NOT EXISTS*/`test` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+
+USE `test`;
+
+/*Table structure for table `classes` */
+
+DROP TABLE IF EXISTS `classes`;
+
+CREATE TABLE `classes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'incr id',
+  `class_no` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'class no',
+  `user_id` int(11) NOT NULL COMMENT 'student id',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+/*Data for the table `classes` */
+
+insert  into `classes`(`id`,`class_no`,`user_id`,`created_at`,`updated_at`) values 
+(1,'S-01',3,'2020-04-10 10:08:08','2020-04-10 10:08:08'),
+(2,'S-01',4,'2020-04-10 10:08:08','2020-04-10 10:08:08'),
+(3,'S-01',5,'2020-04-10 10:08:08','2020-04-10 10:08:08'),
+(4,'S-01',6,'2020-04-10 10:08:08','2020-04-10 10:08:08'),
+(5,'S-02',7,'2020-04-10 10:08:08','2020-04-10 10:08:08'),
+(6,'S-02',8,'2020-04-10 10:08:08','2020-04-10 10:08:08'),
+(7,'S-02',9,'2020-04-10 10:08:08','2020-04-10 10:08:08'),
+(8,'S-02',10,'2020-04-10 10:08:08','2020-04-10 10:08:08');
+
+/*Table structure for table `users` */
+
+DROP TABLE IF EXISTS `users`;
+
+CREATE TABLE `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'auto inc id',
-  `name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
-  `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `sex` tinyint(1) NOT NULL DEFAULT 1,
-  `email` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
-  `created_at` timestamp(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp(0) NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP(0),
-  PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
+  `name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT 'user name',
+  `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'phone number',
+  `sex` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'user sex',
+  `email` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'email',
+  `disable` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'disabled(0=false 1=true)',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `phone` (`phone`)
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
--- ----------------------------
--- Records of users
--- ----------------------------
-INSERT INTO `users` VALUES (1, 'rose', '8613011112222', 2, 'rose123@hotmail.com', '2020-03-11 08:46:57', '2020-03-11 08:48:14');
-INSERT INTO `users` VALUES (2, 'john', '8613100003333', 1, 'john333@hotmail.com', '2020-03-11 08:46:57', '2020-03-11 08:47:59');
+/*Data for the table `users` */
 
-SET FOREIGN_KEY_CHECKS = 1;
+insert  into `users`(`id`,`name`,`phone`,`sex`,`email`,`disable`,`created_at`,`updated_at`) values 
+(1,'lory','8618688888888',2,'2822922@qq.com',0,'2020-03-11 08:46:57','2020-04-13 12:23:34'),
+(2,'lucas','8618699999999',1,'john@gmail.com',0,'2020-03-11 08:46:57','2020-03-11 16:02:51'),
+(3,'std00','8618600000000',1,'admin@golang.org',1,'2020-03-11 14:42:53','2020-04-13 12:09:50'),
+(4,'std01','8618600000001',1,'user1@hotmail.com',0,'2020-03-11 16:58:45','2020-04-10 10:07:15'),
+(5,'std02','8618600000002',1,'user2@hotmail.com',0,'2020-03-11 16:58:45','2020-04-10 10:07:20'),
+(6,'std03','8618600000003',1,'user1@hotmail.com',0,'2020-03-11 16:59:58','2020-04-10 10:07:22'),
+(7,'std04','8618600000004',1,'user2@hotmail.com',0,'2020-03-11 16:59:58','2020-04-10 10:07:26'),
+(9,'std05','8618600000005',1,'user1@hotmail.com',0,'2020-03-11 17:03:51','2020-04-10 10:07:28'),
+(10,'std06','8618600000006',1,'user2@hotmail.com',0,'2020-03-11 17:03:51','2020-04-10 10:07:29'),
+(11,'std07','8618600000007',1,'user1@hotmail.com',0,'2020-03-11 17:04:17','2020-04-10 10:07:31'),
+(12,'std08','8618600000008',2,'user2@hotmail.com',0,'2020-03-11 17:04:17','2020-04-10 10:07:33'),
+(13,'std09','8618600000009',1,'user3@hotmail.com',0,'2020-03-11 17:04:49','2020-04-10 10:07:35'),
+(14,'std10','8618600000010',2,'user4@hotmail.com',0,'2020-03-11 17:04:49','2020-04-10 10:07:38');
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
 ```
 
 # data model
@@ -193,7 +251,7 @@ if err != nil {
 ```
 
 ## save data to cache by id or index 
-just for orm [insert/upsert/update] and tx [update]
+just for orm [insert/upsert/update]
 ```golang
 
 ```
@@ -222,44 +280,60 @@ user := UserDO{
     Sex:   1,
     Email: "john@gmail.com",
 }
-e.Model(&user).Table(TABLE_NAME_USERS).Cache().Insert()
+e.Model(&user).Table(TABLE_NAME_USERS).Cache("phone").Insert()
 ```
 
-## tx: orm and raw
+## tx (TxBegin...TxGet...TxExec...TxCommit)
 
 ```golang
-user1 := UserDO{
-    //Id:    0,
-    Name:  "user1",
-    Phone: "8618600000001",
-    Sex:   1,
-    Email: "user1@hotmail.com",
-}
 
-user2 := UserDO{
-    //Id:    0,
-    Name:  "user2",
-    Phone: "8618600000002",
-    Sex:   1,
-    Email: "user2@hotmail.com",
-}
-tx1 := e.Model(&user1).Table(TABLE_NAME_USERS).ToTxInsert()
-tx2 := e.Model(&user2).Table(TABLE_NAME_USERS).ToTxInsert()
-if err := e.Tx(tx1, tx2); err != nil {
-    log.Errorf("tx error [%v]", err.Error())
-} else {
-    log.Debugf("tx ok")
-}
-```
+func SqlcaTxGetAndExec(e *sqlca.Engine) (err error) {
 
-```golang
-tx1 := "INSERT INTO users (`name`,`phone`,`sex`,`email`) VALUES ('user3','8618600000003','1','user3@hotmail.com')"
-tx2 := "INSERT INTO users (`name`,`phone`,`sex`,`email`) VALUES ('user4','8618600000004','2','user4@hotmail.com')"
+	var tx *sqlca.Engine
+	//transaction: select user id form users where phone is '8618600000000' and update users disable to 1 by user id
+	if tx, err = e.TxBegin(); err != nil {
+		log.Errorf("TxBegin error [%v]", err.Error())
+		return
+	}
 
-if err := e.TxRaw(tx1, tx2); err != nil {
-    log.Errorf("tx raw error [%v]", err.Error())
-} else {
-    log.Debugf("tx raw ok")
+	var UserId int32
+
+	//query results into base variants
+	_, err = tx.TxGet(&UserId, "SELECT id FROM users WHERE phone='%v'", "8618600000000")
+	if err != nil {
+		log.Errorf("TxGet error %v", err.Error())
+		_ = tx.TxRollback()
+		return
+	}
+	var lastInsertId, rowsAffected int64
+	if UserId == 0 {
+		log.Warnf("select id users by phone number but user not exist")
+		_ = tx.TxRollback()
+		return
+	}
+	log.Debugf("base variant of user id [%+v]", UserId)
+	lastInsertId, rowsAffected, err = tx.TxExec("UPDATE users SET disable=? WHERE id=?", 1, UserId)
+	if err != nil {
+		log.Errorf("TxExec error %v", err.Error())
+		_ = tx.TxRollback()
+		return
+	}
+	log.Debugf("user id [%v] disabled, last insert id [%v] rows affected [%v]", UserId, lastInsertId, rowsAffected)
+
+	//query results into a struct object or slice
+	var dos []UserDO
+	_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1")
+	if err != nil {
+		log.Errorf("TxGet error %v", err.Error())
+		_ = tx.TxRollback()
+		return
+	}
+	for _, do := range dos {
+		log.Debugf("struct user data object [%+v]", do)
+	}
+
+	err = tx.TxCommit()
+	return
 }
 ```
 

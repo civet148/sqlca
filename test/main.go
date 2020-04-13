@@ -39,19 +39,19 @@ func main() {
 
 	//OrmInsertByModel(e)
 	OrmUpsertByModel(e)
-	//OrmUpdateByModel(e)
-	//OrmQueryIntoModel(e)
-	//OrmQueryIntoModelSlice(e)
-	//OrmUpdateIndexToCache(e)
-	//OrmSelectMultiTable(e)
+	OrmUpdateByModel(e)
+	OrmQueryIntoModel(e)
+	OrmQueryIntoModelSlice(e)
+	OrmUpdateIndexToCache(e)
+	OrmSelectMultiTable(e)
 
-	//RawQueryIntoModel(e)
-	//RawQueryIntoModelSlice(e)
-	//RawQueryIntoMap(e)
-	//RawExec(e)
+	RawQueryIntoModel(e)
+	RawQueryIntoModelSlice(e)
+	RawQueryIntoMap(e)
+	RawExec(e)
 
-	//TxGetExec(e)
-	//TxRollback(e)
+	TxGetExec(e)
+	TxRollback(e)
 	log.Info("program exit...")
 }
 
@@ -129,7 +129,12 @@ func OrmQueryIntoModelSlice(e *sqlca.Engine) {
 	if rowsAffected, err := e.Model(&users).Table(TABLE_NAME_USERS).Limit(3).Query(); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", users, err.Error())
 	} else {
-		log.Debugf("query into model [%+v] ok, rows affected [%v]", users, rowsAffected)
+
+		if len(users) == 0 {
+			log.Errorf("query into model failed, rows affected [%v]", rowsAffected)
+		} else {
+			log.Debugf("query into model [%+v] ok, rows affected [%v]", users, rowsAffected)
+		}
 	}
 }
 
@@ -203,7 +208,7 @@ func OrmUpdateIndexToCache(e *sqlca.Engine) {
 func OrmSelectMultiTable(e *sqlca.Engine) {
 
 	type UserClass struct {
-		UserId   int32  `db:"user_id"`
+		UserId   int32  `db:"id"`
 		UserName string `db:"user_name"`
 		Phone    string `db:"phone"`
 		ClassNo  string `db:"class_no"`
@@ -211,7 +216,7 @@ func OrmSelectMultiTable(e *sqlca.Engine) {
 	var ucs []UserClass
 	//SQL: SELECT a.*, b.class_no FROM users a, classes b WHERE a.id=b.user_id
 	_, err := e.Model(&ucs).
-		Select("a.id as user_id", "a.name", "a.phone", "b.class_no").
+		Select("a.id", "a.name", "a.phone", "b.class_no").
 		Table("users a", "classes b").
 		Where("a.id=b.user_id").
 		Query()

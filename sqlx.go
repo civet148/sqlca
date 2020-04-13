@@ -145,7 +145,7 @@ func (m ModelType) String() string {
 	case ModelType_Struct:
 		return "ModelType_Struct"
 	case ModelType_Slice:
-		return "ModelType_StructSlice"
+		return "ModelType_Slice"
 	case ModelType_Map:
 		return "ModelType_Map"
 	case ModelType_BaseType:
@@ -193,6 +193,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 		} else {
 			e.setSelectColumns(selectColumns...)
 		}
+		//log.Debugf("dict [%+v] select columns %+v model type [%+v]", e.dict, selectColumns, e.modelType)
 		break //only check first argument
 	}
 	return e
@@ -234,13 +235,29 @@ func (e *Engine) getUseCache() bool {
 	return e.bUseCache
 }
 
+func (e *Engine) sepStrByDot(strIn string) (strPrefix, strSuffix string) {
+	strSuffix = strIn
+	nIndex := strings.LastIndex(strIn, ".")
+	if nIndex == -1 || nIndex == 0 {
+		return
+	} else {
+		strPrefix = strIn[:nIndex+1] //contain . character
+		if nIndex < len(strIn) {
+			strSuffix = strIn[nIndex+1:]
+		}
+	}
+
+	return
+}
+
 func (e *Engine) getModelValue(strKey string) interface{} {
-	return e.dict[strKey]
+
+	_, strCol := e.sepStrByDot(strKey)
+	//log.Debugf("getModelValue raw=%v col=%v dict=%+v", strKey, strCol, e.dict)
+	return e.dict[strCol]
 }
 
 func (e *Engine) setIndexes(name string, value interface{}) {
-
-	assert(value, "index value is nil")
 
 	if name == e.GetPkName() {
 		return
@@ -644,26 +661,29 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 	var strWhere string
-	if isNilOrFalse(e.getCustomWhere()) {
 
-		if isNilOrFalse(e.getPkValue()) {
+	strPkValue := e.getPkValue()
+	strCustomer := e.getCustomWhere()
 
-			strIndexCond := e.getIndexWhere()
-			if strIndexCond != "" {
-				strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getIndexWhere()
-			}
-		} else {
-			strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getPkWhere()
+	if strPkValue == "" || strPkValue == "0" {
+		strIndexCond := e.getIndexWhere()
+		if strIndexCond != "" {
+			strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getIndexWhere()
 		}
-		strSqlx = fmt.Sprintf("SELECT %v FROM %v %v %v %v %v %v",
-			e.getRawColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by model primary key value
 	} else {
-
-		strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getCustomWhere()
-		strSqlx = fmt.Sprintf("SELECT %v FROM %v %v %v %v %v %v",
-			e.getRawColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
+		strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getPkWhere()
 	}
-	assert(strSqlx, "query sql is nil")
+
+	if strWhere == "" {
+		if strCustomer == "" {
+			strWhere = DATABASE_KEY_NAME_WHERE + " " + "1=1"
+		} else {
+			strWhere = DATABASE_KEY_NAME_WHERE + " " + strCustomer
+		}
+	}
+
+	strSqlx = fmt.Sprintf("SELECT %v FROM %v %v %v %v %v %v",
+		e.getRawColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
 	return
 }
 

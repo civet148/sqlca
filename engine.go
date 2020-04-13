@@ -130,7 +130,12 @@ func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 func (e *Engine) Cache(indexes ...string) *Engine {
 	e.setUseCache(true)
 	for _, v := range indexes {
-		e.setIndexes(v, e.getModelValue(v))
+
+		if itf := e.getModelValue(v); itf != nil {
+			e.setIndexes(v, itf)
+		} else {
+			log.Warnf("index key=%v value=%v", v, itf)
+		}
 	}
 	return e
 }

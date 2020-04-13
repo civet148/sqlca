@@ -62,7 +62,11 @@ func (s *ModelReflector) ToMap(tagName string) map[string]interface{} {
 		val = val.Elem()
 	}
 
-	if typ.Kind() == reflect.Struct { // struct type
+	if typ.Kind() == reflect.Struct { // struct data model
+		s.parseStructField(typ, val, tagName)
+	} else if typ.Kind() == reflect.Slice { // struct slice data model
+		typ = val.Type().Elem()
+		val = reflect.New(typ).Elem()
 		s.parseStructField(typ, val, tagName)
 	}
 	return s.dict

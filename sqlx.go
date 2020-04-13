@@ -539,28 +539,14 @@ func (e *Engine) getQuoteConflicts(strExcepts ...string) (strQuoteConflicts stri
 	return
 }
 
-func (e *Engine) getQuoteColumns() (strColumns string) {
-	var cols []string
-
-	selectCols := e.getSelectColumns()
+func (e *Engine) getRawColumns() (strColumns string) {
+	selectCols := e.selectColumns
 	if len(selectCols) == 0 {
 		return "*"
 	}
 
-	for _, v := range selectCols {
-
-		if v == "*" {
-			return "*"
-		}
-
-		if e.isColumnSelected(v) {
-			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // column name format to `id`,`date`,...
-			cols = append(cols, c)
-		}
-	}
-
-	if len(cols) > 0 {
-		strColumns = strings.Join(cols, ",")
+	if len(selectCols) > 0 {
+		strColumns = strings.Join(selectCols, ",")
 	}
 	return
 }
@@ -670,12 +656,12 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 			strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getPkWhere()
 		}
 		strSqlx = fmt.Sprintf("SELECT %v FROM %v %v %v %v %v %v",
-			e.getQuoteColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by model primary key value
+			e.getRawColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by model primary key value
 	} else {
 
 		strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getCustomWhere()
 		strSqlx = fmt.Sprintf("SELECT %v FROM %v %v %v %v %v %v",
-			e.getQuoteColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
+			e.getRawColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
 	}
 	assert(strSqlx, "query sql is nil")
 	return

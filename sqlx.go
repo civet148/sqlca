@@ -99,6 +99,7 @@ const (
 	OperType_QueryRaw OperType = 6 // raw: query sql into model
 	OperType_ExecRaw  OperType = 7 // raw: insert/update sql
 	OperType_QueryMap OperType = 8 // raw: query sql into map
+	OperType_Delete   OperType = 9 // orm: delete sql
 )
 
 func (o OperType) GoString() string {
@@ -494,7 +495,7 @@ func (e *Engine) getGroupBy() (strGroupBy string) {
 
 func (e *Engine) isPkValueNil() bool {
 
-	if e.getPkValue() == "" {
+	if e.getPkValue() == "" || e.getPkValue() == "0" {
 		return true
 	}
 
@@ -650,6 +651,8 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 		strSqlx = e.makeSqlxInsert()
 	case OperType_Upsert:
 		strSqlx = e.makeSqlxUpsert()
+	case OperType_Delete:
+		strSqlx = e.makeSqlxDelete()
 	default:
 		assert(false, "operation illegal")
 	}
@@ -712,7 +715,7 @@ func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 func (e *Engine) makeSqlxInsert() (strSqlx string) {
 
 	strColumns, strValues := e.getInsertColumnsAndValues()
-	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v)", e.strTableName, strColumns, strValues)
+	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v)", e.getTableName(), strColumns, strValues)
 	return
 }
 
@@ -720,7 +723,22 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 
 	strColumns, strValues := e.getInsertColumnsAndValues()
 	strOnConflictUpdates := e.getOnConflictUpdates()
-	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) %v", e.strTableName, strColumns, strValues, strOnConflictUpdates)
+	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) %v", e.getTableName(), strColumns, strValues, strOnConflictUpdates)
+	return
+}
+
+func (e *Engine) makeSqlxDelete() (strSqlx string) {
+	strWhere := e.getCustomWhere()
+	if !e.isPkValueNil() {
+		strSqlx = fmt.Sprintf("DELETE FROM %v WHERE %v=%v%v%v", e.getTableName(), e.GetPkName(), e.getSingleQuote(), e.getPkValue(), e.getSingleQuote())
+		if strWhere != "" {
+			strSqlx += " AND " + strWhere
+		}
+	} else if strWhere != "" {
+		strSqlx = fmt.Sprintf("DELETE FROM %v WHERE %v", e.getTableName(), strWhere)
+	} else {
+		panic("no condition to delete records")
+	}
 	return
 }
 
@@ -730,4 +748,9 @@ func (e *Engine) isQuestionPlaceHolder(query string, args ...interface{}) bool {
 		return true
 	}
 	return false
+}
+
+func (e *Engine) cleanWhereCondition() {
+	e.strWhere = ""
+	e.strPkValue = ""
 }

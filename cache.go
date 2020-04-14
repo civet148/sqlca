@@ -174,7 +174,7 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 	return
 }
 
-func (e *Engine) makeUpdateCache() (kvs []*cacheKeyValue) {
+func (e *Engine) makeUpdateCacheKv() (kvs []*cacheKeyValue) {
 
 	if !e.getUseCache() && e.isDebug() {
 		log.Debugf("use cache is disabled, ignore it")
@@ -235,7 +235,23 @@ func (e *Engine) updateCache() (ok bool) {
 		return
 	}
 
-	return e.saveToCache(e.makeUpdateCache()...)
+	return e.saveToCache(e.makeUpdateCacheKv()...)
+}
+
+func (e *Engine) deleteCache() {
+	if e.isCacheNil() && e.isDebug() {
+		log.Debugf("cache instance is nil, can't delete from cache")
+		return
+	}
+	kvs := e.makeUpdateCacheKv()
+	for _, v := range kvs {
+
+		if _, err := e.cache.Do("DEL", v.Key); err != nil {
+			log.Errorf("DEL key [%v] from redis error [%v]", v.Key, err.Error())
+		} else if e.isDebug() {
+			log.Debugf("DEL key [%v] from redis [OK]", v.Key)
+		}
+	}
 }
 
 func (e *Engine) queryCache() (count int64, ok bool) {

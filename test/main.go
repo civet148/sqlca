@@ -37,13 +37,14 @@ func main() {
 	//e.Open("sqlite:///var/lib/test.db")
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=&windows=false")
 
-	//OrmInsertByModel(e)
+	OrmInsertByModel(e)
 	OrmUpsertByModel(e)
 	OrmUpdateByModel(e)
 	OrmQueryIntoModel(e)
 	OrmQueryIntoModelSlice(e)
 	OrmUpdateIndexToCache(e)
 	OrmSelectMultiTable(e)
+	OrmDeleteFromTable(e)
 
 	RawQueryIntoModel(e)
 	RawQueryIntoModelSlice(e)
@@ -224,6 +225,33 @@ func OrmSelectMultiTable(e *sqlca.Engine) {
 		log.Errorf("query error [%v]", err.Error())
 	} else {
 		log.Debugf("user class info [%+v]", ucs)
+	}
+}
+
+func OrmDeleteFromTable(e *sqlca.Engine) {
+
+	user := UserDO{
+		Id: 1000,
+	}
+	//delete from data model
+	if rows, err := e.Model(&user).Table(TABLE_NAME_USERS).Delete(); err != nil {
+		log.Errorf("delete from table error [%v]", err.Error())
+	} else {
+		log.Debugf("delete from table ok, affected rows [%v]", rows)
+	}
+
+	//delete from where condition (without data model)
+	if rows, err := e.Table(TABLE_NAME_USERS).Where("id > 1001").Delete(); err != nil {
+		log.Errorf("delete from table error [%v]", err.Error())
+	} else {
+		log.Debugf("delete from table ok, affected rows [%v]", rows)
+	}
+
+	//delete from primary key 'id' and value (without data model)
+	if rows, err := e.Table(TABLE_NAME_USERS).Id(1002).Where("disable=1").Delete(); err != nil {
+		log.Errorf("delete from table error [%v]", err.Error())
+	} else {
+		log.Debugf("delete from table ok, affected rows [%v]", rows)
 	}
 }
 

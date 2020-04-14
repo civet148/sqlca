@@ -265,9 +265,9 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 func (e *Engine) Query() (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
+	defer e.cleanWhereCondition()
 
 	e.setOperType(OperType_Query)
-
 	if e.getUseCache() {
 
 		var ok bool
@@ -295,6 +295,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 func (e *Engine) Insert() (lastInsertId int64, err error) {
 	assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
+	defer e.cleanWhereCondition()
 
 	e.setOperType(OperType_Insert)
 	var strSqlx string
@@ -325,6 +326,7 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	assert(e.getSelectColumns(), "update columns is not set")
+	defer e.cleanWhereCondition()
 
 	e.setOperType(OperType_Upsert)
 	var strSqlx string
@@ -358,6 +360,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	assert(e.getSelectColumns(), "update columns is not set, please call Select method")
 
 	e.setOperType(OperType_Update)
+	defer e.cleanWhereCondition()
 
 	if e.getCacheBefore() {
 		e.updateCache() //update data to cache before database updated
@@ -373,13 +376,38 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		log.Errorf("get last insert id error [%v] query [%v] model [%+v]", err, strSqlx, e.model)
+		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSqlx, e.model)
 		return
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
 
 	if rowsAffected > 0 && !e.getCacheBefore() {
 		e.updateCache() //update data to cache after database updated
+	}
+	return
+}
+
+// orm delete record(s) from db and cache
+func (e *Engine) Delete() (rowsAffected int64, err error) {
+	e.setOperType(OperType_Delete)
+	strSqlx := e.makeSqlxString()
+	defer e.cleanWhereCondition()
+
+	var r sql.Result
+	r, err = e.db.Exec(strSqlx)
+	if err != nil {
+		log.Errorf("error %v model %+v", err, e.model)
+		return
+	}
+	rowsAffected, err = r.RowsAffected()
+	if err != nil {
+		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSqlx, e.model)
+		return
+	}
+	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
+
+	if rowsAffected > 0 {
+		e.deleteCache() //delete from cache
 	}
 	return
 }

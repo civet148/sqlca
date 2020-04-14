@@ -268,7 +268,7 @@ func OrmInCondition(e *sqlca.Engine) {
 		Query(); err != nil {
 		log.Errorf("select from table by in condition error [%v]", err.Error())
 	} else {
-		log.Debugf("delete from table by in condition ok, affected rows [%v]", rows)
+		log.Debugf("select from table by in condition ok, affected rows [%v]", rows)
 	}
 }
 

@@ -137,6 +137,8 @@ func (o OperType) String() string {
 		return "OperType_Tx"
 	case OperType_QueryMap:
 		return "OperType_QueryMap"
+	case OperType_Delete:
+		return "OperType_Delete"
 	}
 	return "OperType_Unknown"
 }

@@ -371,3 +371,31 @@ e := sqlca.NewEngine().Attach(db)
 ```golang
 e.SetCacheBefore(true)
 ```
+
+## delete from table
+```golang
+
+user := UserDO{
+		Id: 1000,
+}
+//delete from data model
+if rows, err := e.Model(&user).Table(TABLE_NAME_USERS).Delete(); err != nil {
+    log.Errorf("delete from table error [%v]", err.Error())
+} else {
+    log.Debugf("delete from table ok, affected rows [%v]", rows)
+}
+
+//delete from where condition (without data model)
+if rows, err := e.Table(TABLE_NAME_USERS).Where("id=1001").Delete(); err != nil {
+    log.Errorf("delete from table error [%v]", err.Error())
+} else {
+    log.Debugf("delete from table ok, affected rows [%v]", rows)
+}
+
+//delete from primary key 'id' and value (without data model)
+if rows, err := e.Table(TABLE_NAME_USERS).Id(1002).Where("disable=1").Delete(); err != nil {
+    log.Errorf("delete from table error [%v]", err.Error())
+} else {
+    log.Debugf("delete from table ok, affected rows [%v]", rows)
+}
+```

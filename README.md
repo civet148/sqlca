@@ -196,7 +196,7 @@ user := UserDO{
     Email: "john@gmail.com",
 }
 //SQL: update users set name='john', phone='8618699999999', sex='1', email='john@gmail.com' where id='1'
-if rowsAffected, err := e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "email", "sex").Update(); err != nil {
+if rowsAffected, err := e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "email", "sex").Cache("phone").Update(); err != nil {
     log.Errorf("update data model [%+v] error [%v]", user, err.Error())
 } else {
     log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
@@ -251,10 +251,7 @@ if err != nil {
 ```
 
 ## save data to cache by id or index 
-just for orm [insert/upsert/update]
-```golang
-
-```
+just for orm [insert/upsert/update] see the example of orm update
 
 ## change primary key name
 ```golang

@@ -203,12 +203,18 @@ func (e *Engine) Select(strColumns ...string) *Engine {
 	return e
 }
 
-// orm query
-// return rows affected and error, if err is not nil must be something wrong
-// Model function is must be called before call this function
-// notice: use Where function, the records which be updated can not be refreshed to redis/memcached...
-func (e *Engine) Where(strWhere string) *Engine {
+func (e *Engine) replaceQuestionPlaceHolder(strIn string, args ...interface{}) (strFmt string) {
+	strFmt = strIn
+	if e.isQuestionPlaceHolder(strIn, args...) { //question placeholder exist
+		strFmt = strings.Replace(strFmt, "?", "'%v'", -1)
+	}
+	return fmt.Sprintf(strFmt, args...)
+}
+
+// orm where condition
+func (e *Engine) Where(strWhere string, args ...interface{}) *Engine {
 	assert(strWhere, "string is nil")
+
 	e.setWhere(strWhere)
 	return e
 }
@@ -440,17 +446,11 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	e.setOperType(OperType_QueryRaw)
 
 	var r *sqlx.Rows
+	strQuery = e.replaceQuestionPlaceHolder(strQuery, args...)
 	if e.isDebug() {
-		log.Debugf("query [%v] args %+v", strQuery, args)
+		log.Debugf("query [%v]", strQuery)
 	}
-
-	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
-		r, err = e.db.Queryx(strQuery, args...)
-	} else {
-		r, err = e.db.Queryx(fmt.Sprintf(strQuery, args...))
-	}
-
-	if err != nil {
+	if r, err = e.db.Queryx(strQuery); err != nil {
 		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
 		return
 	}
@@ -468,14 +468,14 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 
 	e.setOperType(OperType_QueryMap)
 	var r *sqlx.Rows
-	if e.isDebug() {
-		log.Debugf("query [%v] args %+v", strQuery, args)
-	}
 
-	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
-		r, err = e.db.Queryx(strQuery, args...)
-	} else {
-		r, err = e.db.Queryx(fmt.Sprintf(strQuery, args...))
+	strQuery = e.replaceQuestionPlaceHolder(strQuery, args...)
+	if e.isDebug() {
+		log.Debugf("query [%v]", strQuery)
+	}
+	if r, err = e.db.Queryx(strQuery); err != nil {
+		log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
+		return
 	}
 
 	for r.Next() {
@@ -498,15 +498,17 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	if e.isDebug() {
 		log.Debugf("query [%v] args %+v", strQuery, args)
 	}
-	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
-		r, err = e.db.Exec(strQuery, args...)
-	} else {
-		r, err = e.db.Exec(fmt.Sprintf(strQuery, args...))
+
+	strQuery = e.replaceQuestionPlaceHolder(strQuery, args...)
+	if e.isDebug() {
+		log.Debugf("query [%v]", strQuery)
 	}
-	if err != nil {
+
+	if r, err = e.db.Exec(strQuery); err != nil {
 		log.Errorf("error [%v] model [%+v]", err, e.model)
 		return
 	}
+
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
 		log.Errorf("get rows affected error [%v] query [%v]", err.Error(), strQuery)

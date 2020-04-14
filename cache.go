@@ -16,7 +16,7 @@ const (
 	CACHE_INDEX_DEEP  = 1           // index deep in cache
 	CACHE_REPLICATE   = "replicate" //replicate host [ip:port,...]
 	CACHE_DB_INDEX    = "db"
-	CAHCE_SQLX_PREFIX = "sqlx:cache"
+	CAHCE_SQLX_PREFIX = "sqlca:cache"
 )
 
 const (
@@ -76,7 +76,7 @@ func newCache(strScheme string, strConfig string) (cache redigogo.Cache, err err
 //}
 
 func (e *Engine) makeCacheKey(name string, value interface{}) string {
-	return fmt.Sprintf("%v:%v:%v:%v", CAHCE_SQLX_PREFIX, e.getTableName(), name, value)
+	return fmt.Sprintf("%v:%v:%v:%v:%v", CAHCE_SQLX_PREFIX, e.getDatabaseName(), e.getTableName(), name, value)
 }
 
 func (e *Engine) marshalModel() (s string) {

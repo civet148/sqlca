@@ -122,7 +122,7 @@ func ParseUrl(strUrl string) (ui *UrlInfo) {
 	return
 }
 
-func getDatabaseName(strPath string) string {
+func parseDatabaseName(strPath string) string {
 	idx := strings.LastIndex(strPath, "/")
 	if idx == -1 {
 		assert(false, "[%v] invalid database path", strPath)
@@ -143,6 +143,7 @@ func getHostPort(strHost string) (ip, port string) {
 func (e *Engine) parseMysqlUrl(strUrl string) (strDSN string) {
 
 	ui := ParseUrl(strUrl)
+	e.setDatabaseName(parseDatabaseName(ui.Path))
 	strDSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
 	var queries []string
 	for k, v := range ui.Queries {
@@ -158,7 +159,8 @@ func (e *Engine) parseMysqlUrl(strUrl string) (strDSN string) {
 func (e *Engine) parsePostgresUrl(strUrl string) (strDSN string) {
 
 	ui := ParseUrl(strUrl)
-	strDatabase := getDatabaseName(ui.Path)
+	e.setDatabaseName(parseDatabaseName(ui.Path))
+	strDatabase := e.getDatabaseName()
 	strIP, strPort := getHostPort(ui.Host)
 
 	var ok bool
@@ -192,6 +194,7 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
 			isWindowsAuth = true
 		}
 	}
+	e.setDatabaseName(parseDatabaseName(ui.Path))
 
 	dsnArgs = append(dsnArgs, "Provider=SQLOLEDB") //set driver provider
 	if isWindowsAuth {                             //windows authentication
@@ -207,7 +210,7 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
 		}
 	}
 	dsnArgs = append(dsnArgs, strDataSource)
-	dsnArgs = append(dsnArgs, fmt.Sprintf("Initial Catalog=%s", getDatabaseName(ui.Path))) //database name
+	dsnArgs = append(dsnArgs, fmt.Sprintf("Initial Catalog=%s", e.getDatabaseName())) //database name
 	dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", ui.User))
 	dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", ui.Password))
 	strDSN = strings.Join(dsnArgs, ";")

@@ -219,13 +219,14 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 func (e *Engine) clone(models ...interface{}) *Engine {
 
 	engine := &Engine{
-		db:           e.db,
-		cache:        e.cache,
-		debug:        e.debug,
-		adapterSqlx:  e.adapterSqlx,
-		adapterCache: e.adapterCache,
-		strPkName:    e.strPkName,
-		expireTime:   e.expireTime,
+		db:              e.db,
+		cache:           e.cache,
+		debug:           e.debug,
+		adapterSqlx:     e.adapterSqlx,
+		adapterCache:    e.adapterCache,
+		strPkName:       e.strPkName,
+		expireTime:      e.expireTime,
+		strDatabaseName: e.strDatabaseName,
 	}
 
 	engine.setModel(models...)
@@ -291,6 +292,14 @@ func (e *Engine) setIndexes(name string, value interface{}) {
 
 func (e *Engine) getIndexes() []tableIndex {
 	return e.cacheIndexes
+}
+
+func (e *Engine) setDatabaseName(strName string) {
+	e.strDatabaseName = strName
+}
+
+func (e *Engine) getDatabaseName() string {
+	return e.strDatabaseName
 }
 
 func (e *Engine) getTableName() string {

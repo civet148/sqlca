@@ -33,6 +33,7 @@ type Engine struct {
 	debug           bool                   // debug mode [on/off]
 	model           interface{}            // data model [struct object or struct slice]
 	dict            map[string]interface{} // data model db dictionary
+	strDatabaseName string                 // database name
 	strTableName    string                 // table name
 	strPkName       string                 // primary key of table, default 'id'
 	strPkValue      string                 // primary key's value
@@ -135,8 +136,9 @@ func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 }
 
 // attach from a exist sqlx db instance
-func (e *Engine) Attach(db *sqlx.DB) *Engine {
+func (e *Engine) Attach(strDatabaseName string, db *sqlx.DB) *Engine {
 	e.db = db
+	e.setDatabaseName(strDatabaseName)
 	return e
 }
 

@@ -8,13 +8,26 @@ import (
 )
 
 const (
-	TAG_NAME_DB             = "db"
-	DRIVER_NAME_MYSQL       = "mysql"
-	DRIVER_NAME_POSTGRES    = "postgres"
-	DRIVER_NAME_SQLITE      = "sqlite3"
-	DRIVER_NAME_MSSQL       = "adodb"
-	DRIVER_NAME_REDIS       = "redis"
-	DATABASE_KEY_NAME_WHERE = "WHERE"
+	TAG_NAME_DB              = "db"
+	DRIVER_NAME_MYSQL        = "mysql"
+	DRIVER_NAME_POSTGRES     = "postgres"
+	DRIVER_NAME_SQLITE       = "sqlite3"
+	DRIVER_NAME_MSSQL        = "adodb"
+	DRIVER_NAME_REDIS        = "redis"
+	DATABASE_KEY_NAME_WHERE  = " WHERE "
+	DATABASE_KEY_NAME_UPDATE = " UPDATE "
+	DATABASE_KEY_NAME_SET    = " SET "
+	DATABASE_KEY_NAME_FROM   = " FROM "
+	DATABASE_KEY_NAME_DELETE = " DELETE "
+	DATABASE_KEY_NAME_SELECT = " SELECT "
+	DATABASE_KEY_NAME_EXIST  = " EXIST "
+	DATABASE_KEY_NAME_IN     = " IN "
+	DATABASE_KEY_NAME_OR     = " OR "
+	DATABASE_KEY_NAME_NOT    = " NOT "
+	DATABASE_KEY_NAME_AND    = " AND "
+	DATABASE_KEY_NAME_INSERT = " INSERT INTO "
+	DATABASE_KEY_NAME_VALUE  = " VALUE "
+	DATABASE_KEY_NAME_VALUES = " VALUES "
 )
 
 type AdapterType int
@@ -657,57 +670,62 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 		assert(false, "operation illegal")
 	}
 
-	log.Debugf("sqlx query [%s]", strSqlx)
+	if e.isDebug() {
+		log.Debugf("[%v] query sql [%s]", e.operType, strSqlx)
+	}
+	return
+}
 
+func (e *Engine) makeInCondition(cond inCondition, isIn bool) (strCondition string) {
+
+	var strValues []string
+	for _, v := range cond.ColumnValues {
+		strValues = append(strValues, fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()))
+	}
+	strCondition = fmt.Sprintf("%v %v (%v)", cond.ColumnName, DATABASE_KEY_NAME_IN, strings.Join(strValues, ","))
+	return
+}
+
+func (e *Engine) makeWhereCondition() (strWhere string) {
+
+	if e.isPkValueNil() {
+		strIndexCond := e.getIndexWhere()
+		if strIndexCond != "" {
+			strWhere = DATABASE_KEY_NAME_WHERE + e.getIndexWhere()
+		}
+	} else {
+		strWhere = DATABASE_KEY_NAME_WHERE + e.getPkWhere()
+	}
+
+	if strWhere == "" {
+		strCustomer := e.getCustomWhere()
+		if strCustomer == "" {
+			strWhere = DATABASE_KEY_NAME_WHERE + "1=1"
+		} else {
+			strWhere = DATABASE_KEY_NAME_WHERE + strCustomer
+		}
+	}
+
+	for _, v := range e.inConditions {
+		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeInCondition(v, true))
+	}
 	return
 }
 
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
-	var strWhere string
-
-	strPkValue := e.getPkValue()
-	strCustomer := e.getCustomWhere()
-
-	if strPkValue == "" || strPkValue == "0" {
-		strIndexCond := e.getIndexWhere()
-		if strIndexCond != "" {
-			strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getIndexWhere()
-		}
-	} else {
-		strWhere = DATABASE_KEY_NAME_WHERE + " " + e.getPkWhere()
-	}
-
-	if strWhere == "" {
-		if strCustomer == "" {
-			strWhere = DATABASE_KEY_NAME_WHERE + " " + "1=1"
-		} else {
-			strWhere = DATABASE_KEY_NAME_WHERE + " " + strCustomer
-		}
-	}
-
-	strSqlx = fmt.Sprintf("SELECT %v FROM %v %v %v %v %v %v",
-		e.getRawColumns(), e.getTableName(), strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
+	strWhere := e.makeWhereCondition()
+	strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v",
+		DATABASE_KEY_NAME_SELECT, e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
+		strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
 	return
 }
 
 func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 
-	if isNilOrFalse(e.getCustomWhere()) {
-
-		//where condition by model primary key value (not include primary key `id` and created_at/updated_at)
-		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v",
-			e.getTableName(),
-			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()),
-			e.getPkWhere(),
-			e.getLimit())
-	} else {
-		//where condition by custom condition (not include primary key like `id` and created_at/updated_at)
-		strSqlx = fmt.Sprintf("UPDATE %v SET %v WHERE %v %v",
-			e.getTableName(),
-			e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()),
-			e.getCustomWhere(),
-			e.getLimit())
-	}
+	strWhere := e.makeWhereCondition()
+	strSqlx = fmt.Sprintf("%v %v %v %v %v %v",
+		DATABASE_KEY_NAME_UPDATE, e.getTableName(), DATABASE_KEY_NAME_SET,
+		e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), strWhere, e.getLimit())
 	assert(strSqlx, "update sql is nil")
 	return
 }
@@ -715,7 +733,7 @@ func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 func (e *Engine) makeSqlxInsert() (strSqlx string) {
 
 	strColumns, strValues := e.getInsertColumnsAndValues()
-	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v)", e.getTableName(), strColumns, strValues)
+	strSqlx = fmt.Sprintf("%v %v (%v) %v (%v)", DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, DATABASE_KEY_NAME_VALUES, strValues)
 	return
 }
 
@@ -723,22 +741,16 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 
 	strColumns, strValues := e.getInsertColumnsAndValues()
 	strOnConflictUpdates := e.getOnConflictUpdates()
-	strSqlx = fmt.Sprintf("INSERT INTO %v (%v) VALUES (%v) %v", e.getTableName(), strColumns, strValues, strOnConflictUpdates)
+	strSqlx = fmt.Sprintf("%v %v (%v) %v (%v) %v", DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, DATABASE_KEY_NAME_VALUES, strValues, strOnConflictUpdates)
 	return
 }
 
 func (e *Engine) makeSqlxDelete() (strSqlx string) {
-	strWhere := e.getCustomWhere()
-	if !e.isPkValueNil() {
-		strSqlx = fmt.Sprintf("DELETE FROM %v WHERE %v=%v%v%v", e.getTableName(), e.GetPkName(), e.getSingleQuote(), e.getPkValue(), e.getSingleQuote())
-		if strWhere != "" {
-			strSqlx += " AND " + strWhere
-		}
-	} else if strWhere != "" {
-		strSqlx = fmt.Sprintf("DELETE FROM %v WHERE %v", e.getTableName(), strWhere)
-	} else {
+	strWhere := e.makeWhereCondition()
+	if strWhere == "" {
 		panic("no condition to delete records")
 	}
+	strSqlx = fmt.Sprintf("%v %v %v %v", DATABASE_KEY_NAME_DELETE, DATABASE_KEY_NAME_FROM, e.getTableName(), strWhere)
 	return
 }
 
@@ -753,4 +765,5 @@ func (e *Engine) isQuestionPlaceHolder(query string, args ...interface{}) bool {
 func (e *Engine) cleanWhereCondition() {
 	e.strWhere = ""
 	e.strPkValue = ""
+	e.cacheIndexes = nil
 }

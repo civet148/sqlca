@@ -13,6 +13,11 @@ import (
 	"strings"
 )
 
+type inCondition struct {
+	ColumnName   string
+	ColumnValues []interface{}
+}
+
 type Engine struct {
 	db              *sqlx.DB               // sqlx instance
 	tx              *sql.Tx                // sql tx instance
@@ -39,6 +44,7 @@ type Engine struct {
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string               // order by columns
 	groupByColumns  []string               // group by columns
+	inConditions    []inCondition          // in condition
 	cacheIndexes    []tableIndex           // index read or write cache
 }
 
@@ -250,6 +256,17 @@ func (e *Engine) Asc() *Engine {
 // order by [field1,field2...] desc
 func (e *Engine) Desc() *Engine {
 	e.setAscOrDesc(ORDER_BY_DESC)
+	return e
+}
+
+// `field_name` in ('1','2',...)
+func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
+
+	v := inCondition{
+		ColumnName:   strColumn,
+		ColumnValues: args,
+	}
+	e.inConditions = append(e.inConditions, v)
 	return e
 }
 

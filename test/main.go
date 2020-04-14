@@ -37,7 +37,7 @@ func main() {
 	//e.Open("sqlite:///var/lib/test.db")
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=&windows=false")
 
-	OrmInsertByModel(e)
+	//OrmInsertByModel(e)
 	OrmUpsertByModel(e)
 	OrmUpdateByModel(e)
 	OrmQueryIntoModel(e)
@@ -45,6 +45,7 @@ func main() {
 	OrmUpdateIndexToCache(e)
 	OrmSelectMultiTable(e)
 	OrmDeleteFromTable(e)
+	OrmInCondition(e)
 
 	RawQueryIntoModel(e)
 	RawQueryIntoModelSlice(e)
@@ -255,6 +256,22 @@ func OrmDeleteFromTable(e *sqlca.Engine) {
 	}
 }
 
+func OrmInCondition(e *sqlca.Engine) {
+	var users []UserDO
+	//SQL: select * from users where id > 2 and id in (1,3,6,7) and disable in (0,1)
+	if rows, err := e.Model(&users).
+		Table(TABLE_NAME_USERS).
+		Select("*").
+		Where("id > 2").
+		In("id", 1, 3, 6, 7).
+		In("disable", 0, 1).
+		Query(); err != nil {
+		log.Errorf("select from table by in condition error [%v]", err.Error())
+	} else {
+		log.Debugf("delete from table by in condition ok, affected rows [%v]", rows)
+	}
+}
+
 func TxGetExec(e *sqlca.Engine) (err error) {
 
 	var tx *sqlca.Engine
@@ -290,7 +307,7 @@ func TxGetExec(e *sqlca.Engine) (err error) {
 
 	//query results into a struct object or slice
 	var dos []UserDO
-	_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1")
+	_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1 LIMIT 5")
 	if err != nil {
 		log.Errorf("TxGet error %v", err.Error())
 		_ = tx.TxRollback()

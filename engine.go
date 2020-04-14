@@ -17,7 +17,7 @@ type Engine struct {
 	db              *sqlx.DB               // sqlx instance
 	tx              *sql.Tx                // sql tx instance
 	cache           redigogo.Cache         // redis cache instance
-	isCacheAfter    bool                   // is cache update after db or not (default false)
+	isCacheBefore   bool                   // is cache update before db or not (default false)
 	adapterSqlx     AdapterType            // what's adapter of sqlx
 	adapterCache    AdapterType            // what's adapter of cache
 	modelType       ModelType              // model type
@@ -359,7 +359,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 
 	e.setOperType(OperType_Update)
 
-	if !e.getCacheAfter() {
+	if e.getCacheBefore() {
 		e.updateCache() //update data to cache before database updated
 	}
 	var strSqlx string
@@ -378,7 +378,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
 
-	if rowsAffected > 0 && e.getCacheAfter() {
+	if rowsAffected > 0 && !e.getCacheBefore() {
 		e.updateCache() //update data to cache after database updated
 	}
 	return
@@ -530,12 +530,12 @@ func (e *Engine) TxCommit() error {
 	return e.tx.Commit()
 }
 
-// set cache update after database
-func (e *Engine) SetCacheAfter(ok bool) {
-	e.isCacheAfter = ok
+// set cache update before database
+func (e *Engine) SetCacheBefore(ok bool) {
+	e.isCacheBefore = ok
 }
 
-// get cache update after database
-func (e *Engine) getCacheAfter() bool {
-	return e.isCacheAfter
+// get cache update before database
+func (e *Engine) getCacheBefore() bool {
+	return e.isCacheBefore
 }

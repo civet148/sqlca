@@ -360,3 +360,14 @@ if rowsAffected, err := e.Model(&user).
     log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
 }
 ``` 
+
+## attach exist sqlx db instance
+```golang
+// db is a exist sqlx.DB instance
+e := sqlca.NewEngine().Attach(db)
+```
+
+## set cache update before db update
+```golang
+e.SetCacheBefore(true)
+```

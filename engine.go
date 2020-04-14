@@ -17,6 +17,7 @@ type Engine struct {
 	db              *sqlx.DB               // sqlx instance
 	tx              *sql.Tx                // sql tx instance
 	cache           redigogo.Cache         // redis cache instance
+	isCacheAfter    bool                   // is cache update after db or not (default false)
 	adapterSqlx     AdapterType            // what's adapter of sqlx
 	adapterCache    AdapterType            // what's adapter of cache
 	modelType       ModelType              // model type
@@ -124,6 +125,12 @@ func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 	}
 
 	//log.Struct(e)
+	return e
+}
+
+// attach from a exist sqlx db instance
+func (e *Engine) Attach(db *sqlx.DB) *Engine {
+	e.db = db
 	return e
 }
 
@@ -352,6 +359,9 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 
 	e.setOperType(OperType_Update)
 
+	if !e.getCacheAfter() {
+		e.updateCache() //update data to cache before database updated
+	}
 	var strSqlx string
 	strSqlx = e.makeSqlxString()
 
@@ -368,8 +378,8 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
 
-	if rowsAffected > 0 {
-		e.updateCache()
+	if rowsAffected > 0 && e.getCacheAfter() {
+		e.updateCache() //update data to cache after database updated
 	}
 	return
 }
@@ -518,4 +528,14 @@ func (e *Engine) TxRollback() error {
 func (e *Engine) TxCommit() error {
 	assert(e.tx, "TxCommit tx instance is nil, please call TxBegin to create a tx instance")
 	return e.tx.Commit()
+}
+
+// set cache update after database
+func (e *Engine) SetCacheAfter(ok bool) {
+	e.isCacheAfter = ok
+}
+
+// get cache update after database
+func (e *Engine) getCacheAfter() bool {
+	return e.isCacheAfter
 }

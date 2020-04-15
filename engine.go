@@ -216,7 +216,7 @@ func (e *Engine) replaceQuestionPlaceHolder(strIn string, args ...interface{}) (
 // orm where condition
 func (e *Engine) Where(strWhere string, args ...interface{}) *Engine {
 	assert(strWhere, "string is nil")
-
+	strWhere = e.replaceQuestionPlaceHolder(strWhere, args...)
 	e.setWhere(strWhere)
 	return e
 }

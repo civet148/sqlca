@@ -400,17 +400,18 @@ if rows, err := e.Table(TABLE_NAME_USERS).Id(1002).Where("disable=1").Delete(); 
 ## select from multiple tables
 ```golang
 type UserClass struct {
-    UserId   int32  `db:"id"`
+    UserId   int32  `db:"user_id"`
     UserName string `db:"user_name"`
     Phone    string `db:"phone"`
     ClassNo  string `db:"class_no"`
 }
 var ucs []UserClass
-//SQL: SELECT a.id as user_id, a.name, a.phone, b.class_no FROM users a, classes b WHERE a.id=b.user_id
+//SQL: SELECT a.*, b.class_no FROM users a, classes b WHERE a.id=b.user_id AND a.id=3
 _, err := e.Model(&ucs).
     Select("a.id as user_id", "a.name", "a.phone", "b.class_no").
     Table("users a", "classes b").
     Where("a.id=b.user_id").
+    And("a.id=?", 3).
     Query()
 if err != nil {
     log.Errorf("query error [%v]", err.Error())

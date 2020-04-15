@@ -175,6 +175,11 @@ type tableIndex struct {
 	Value interface{} `json:"value"`
 }
 
+type condition struct {
+	ColumnName   string
+	ColumnValues []interface{}
+}
+
 func (e *Engine) setModel(models ...interface{}) *Engine {
 
 	for _, v := range models {
@@ -687,7 +692,7 @@ func (e *Engine) makeSqlxString() (strSqlx string) {
 	return
 }
 
-func (e *Engine) makeInCondition(cond inCondition, isIn bool) (strCondition string) {
+func (e *Engine) makeInCondition(cond condition) (strCondition string) {
 
 	var strValues []string
 	for _, v := range cond.ColumnValues {
@@ -702,24 +707,29 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 	if e.isPkValueNil() {
 		strIndexCond := e.getIndexWhere()
 		if strIndexCond != "" {
-			strWhere = DATABASE_KEY_NAME_WHERE + e.getIndexWhere()
+			strWhere += e.getIndexWhere()
 		}
 	} else {
-		strWhere = DATABASE_KEY_NAME_WHERE + e.getPkWhere()
+		strWhere += e.getPkWhere()
 	}
 
 	if strWhere == "" {
 		strCustomer := e.getCustomWhere()
 		if strCustomer == "" {
-			strWhere = DATABASE_KEY_NAME_WHERE + "1=1"
+			strWhere += "1=1"
 		} else {
-			strWhere = DATABASE_KEY_NAME_WHERE + strCustomer
+			strWhere += strCustomer
 		}
 	}
 
-	for _, v := range e.inConditions {
-		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeInCondition(v, true))
+	for _, v := range e.andConditions {
+		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, v)
 	}
+	for _, v := range e.inConditions {
+		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeInCondition(v))
+	}
+
+	strWhere = DATABASE_KEY_NAME_WHERE + strWhere
 	return
 }
 

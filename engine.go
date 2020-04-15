@@ -13,11 +13,6 @@ import (
 	"strings"
 )
 
-type inCondition struct {
-	ColumnName   string
-	ColumnValues []interface{}
-}
-
 type Engine struct {
 	db              *sqlx.DB               // sqlx instance
 	tx              *sql.Tx                // sql tx instance
@@ -45,7 +40,8 @@ type Engine struct {
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string               // order by columns
 	groupByColumns  []string               // group by columns
-	inConditions    []inCondition          // in condition
+	inConditions    []condition            // in condition
+	andConditions   []string               // and condition
 	cacheIndexes    []tableIndex           // index read or write cache
 }
 
@@ -205,7 +201,7 @@ func (e *Engine) Select(strColumns ...string) *Engine {
 	return e
 }
 
-func (e *Engine) replaceQuestionPlaceHolder(strIn string, args ...interface{}) (strFmt string) {
+func (e *Engine) formatString(strIn string, args ...interface{}) (strFmt string) {
 	strFmt = strIn
 	if e.isQuestionPlaceHolder(strIn, args...) { //question placeholder exist
 		strFmt = strings.Replace(strFmt, "?", "'%v'", -1)
@@ -216,8 +212,13 @@ func (e *Engine) replaceQuestionPlaceHolder(strIn string, args ...interface{}) (
 // orm where condition
 func (e *Engine) Where(strWhere string, args ...interface{}) *Engine {
 	assert(strWhere, "string is nil")
-	strWhere = e.replaceQuestionPlaceHolder(strWhere, args...)
+	strWhere = e.formatString(strWhere, args...)
 	e.setWhere(strWhere)
+	return e
+}
+
+func (e *Engine) And(strFmt string, args ...interface{}) *Engine {
+	e.andConditions = append(e.andConditions, e.formatString(strFmt, args...))
 	return e
 }
 
@@ -270,7 +271,7 @@ func (e *Engine) Desc() *Engine {
 // `field_name` in ('1','2',...)
 func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
 
-	v := inCondition{
+	v := condition{
 		ColumnName:   strColumn,
 		ColumnValues: args,
 	}
@@ -304,14 +305,14 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 
 	strSqlx := e.makeSqlxString()
 
-	var r *sql.Rows
-	if r, err = e.db.Query(strSqlx); err != nil {
+	var rows *sql.Rows
+	if rows, err = e.db.Query(strSqlx); err != nil {
 		log.Errorf("query [%v] error [%v]", strSqlx, err.Error())
 		return
 	}
 
-	defer r.Close()
-	return e.fetchRows(r)
+	defer rows.Close()
+	return e.fetchRows(rows)
 }
 
 // orm insert
@@ -447,18 +448,18 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 
 	e.setOperType(OperType_QueryRaw)
 
-	var r *sqlx.Rows
-	strQuery = e.replaceQuestionPlaceHolder(strQuery, args...)
+	var rows *sqlx.Rows
+	strQuery = e.formatString(strQuery, args...)
 	if e.isDebug() {
 		log.Debugf("query [%v]", strQuery)
 	}
-	if r, err = e.db.Queryx(strQuery); err != nil {
+	if rows, err = e.db.Queryx(strQuery); err != nil {
 		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
 		return
 	}
 
-	defer r.Close()
-	return e.fetchRows(r.Rows)
+	defer rows.Close()
+	return e.fetchRows(rows.Rows)
 }
 
 // use raw sql to query results into a map slice (model type is []map[string]string)
@@ -469,20 +470,21 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 	assert(e.model, "model is nil, please call Model method first")
 
 	e.setOperType(OperType_QueryMap)
-	var r *sqlx.Rows
+	var rows *sqlx.Rows
 
-	strQuery = e.replaceQuestionPlaceHolder(strQuery, args...)
+	strQuery = e.formatString(strQuery, args...)
 	if e.isDebug() {
 		log.Debugf("query [%v]", strQuery)
 	}
-	if r, err = e.db.Queryx(strQuery); err != nil {
+	if rows, err = e.db.Queryx(strQuery); err != nil {
 		log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
 		return
 	}
 
-	for r.Next() {
+	defer rows.Close()
+	for rows.Next() {
 		rowsAffected++
-		fetcher, _ := e.getFecther(r.Rows)
+		fetcher, _ := e.getFecther(rows.Rows)
 		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
 	}
 	return
@@ -501,7 +503,7 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 		log.Debugf("query [%v] args %+v", strQuery, args)
 	}
 
-	strQuery = e.replaceQuestionPlaceHolder(strQuery, args...)
+	strQuery = e.formatString(strQuery, args...)
 	if e.isDebug() {
 		log.Debugf("query [%v]", strQuery)
 	}
@@ -532,17 +534,17 @@ func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (
 	assert(e.tx, "TxGet tx instance is nil, please call TxBegin to create a tx instance")
 	var rows *sql.Rows
 
-	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
-		rows, err = e.tx.Query(strQuery, args...)
-	} else {
-		rows, err = e.tx.Query(fmt.Sprintf(strQuery, args...))
+	strQuery = e.formatString(strQuery, args...)
+	if e.isDebug() {
+		log.Debugf("query [%v]", strQuery)
 	}
-
+	rows, err = e.tx.Query(strQuery)
 	if err != nil {
 		log.Errorf("TxGet sql [%v] args %v query error [%v]", strQuery, args, err.Error())
 		return
 	}
 	e.setModel(dest)
+	defer rows.Close()
 	if count, err = e.fetchRows(rows); err != nil {
 		log.Errorf("TxGet sql [%v] args %v fetch row error [%v]", strQuery, args, err.Error())
 		return
@@ -554,11 +556,11 @@ func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, row
 	assert(e.tx, "TxExec tx instance is nil, please call TxBegin to create a tx instance")
 	var result sql.Result
 
-	if e.isQuestionPlaceHolder(strQuery, args...) { //question placeholder exist
-		result, err = e.tx.Exec(strQuery, args...)
-	} else {
-		result, err = e.tx.Exec(fmt.Sprintf(strQuery, args...))
+	strQuery = e.formatString(strQuery, args...)
+	if e.isDebug() {
+		log.Debugf("query [%v]", strQuery)
 	}
+	result, err = e.tx.Exec(strQuery)
 
 	if err != nil {
 		log.Errorf("TxExec exec query [%v] args %+v error [%+v]", strQuery, args, err.Error())

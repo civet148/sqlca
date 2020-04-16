@@ -56,6 +56,7 @@ func main() {
 
 		TxGetExec(e)
 		TxRollback(e)
+		CustomTag(e)
 	}
 
 	//log.Info("%+v", log.Report()) //print function report
@@ -397,4 +398,24 @@ func TxRollback(e *sqlca.Engine) (err error) {
 		return
 	}
 	return
+}
+
+func CustomTag(e *sqlca.Engine) {
+	type CustomUser struct {
+		Id    int32  `protobuf:"id"` // protobuf tag
+		Name  string `json:"name"`   // json tag
+		Phone string `db:"phone"`    // db tag
+	}
+
+	var users []CustomUser
+	//add custom tag
+	e.SetCustomTag("protobuf", "json")
+	if count, err := e.Model(&users).
+		Table(TABLE_NAME_USERS).
+		Where("id < ?", 5).
+		Query(); err != nil {
+		log.Errorf("custom tag query error [%v]", err.Error())
+	} else {
+		log.Debugf("custom tag query results %+v rows [%v]", users, count)
+	}
 }

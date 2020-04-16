@@ -107,9 +107,18 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 //trim the field value's first and last blank character and save to map
 func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.Value, tagName string) {
 
-	tagVal := s.getTag(field, tagName)
-	if tagVal != "" {
-		s.dict[tagVal] = val.Interface()
+	dbTags := strings.Split(tagName, ",")
+	if len(dbTags) == 0 {
+		log.Errorf("ModelReflector.setValueByField no tag to set value")
+		return
+	}
+
+	for _, v := range dbTags {
+		tagVal := s.getTag(field, v)
+		if tagVal != "" {
+			s.dict[tagVal] = val.Interface()
+			return
+		}
 	}
 }
 
@@ -312,7 +321,7 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 				valField = valField.Elem()
 			}
 			if !valField.IsValid() || !valField.CanInterface() {
-				fmt.Printf("Filed [%s] tag(%s)  is not valid \n", typField.Type.Name(), e.getTagValue(typField, TAG_NAME_DB))
+				//fmt.Printf("Filed [%s] tag(%s)  is not valid \n", typField.Type.Name(), e.getTagValue(typField))
 				return
 			}
 			switch typField.Type.Kind() {
@@ -339,16 +348,27 @@ func (e *Engine) fetchToBaseType(fetcher *Fetcher, typ reflect.Type, val reflect
 	return
 }
 
-func (e *Engine) getTagValue(sf reflect.StructField, tagName string) string {
+func (e *Engine) getTagValue(sf reflect.StructField) (strValue string) {
 
-	return sf.Tag.Get(tagName)
+	var tagName string
+	tagName = TAG_NAME_DB
+	strValue = sf.Tag.Get(tagName)
+	if strValue == "" {
+		for _, v := range e.dbTags { //support multiple tag
+			strValue = sf.Tag.Get(v)
+			if strValue != "" {
+				return
+			}
+		}
+	}
+	return
 }
 
 //按结构体字段标签赋值
 func (e *Engine) setValueByField(fetcher *Fetcher, field reflect.StructField, val reflect.Value) (err error) {
 
 	//优先给有db标签的成员变量赋值
-	strDbTagVal := e.getTagValue(field, TAG_NAME_DB)
+	strDbTagVal := e.getTagValue(field)
 
 	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
 		e.setValue(field.Type, val, v)

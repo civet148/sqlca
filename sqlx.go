@@ -205,7 +205,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 			e.model = models //base type argument like int/string/float32...
 		}
 		var selectColumns []string
-		e.dict = newReflector(e.model).ToMap(TAG_NAME_DB)
+		e.dict = newReflector(e.model).ToMap(strings.Join(e.dbTags, ","))
 		for k, _ := range e.dict {
 			selectColumns = append(selectColumns, k)
 		}
@@ -232,6 +232,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		strPkName:       e.strPkName,
 		expireTime:      e.expireTime,
 		strDatabaseName: e.strDatabaseName,
+		dbTags:          e.dbTags,
 	}
 
 	engine.setModel(models...)

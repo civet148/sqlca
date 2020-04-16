@@ -9,6 +9,9 @@ import (
 
 const (
 	TAG_NAME_DB                = "db"
+	TAG_NAME_JSON              = "json"
+	TAG_NAME_PROTOBUF          = "protobuf"
+	PROTOBUF_VALUE_NAME        = "name"
 	DRIVER_NAME_MYSQL          = "mysql"
 	DRIVER_NAME_POSTGRES       = "postgres"
 	DRIVER_NAME_SQLITE         = "sqlite3"

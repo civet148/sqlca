@@ -402,14 +402,14 @@ func TxRollback(e *sqlca.Engine) (err error) {
 
 func CustomTag(e *sqlca.Engine) {
 	type CustomUser struct {
-		Id    int32  `protobuf:"id"` // protobuf tag
-		Name  string `json:"name"`   // json tag
-		Phone string `db:"phone"`    // db tag
+		Id    int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // protobuf tag
+		Name  string `json:"name"`                                                // json tag
+		Phone string `db:"phone"`                                                 // db tag
 	}
 
 	var users []CustomUser
 	//add custom tag
-	e.SetCustomTag("protobuf", "json")
+	e.SetCustomTag(sqlca.TAG_NAME_PROTOBUF, sqlca.TAG_NAME_JSON)
 	if count, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
 		Where("id < ?", 5).

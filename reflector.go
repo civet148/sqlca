@@ -114,7 +114,8 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 	}
 
 	for _, v := range dbTags {
-		tagVal := s.getTag(field, v)
+
+		tagVal := handleTagValue(v, s.getTag(field, v))
 		if tagVal != "" {
 			s.dict[tagVal] = val.Interface()
 			return
@@ -348,17 +349,33 @@ func (e *Engine) fetchToBaseType(fetcher *Fetcher, typ reflect.Type, val reflect
 	return
 }
 
+func handleTagValue(strTagName, strTagValue string) string {
+
+	if strTagName == TAG_NAME_PROTOBUF && strTagValue != "" {
+		//parse protobuf tag value
+		vs := strings.Split(strTagValue, ",")
+		for _, vv := range vs {
+			ss := strings.Split(vv, "=")
+			if len(ss) <= 1 {
+				//log.Warnf("protobuf tag value [%v] is not a invalid format", strTagValue)
+				continue
+			} else {
+				if ss[0] == PROTOBUF_VALUE_NAME {
+					strTagValue = ss[1]
+					return strTagValue
+				}
+			}
+		}
+	}
+	return strTagValue
+}
+
 func (e *Engine) getTagValue(sf reflect.StructField) (strValue string) {
 
-	var tagName string
-	tagName = TAG_NAME_DB
-	strValue = sf.Tag.Get(tagName)
-	if strValue == "" {
-		for _, v := range e.dbTags { //support multiple tag
-			strValue = sf.Tag.Get(v)
-			if strValue != "" {
-				return
-			}
+	for _, v := range e.dbTags { //support multiple tag
+		strValue = handleTagValue(v, sf.Tag.Get(v))
+		if strValue != "" {
+			return
 		}
 	}
 	return

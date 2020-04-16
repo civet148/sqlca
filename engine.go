@@ -143,6 +143,16 @@ func (e *Engine) Attach(strDatabaseName string, db *sqlx.DB) *Engine {
 	return e
 }
 
+// get sqlx db instance
+func (e *Engine) DB() *sqlx.DB {
+	return e.db
+}
+
+// set log file
+func (e *Engine) SetLogFile(strPath string) {
+	log.Open(strPath)
+}
+
 // set cache indexes. if null, the primary key (eg. 'id') will be cached to redis
 func (e *Engine) Cache(indexes ...string) *Engine {
 	e.setUseCache(true)

@@ -423,7 +423,7 @@ if err != nil {
 ## custom tag
 ```golang
 type CustomUser struct {
-    Id    int32  `protobuf:"id"` // protobuf tag
+    Id    int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // protobuf tag
     Name  string `json:"name"`   // json tag
     Phone string `db:"phone"`    // db tag
 }

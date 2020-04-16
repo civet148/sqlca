@@ -29,7 +29,7 @@ func main() {
 	e := sqlca.NewEngine(true)
 	e.Debug(true) //debug on
 
-	e.Open("redis://127.0.0.1:6379/cluster?db=0", 3600) //redis alone mode
+	e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
 	//e.Open(sqlca.AdapterCache_Redis, "redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 
 	e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
@@ -37,27 +37,35 @@ func main() {
 	//e.Open("sqlite:///var/lib/test.db")
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=&windows=false")
 
-	//OrmInsertByModel(e)
-	OrmUpsertByModel(e)
-	OrmUpdateByModel(e)
-	OrmQueryIntoModel(e)
-	OrmQueryIntoModelSlice(e)
-	OrmUpdateIndexToCache(e)
-	OrmSelectMultiTable(e)
-	OrmDeleteFromTable(e)
-	OrmInCondition(e)
+	nCount := 1
+	for i := 0; i < nCount; i++ {
+		//OrmInsertByModel(e)
+		OrmUpsertByModel(e)
+		OrmUpdateByModel(e)
+		OrmQueryIntoModel(e)
+		OrmQueryIntoModelSlice(e)
+		OrmUpdateIndexToCache(e)
+		OrmSelectMultiTable(e)
+		OrmDeleteFromTable(e)
+		OrmInCondition(e)
 
-	RawQueryIntoModel(e)
-	RawQueryIntoModelSlice(e)
-	RawQueryIntoMap(e)
-	RawExec(e)
+		RawQueryIntoModel(e)
+		RawQueryIntoModelSlice(e)
+		RawQueryIntoMap(e)
+		RawExec(e)
 
-	TxGetExec(e)
-	TxRollback(e)
+		TxGetExec(e)
+		TxRollback(e)
+	}
+
+	log.Info("%+v", log.Report())
 	log.Info("program exit...")
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
+
+	log.Enter()
+	defer log.Leave()
 
 	user := UserDO{
 		//Id:    0,
@@ -74,6 +82,9 @@ func OrmInsertByModel(e *sqlca.Engine) {
 }
 
 func OrmUpsertByModel(e *sqlca.Engine) {
+
+	log.Enter()
+	defer log.Leave()
 	user := UserDO{
 		Id:    1,
 		Name:  "lory",
@@ -89,6 +100,10 @@ func OrmUpsertByModel(e *sqlca.Engine) {
 }
 
 func OrmUpdateByModel(e *sqlca.Engine) {
+
+	log.Enter()
+	defer log.Leave()
+
 	user := UserDO{
 		Id:      1,
 		Name:    "john",
@@ -107,6 +122,9 @@ func OrmUpdateByModel(e *sqlca.Engine) {
 }
 
 func OrmQueryIntoModel(e *sqlca.Engine) {
+	log.Enter()
+	defer log.Leave()
+
 	user := UserDO{}
 
 	//SQL: select id, name, phone from users where id=1
@@ -121,6 +139,8 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 }
 
 func OrmQueryIntoModelSlice(e *sqlca.Engine) {
+	log.Enter()
+	defer log.Leave()
 
 	var users []UserDO
 
@@ -141,6 +161,9 @@ func OrmQueryIntoModelSlice(e *sqlca.Engine) {
 }
 
 func RawQueryIntoModel(e *sqlca.Engine) {
+	log.Enter()
+	defer log.Leave()
+
 	user := UserDO{}
 
 	//SQL: select * from users where id=1
@@ -152,6 +175,10 @@ func RawQueryIntoModel(e *sqlca.Engine) {
 }
 
 func RawQueryIntoModelSlice(e *sqlca.Engine) {
+
+	log.Enter()
+	defer log.Leave()
+
 	var users []UserDO
 
 	//SQL: select * from users where id < 5
@@ -163,6 +190,10 @@ func RawQueryIntoModelSlice(e *sqlca.Engine) {
 }
 
 func RawQueryIntoMap(e *sqlca.Engine) {
+
+	log.Enter()
+	defer log.Leave()
+
 	var users []map[string]string
 
 	//SQL: select * from users where id < 5
@@ -185,6 +216,10 @@ func RawExec(e *sqlca.Engine) {
 }
 
 func OrmUpdateIndexToCache(e *sqlca.Engine) {
+
+	log.Enter()
+	defer log.Leave()
+
 	user := UserDO{
 		Id:    1,
 		Name:  "john3",
@@ -209,6 +244,9 @@ func OrmUpdateIndexToCache(e *sqlca.Engine) {
 
 func OrmSelectMultiTable(e *sqlca.Engine) {
 
+	log.Enter()
+	defer log.Leave()
+
 	type UserClass struct {
 		UserId   int32  `db:"user_id"`
 		UserName string `db:"user_name"`
@@ -231,6 +269,9 @@ func OrmSelectMultiTable(e *sqlca.Engine) {
 }
 
 func OrmDeleteFromTable(e *sqlca.Engine) {
+
+	log.Enter()
+	defer log.Leave()
 
 	user := UserDO{
 		Id: 1000,
@@ -258,6 +299,9 @@ func OrmDeleteFromTable(e *sqlca.Engine) {
 }
 
 func OrmInCondition(e *sqlca.Engine) {
+	log.Enter()
+	defer log.Leave()
+
 	var users []UserDO
 	//SQL: select * from users where id > 2 and id in (1,3,6,7) and disable in (0,1)
 	if rows, err := e.Model(&users).
@@ -274,6 +318,8 @@ func OrmInCondition(e *sqlca.Engine) {
 }
 
 func TxGetExec(e *sqlca.Engine) (err error) {
+	log.Enter()
+	defer log.Leave()
 
 	var tx *sqlca.Engine
 	//transaction: select user id form users where phone is '8618600000000' and update users disable to 1 by user id
@@ -326,6 +372,9 @@ func TxGetExec(e *sqlca.Engine) (err error) {
 }
 
 func TxRollback(e *sqlca.Engine) (err error) {
+
+	log.Enter()
+	defer log.Leave()
 
 	var tx *sqlca.Engine
 	//transaction: insert and rollback

@@ -22,8 +22,8 @@ const (
 	DATABASE_KEY_NAME_SELECT = " SELECT "
 	DATABASE_KEY_NAME_EXIST  = " EXIST "
 	DATABASE_KEY_NAME_IN     = " IN "
+	DATABASE_KEY_NAME_NOT_IN = " NOT IN "
 	DATABASE_KEY_NAME_OR     = " OR "
-	DATABASE_KEY_NAME_NOT    = " NOT "
 	DATABASE_KEY_NAME_AND    = " AND "
 	DATABASE_KEY_NAME_INSERT = " INSERT INTO "
 	DATABASE_KEY_NAME_VALUE  = " VALUE "
@@ -702,6 +702,16 @@ func (e *Engine) makeInCondition(cond condition) (strCondition string) {
 	return
 }
 
+func (e *Engine) makeNotCondition(cond condition) (strCondition string) {
+
+	var strValues []string
+	for _, v := range cond.ColumnValues {
+		strValues = append(strValues, fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()))
+	}
+	strCondition = fmt.Sprintf("%v %v (%v)", cond.ColumnName, DATABASE_KEY_NAME_NOT_IN, strings.Join(strValues, ","))
+	return
+}
+
 func (e *Engine) makeWhereCondition() (strWhere string) {
 
 	if e.isPkValueNil() {
@@ -728,7 +738,9 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 	for _, v := range e.inConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeInCondition(v))
 	}
-
+	for _, v := range e.notConditions {
+		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeNotCondition(v))
+	}
 	strWhere = DATABASE_KEY_NAME_WHERE + strWhere
 	return
 }

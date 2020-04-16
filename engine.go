@@ -41,6 +41,7 @@ type Engine struct {
 	orderByColumns  []string               // order by columns
 	groupByColumns  []string               // group by columns
 	inConditions    []condition            // in condition
+	notConditions   []condition            // not in condition
 	andConditions   []string               // and condition
 	cacheIndexes    []tableIndex           // index read or write cache
 }
@@ -268,7 +269,7 @@ func (e *Engine) Desc() *Engine {
 	return e
 }
 
-// `field_name` in ('1','2',...)
+// `field_name` IN ('1','2',...)
 func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
 
 	v := condition{
@@ -276,6 +277,17 @@ func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
 		ColumnValues: args,
 	}
 	e.inConditions = append(e.inConditions, v)
+	return e
+}
+
+// `field_name` NOT IN ('1','2',...)
+func (e *Engine) Not(strColumn string, args ...interface{}) *Engine {
+
+	v := condition{
+		ColumnName:   strColumn,
+		ColumnValues: args,
+	}
+	e.notConditions = append(e.notConditions, v)
 	return e
 }
 

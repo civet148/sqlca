@@ -36,6 +36,7 @@ type Engine struct {
 	strLimit        string                 // limit
 	strOffset       string                 // offset (only for postgres)
 	strAscOrDesc    string                 // order by ... [asc|desc]
+	strDistinct     string                 // distinct
 	selectColumns   []string               // columns to query: select
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string               // order by columns
@@ -139,6 +140,7 @@ func (e *Engine) Attach(strDatabaseName string, db *sqlx.DB) *Engine {
 	return e
 }
 
+// set cache indexes. if null, the primary key (eg. 'id') will be cached to redis
 func (e *Engine) Cache(indexes ...string) *Engine {
 	e.setUseCache(true)
 	for _, v := range indexes {
@@ -202,12 +204,10 @@ func (e *Engine) Select(strColumns ...string) *Engine {
 	return e
 }
 
-func (e *Engine) formatString(strIn string, args ...interface{}) (strFmt string) {
-	strFmt = strIn
-	if e.isQuestionPlaceHolder(strIn, args...) { //question placeholder exist
-		strFmt = strings.Replace(strFmt, "?", "'%v'", -1)
-	}
-	return fmt.Sprintf(strFmt, args...)
+// set distinct when select
+func (e *Engine) Distinct() *Engine {
+	e.setDistinct()
+	return e
 }
 
 // orm where condition

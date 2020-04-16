@@ -8,26 +8,26 @@ import (
 )
 
 const (
-	TAG_NAME_DB              = "db"
-	DRIVER_NAME_MYSQL        = "mysql"
-	DRIVER_NAME_POSTGRES     = "postgres"
-	DRIVER_NAME_SQLITE       = "sqlite3"
-	DRIVER_NAME_MSSQL        = "adodb"
-	DRIVER_NAME_REDIS        = "redis"
-	DATABASE_KEY_NAME_WHERE  = " WHERE "
-	DATABASE_KEY_NAME_UPDATE = " UPDATE "
-	DATABASE_KEY_NAME_SET    = " SET "
-	DATABASE_KEY_NAME_FROM   = " FROM "
-	DATABASE_KEY_NAME_DELETE = " DELETE "
-	DATABASE_KEY_NAME_SELECT = " SELECT "
-	DATABASE_KEY_NAME_EXIST  = " EXIST "
-	DATABASE_KEY_NAME_IN     = " IN "
-	DATABASE_KEY_NAME_NOT_IN = " NOT IN "
-	DATABASE_KEY_NAME_OR     = " OR "
-	DATABASE_KEY_NAME_AND    = " AND "
-	DATABASE_KEY_NAME_INSERT = " INSERT INTO "
-	DATABASE_KEY_NAME_VALUE  = " VALUE "
-	DATABASE_KEY_NAME_VALUES = " VALUES "
+	TAG_NAME_DB                = "db"
+	DRIVER_NAME_MYSQL          = "mysql"
+	DRIVER_NAME_POSTGRES       = "postgres"
+	DRIVER_NAME_SQLITE         = "sqlite3"
+	DRIVER_NAME_MSSQL          = "adodb"
+	DRIVER_NAME_REDIS          = "redis"
+	DATABASE_KEY_NAME_WHERE    = "WHERE"
+	DATABASE_KEY_NAME_UPDATE   = "UPDATE"
+	DATABASE_KEY_NAME_SET      = "SET"
+	DATABASE_KEY_NAME_FROM     = "FROM"
+	DATABASE_KEY_NAME_DELETE   = "DELETE"
+	DATABASE_KEY_NAME_SELECT   = "SELECT"
+	DATABASE_KEY_NAME_DISTINCT = "DISTINCT"
+	DATABASE_KEY_NAME_IN       = "IN"
+	DATABASE_KEY_NAME_NOT_IN   = "NOT IN"
+	DATABASE_KEY_NAME_OR       = "OR"
+	DATABASE_KEY_NAME_AND      = "AND"
+	DATABASE_KEY_NAME_INSERT   = "INSERT INTO"
+	DATABASE_KEY_NAME_VALUE    = "VALUE"
+	DATABASE_KEY_NAME_VALUES   = "VALUES"
 )
 
 type AdapterType int
@@ -247,6 +247,14 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 	}
 	txEngine.operType = OperType_Tx
 	return
+}
+
+func (e *Engine) getDistinct() string {
+	return e.strDistinct
+}
+
+func (e *Engine) setDistinct() {
+	e.strDistinct = DATABASE_KEY_NAME_DISTINCT
 }
 
 func (e *Engine) setUseCache(enable bool) {
@@ -669,6 +677,14 @@ func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) 
 	return
 }
 
+func (e *Engine) formatString(strIn string, args ...interface{}) (strFmt string) {
+	strFmt = strIn
+	if e.isQuestionPlaceHolder(strIn, args...) { //question placeholder exist
+		strFmt = strings.Replace(strFmt, "?", "'%v'", -1)
+	}
+	return fmt.Sprintf(strFmt, args...)
+}
+
 func (e *Engine) makeSqlxString() (strSqlx string) {
 
 	switch e.operType {
@@ -741,14 +757,14 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 	for _, v := range e.notConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeNotCondition(v))
 	}
-	strWhere = DATABASE_KEY_NAME_WHERE + strWhere
+	strWhere = DATABASE_KEY_NAME_WHERE + " " + strWhere
 	return
 }
 
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 	strWhere := e.makeWhereCondition()
-	strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v",
-		DATABASE_KEY_NAME_SELECT, e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
+	strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
+		DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
 		strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
 	return
 }

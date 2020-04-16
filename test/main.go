@@ -58,7 +58,7 @@ func main() {
 		TxRollback(e)
 	}
 
-	log.Info("%+v", log.Report())
+	//log.Info("%+v", log.Report()) //print function report
 	log.Info("program exit...")
 }
 
@@ -233,6 +233,7 @@ func OrmUpdateIndexToCache(e *sqlca.Engine) {
 	//redis key:  sqlx:cache:[table]:[column]:[column value]
 	if rowsAffected, err := e.Model(&user).
 		Table(TABLE_NAME_USERS).
+		Distinct().
 		Select("name", "phone", "email", "sex").
 		Cache("name", "phone").
 		Update(); err != nil {
@@ -256,6 +257,7 @@ func OrmSelectMultiTable(e *sqlca.Engine) {
 	var ucs []UserClass
 	//SQL: SELECT a.*, b.class_no FROM users a, classes b WHERE a.id=b.user_id AND a.id=3
 	_, err := e.Model(&ucs).
+		Distinct().
 		Select("a.id as user_id", "a.name", "a.phone", "b.class_no").
 		Table("users a", "classes b").
 		Where("a.id=b.user_id").

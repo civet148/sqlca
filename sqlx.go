@@ -661,10 +661,14 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 
 	for k, v := range e.dict {
 
-		c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote())  // column name format to `id`,...
-		v := fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()) // column value format to :id,...
+		c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
+
+		if k == e.GetPkName() && e.isPkValueNil() {
+			continue
+		}
+		vq := fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()) // column value format to :id,...
 		cols = append(cols, c)
-		vals = append(vals, v)
+		vals = append(vals, vq)
 	}
 	strQuoteColumns = strings.Join(cols, ",")
 	strColonValues = strings.Join(vals, ",")
@@ -767,9 +771,18 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 	strWhere := e.makeWhereCondition()
-	strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
-		DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
-		strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset()) //where condition by custom where condition from Where()
+
+	switch e.adapterSqlx {
+	case AdapterSqlx_Mssql:
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v",
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
+			strWhere, e.getOrderBy(), e.getGroupBy())
+	default:
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
+			strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset())
+	}
+
 	return
 }
 

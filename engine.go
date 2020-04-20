@@ -89,7 +89,7 @@ func (e *Engine) getConnConfig(adapterType AdapterType, strUrl string) (strDrive
 // 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4")
 // 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/mydb?sslmode=disable")
 // 	   [sqlite]   Open("sqlite:///var/lib/my.db")
-// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=&windows=false")
+// 	   [mssql]    Open("adodb://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
 //
 //  2. cache config
 //     [redis-alone]    Open("redis://123456@127.0.0.1:6379/cluster?db=0")
@@ -250,11 +250,25 @@ func (e *Engine) Limit(args ...int) *Engine {
 
 	//TODO postgresql/mssql limit statement
 	nArgs := len(args)
-	if nArgs == 1 {
-		e.setLimit(fmt.Sprintf("LIMIT %v", args[0]))
-	} else if nArgs == 2 {
-		e.setLimit(fmt.Sprintf("LIMIT %v,%v", args[0], args[1]))
+	if nArgs == 0 {
+		return e
 	}
+
+	switch e.adapterSqlx {
+	case AdapterSqlx_Mssql:
+		{
+			e.setLimit(fmt.Sprintf("TOP %v", args[0]))
+		}
+	default:
+		{
+			if nArgs == 1 {
+				e.setLimit(fmt.Sprintf("LIMIT %v", args[0]))
+			} else if nArgs == 2 {
+				e.setLimit(fmt.Sprintf("LIMIT %v,%v", args[0], args[1]))
+			}
+		}
+	}
+
 	return e
 }
 
@@ -358,12 +372,8 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 		log.Errorf("error %v model %+v", err, e.model)
 		return
 	}
-	lastInsertId, err = r.LastInsertId()
-	if err != nil {
-		log.Errorf("get last insert id error %v model %+v", err, e.model)
-		return
-	}
-	log.Debugf("lastInsertId = %v", lastInsertId)
+
+	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
 	if lastInsertId > 0 {
 		e.upsertCache(lastInsertId)
 	}
@@ -544,11 +554,7 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 		log.Errorf("get rows affected error [%v] query [%v]", err.Error(), strQuery)
 		return
 	}
-	lastInsertId, err = r.LastInsertId()
-	if err != nil {
-		log.Errorf("get last insert id error [%v] query [%v]", err.Error(), strQuery)
-		return
-	}
+	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
 	return
 }
 

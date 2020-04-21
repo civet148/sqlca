@@ -8,8 +8,9 @@ import (
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
 	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
-	_ "github.com/mattn/go-adodb"      //mssql golang driver
-	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
+	//_ "github.com/mattn/go-adodb"      //mssql golang driver
+	_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
+	_ "github.com/mattn/go-sqlite3"      //sqlite3 golang driver
 	"strings"
 )
 
@@ -366,17 +367,46 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	e.setOperType(OperType_Insert)
 	var strSqlx string
 	strSqlx = e.makeSqlxString()
-	var r sql.Result
-	r, err = e.db.NamedExec(strSqlx, e.model)
-	if err != nil {
-		log.Errorf("error %v model %+v", err, e.model)
-		return
+
+	switch e.adapterSqlx {
+	case AdapterSqlx_Mssql:
+		{
+			if e.isPkInteger() && e.isPkValueNil() {
+				//strSqlx += " SELECT SCOPE_IDENTITY() AS last_insert_id"
+				strSqlx += " SELECT SCOPE_IDENTITY() AS last_insert_id"
+				log.Debugf("[AdapterSqlx_Mssql] insert [%v]", strSqlx)
+				var rows *sql.Rows
+				if rows, err = e.db.Query(strSqlx); err != nil {
+					log.Errorf("tx.Query error [%v]", err.Error())
+					return
+				}
+				defer rows.Close()
+				for rows.Next() {
+					if err = rows.Scan(&lastInsertId); err != nil {
+						log.Errorf("rows.Scan error [%v]", err.Error())
+						//_ = tx.Rollback()
+						return
+					}
+					log.Debugf("rows.Scan lastInsertId=%v", lastInsertId)
+				}
+			}
+		}
+	default:
+		{
+			var r sql.Result
+			r, err = e.db.Exec(strSqlx)
+			if err != nil {
+				log.Errorf("error %v model %+v", err, e.model)
+				return
+			}
+
+			lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
+			if lastInsertId > 0 {
+				e.upsertCache(lastInsertId)
+			}
+		}
 	}
 
-	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
-	if lastInsertId > 0 {
-		e.upsertCache(lastInsertId)
-	}
 	return
 }
 
@@ -395,7 +425,7 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	strSqlx = e.makeSqlxString()
 
 	var r sql.Result
-	r, err = e.db.NamedExec(strSqlx, e.model)
+	r, err = e.db.Exec(strSqlx)
 	if err != nil {
 		log.Errorf("error %v model %+v", err, e.model)
 		return

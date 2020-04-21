@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/redigogo"
-	_ "github.com/go-sql-driver/mysql" //mysql golang driver
-	"github.com/jmoiron/sqlx"          //sqlx package
-	_ "github.com/lib/pq"              //postgres golang driver
-	//_ "github.com/mattn/go-adodb"      //mssql golang driver
 	_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
+	_ "github.com/go-sql-driver/mysql"   //mysql golang driver
+	"github.com/jmoiron/sqlx"            //sqlx package
+	_ "github.com/lib/pq"                //postgres golang driver
 	_ "github.com/mattn/go-sqlite3"      //sqlite3 golang driver
 	"strings"
 )
@@ -90,7 +89,7 @@ func (e *Engine) getConnConfig(adapterType AdapterType, strUrl string) (strDrive
 // 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4")
 // 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/mydb?sslmode=disable")
 // 	   [sqlite]   Open("sqlite:///var/lib/my.db")
-// 	   [mssql]    Open("adodb://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
+// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
 //
 //  2. cache config
 //     [redis-alone]    Open("redis://123456@127.0.0.1:6379/cluster?db=0")

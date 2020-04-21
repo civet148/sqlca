@@ -77,20 +77,20 @@ func MSSQL_OrmInsertByModel(e *sqlca.Engine) {
 
 func MSSQL_OrmUpsertByModel(e *sqlca.Engine) {
 
-	//log.Enter()
-	//defer log.Leave()
-	//user := UserDO{
-	//	Id:    1,
-	//	Name:  "lory",
-	//	Phone: "8618688888888",
-	//	Sex:   2,
-	//	Email: "lory@gmail.com",
-	//}
-	//if lastInsertId, err := e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "email", "sex").Upsert(); err != nil {
-	//	log.Errorf("upsert data model [%+v] error [%v]", user, err.Error())
-	//} else {
-	//	log.Debugf("upsert data model [%+v] ok, last insert id [%v]", user, lastInsertId)
-	//}
+	log.Enter()
+	defer log.Leave()
+	user := UserDO{
+		Id:    0,
+		Name:  "lory",
+		Phone: "8618677454534",
+		Sex:   2,
+		Email: "spuset@gmail.com",
+	}
+	if lastInsertId, err := e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "email", "sex").Upsert(); err != nil {
+		log.Errorf("upsert data model [%+v] error [%v]", user, err.Error())
+	} else {
+		log.Debugf("upsert data model [%+v] ok, last insert id [%v]", user, lastInsertId)
+	}
 }
 
 func MSSQL_OrmUpdateByModel(e *sqlca.Engine) {

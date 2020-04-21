@@ -176,7 +176,7 @@ func (e *Engine) makeCacheIndexes() (kvs []*cacheKeyValue) {
 
 func (e *Engine) makeUpdateCacheKv() (kvs []*cacheKeyValue) {
 
-	if !e.getUseCache() && e.isDebug() {
+	if !e.getUseCache() {
 		log.Debugf("use cache is disabled, ignore it")
 		return
 	}
@@ -196,10 +196,6 @@ func (e *Engine) saveToCache(kvs ...*cacheKeyValue) (ok bool) {
 		if _, err := e.cache.Do("SETEX", v.Key, e.expireTime, string(data)); err != nil {
 			log.Errorf("set key [%v] value [%v] error [%v]", v.Key, string(data), err.Error())
 			return false
-		} else {
-			if e.isDebug() {
-				e.getCacheValue(v.Key)
-			}
 		}
 	}
 	return true
@@ -207,12 +203,12 @@ func (e *Engine) saveToCache(kvs ...*cacheKeyValue) (ok bool) {
 
 func (e *Engine) upsertCache(lastInsertId int64) {
 
-	if e.isCacheNil() && e.isDebug() {
+	if e.isCacheNil() {
 		log.Debugf("cache instance is nil, can't update to cache")
 		return
 	}
 
-	if !e.getUseCache() && e.isDebug() {
+	if !e.getUseCache() {
 		log.Debugf("use cache is disabled, ignore it")
 		return
 	}
@@ -230,7 +226,7 @@ func (e *Engine) upsertCache(lastInsertId int64) {
 
 func (e *Engine) updateCache() (ok bool) {
 
-	if e.isCacheNil() && e.isDebug() {
+	if e.isCacheNil() {
 		log.Debugf("cache instance is nil, can't update to cache")
 		return
 	}
@@ -239,7 +235,7 @@ func (e *Engine) updateCache() (ok bool) {
 }
 
 func (e *Engine) deleteCache() {
-	if e.isCacheNil() && e.isDebug() {
+	if e.isCacheNil() {
 		log.Debugf("cache instance is nil, can't delete from cache")
 		return
 	}
@@ -248,7 +244,7 @@ func (e *Engine) deleteCache() {
 
 		if _, err := e.cache.Do("DEL", v.Key); err != nil {
 			log.Errorf("DEL key [%v] from redis error [%v]", v.Key, err.Error())
-		} else if e.isDebug() {
+		} else {
 			log.Debugf("DEL key [%v] from redis [OK]", v.Key)
 		}
 	}
@@ -256,25 +252,24 @@ func (e *Engine) deleteCache() {
 
 func (e *Engine) queryCache() (count int64, ok bool) {
 
-	if e.isCacheNil() && e.isDebug() {
+	if e.isCacheNil() {
 		log.Warnf("cache instance is nil, can't update to cache")
 		return
 	}
 
-	if !e.getUseCache() && e.isDebug() {
+	if !e.getUseCache() {
 		log.Warnf("use cache is disabled, ignore it")
 		return
 	}
 
-	if e.isPkValueNil() && len(e.getIndexes()) == 0 && e.isDebug() {
+	if e.isPkValueNil() && len(e.getIndexes()) == 0 {
 		log.Warnf("query condition primary key's value and index not set")
 		return
 	}
 
 	if e.getOrderBy() != "" || e.getAscOrDesc() != "" || e.getGroupBy() != "" || e.getLimit() != "" || e.getOffset() != "" {
-		if e.isDebug() {
-			log.Warnf("query from cache can't use ORDER BY/GROUP BY/LIMIT/OFFSET key words")
-		}
+
+		log.Warnf("query from cache can't use ORDER BY/GROUP BY/LIMIT/OFFSET key words")
 		return 0, false
 	}
 

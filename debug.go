@@ -81,19 +81,11 @@ func (e *Engine) isCacheNil() bool {
 }
 
 func (e *Engine) setDebug(ok bool) {
-	e.debug = ok
 	log.SetLevel(log.LEVEL_DEBUG)
 }
 
-func (e *Engine) isDebug() bool {
-	return e.debug
-}
-
 func (e *Engine) panic(strFmt string, args ...interface{}) {
-	if e.isDebug() {
-		panic(fmt.Sprintf(strFmt, args...))
-	} else {
-		//strFmt = fmtParentCaller(strFmt)
-		log.Errorf(strFmt, args...)
-	}
+
+	//strFmt = fmtParentCaller(strFmt)
+	log.Fatalf(strFmt, args...)
 }

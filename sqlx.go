@@ -230,7 +230,6 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 	engine := &Engine{
 		db:              e.db,
 		cache:           e.cache,
-		debug:           e.debug,
 		adapterSqlx:     e.adapterSqlx,
 		adapterCache:    e.adapterCache,
 		strPkName:       e.strPkName,
@@ -254,8 +253,11 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 	return
 }
 
-func (e *Engine) queryInsert(strSQL string) (lastInsertId int64, err error) {
+func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err error) {
 	var rows *sql.Rows
+	strSQL += " RETURNING ID"
+	log.Debugf("[%v]", strSQL)
+
 	if rows, err = e.db.Query(strSQL); err != nil {
 		log.Errorf("tx.Query error [%v]", err.Error())
 		return
@@ -264,10 +266,70 @@ func (e *Engine) queryInsert(strSQL string) (lastInsertId int64, err error) {
 	for rows.Next() {
 		if err = rows.Scan(&lastInsertId); err != nil {
 			log.Errorf("rows.Scan error [%v]", err.Error())
-			//_ = tx.Rollback()
 			return
 		}
-		//log.Debugf("rows.Scan lastInsertId=%v", lastInsertId)
+	}
+	return
+}
+
+func (e *Engine) mssqlQueryInsert(strSQL string) (lastInsertId int64, err error) {
+	var rows *sql.Rows
+	strSQL += " SELECT SCOPE_IDENTITY() AS last_insert_id"
+	log.Debugf("[%v]", strSQL)
+
+	if rows, err = e.db.Query(strSQL); err != nil {
+		log.Errorf("tx.Query error [%v]", err.Error())
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err = rows.Scan(&lastInsertId); err != nil {
+			log.Errorf("rows.Scan error [%v]", err.Error())
+			return
+		}
+	}
+	return
+}
+
+func (e *Engine) mssqlUpsert(strSQL string) (lastInsertId int64, err error) {
+
+	var db *Engine
+	var query = e.makeSqlxQueryPrimaryKey()
+	if db, err = e.TxBegin(); err != nil {
+		log.Errorf("TxBegin error [%v]", err.Error())
+		return
+	}
+	var count int64
+	if count, err = db.TxGet(&lastInsertId, query); err != nil {
+		log.Errorf("TxGet [%v] error [%v]", query, err.Error())
+		_ = db.TxRollback()
+		return
+	}
+	if count == 0 {
+		// INSERT INTO users(...) values(...)  SELECT SCOPE_IDENTITY() AS last_insert_id
+		//if _, _, err = db.TxExec(strSQL); err != nil
+		if lastInsertId, err = e.mssqlQueryInsert(strSQL); err != nil {
+			log.Errorf("mssqlQueryInsert [%v] error [%v]", strSQL, err.Error())
+			_ = db.TxRollback()
+			return
+		}
+	} else {
+		// UPDATE users SET xxx=yyy WHERE id=nnn
+		strUpdates := fmt.Sprintf("%v %v %v %v %v %v=%v",
+			DATABASE_KEY_NAME_UPDATE, e.getTableName(),
+			DATABASE_KEY_NAME_SET, e.getOnConflictDo(),
+			DATABASE_KEY_NAME_WHERE, e.GetPkName(), lastInsertId)
+		log.Debugf("%v", strUpdates)
+		if _, _, err = db.TxExec(strUpdates); err != nil {
+			log.Errorf("TxExec [%v] error [%v]", strSQL, err.Error())
+			_ = db.TxRollback()
+			return
+		}
+	}
+
+	if err = db.TxCommit(); err != nil {
+		log.Errorf("TxCommit [%v] error [%v]", strSQL, err.Error())
+		return
 	}
 	return
 }
@@ -669,7 +731,7 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 		}
 	case AdapterSqlx_Mssql:
 		{
-			// TODO @libin MSSQL Server upsert...do...
+			strDo = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 		}
 	}
 	return
@@ -712,26 +774,35 @@ func (e *Engine) formatString(strIn string, args ...interface{}) (strFmt string)
 	return fmt.Sprintf(strFmt, args...)
 }
 
-func (e *Engine) makeSqlxString() (strSqlx string) {
+func (e *Engine) makeSqlxQueryPrimaryKey() (strSql string) {
+
+	strSql = fmt.Sprintf("%v %v%v%v %v %v %v %v%v%v=%v%v%v",
+		DATABASE_KEY_NAME_SELECT, e.getForwardQuote(), e.GetPkName(), e.getBackQuote(),
+		DATABASE_KEY_NAME_FROM, e.getTableName(), DATABASE_KEY_NAME_WHERE,
+		e.getForwardQuote(), e.GetPkName(), e.getBackQuote(),
+		e.getSingleQuote(), e.getPkValue(), e.getSingleQuote())
+	return
+}
+
+func (e *Engine) makeSqlxString() (strSql string) {
 
 	switch e.operType {
 	case OperType_Query:
-		strSqlx = e.makeSqlxQuery()
+		strSql = e.makeSqlxQuery()
 	case OperType_Update:
-		strSqlx = e.makeSqlxUpdate()
+		strSql = e.makeSqlxUpdate()
 	case OperType_Insert:
-		strSqlx = e.makeSqlxInsert()
+		strSql = e.makeSqlxInsert()
 	case OperType_Upsert:
-		strSqlx = e.makeSqlxUpsert()
+		strSql = e.makeSqlxUpsert()
 	case OperType_Delete:
-		strSqlx = e.makeSqlxDelete()
+		strSql = e.makeSqlxDelete()
 	default:
 		assert(false, "operation illegal")
 	}
 
-	if e.isDebug() {
-		log.Debugf("[%v] query sql [%s]", e.operType, strSqlx)
-	}
+	log.Debugf("[%v] SQL [%s]", e.operType, strSql)
+
 	return
 }
 

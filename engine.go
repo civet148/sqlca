@@ -25,7 +25,6 @@ type Engine struct {
 	expireTime      int                    // cache expire time of seconds
 	bUseCache       bool                   // can update to cache or read from cache? (true=yes false=no)
 	bCacheFirst     bool                   // cache first or database first (true=cache first; false=db first)
-	debug           bool                   // debug mode [on/off]
 	model           interface{}            // data model [struct object or struct slice]
 	dict            map[string]interface{} // data model db dictionary
 	strDatabaseName string                 // database name
@@ -342,11 +341,11 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 		}
 	}
 
-	strSqlx := e.makeSqlxString()
+	strSql := e.makeSqlxString()
 
 	var rows *sql.Rows
-	if rows, err = e.db.Query(strSqlx); err != nil {
-		log.Errorf("query [%v] error [%v]", strSqlx, err.Error())
+	if rows, err = e.db.Query(strSql); err != nil {
+		log.Errorf("query [%v] error [%v]", strSql, err.Error())
 		return
 	}
 
@@ -371,17 +370,13 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	case AdapterSqlx_Mssql:
 		{
 			if e.isPkInteger() && e.isPkValueNil() {
-				strSql += " SELECT SCOPE_IDENTITY() AS last_insert_id"
-				log.Debugf("[AdapterSqlx_Mssql] insert [%v]", strSql)
-				lastInsertId, err = e.queryInsert(strSql)
+				lastInsertId, err = e.mssqlQueryInsert(strSql)
 			}
 		}
 	case AdapterSqlx_Postgres:
 		{
 			if e.isPkInteger() && e.isPkValueNil() {
-				strSql += " RETURNING ID"
-				log.Debugf("[AdapterSqlx_Postgres] insert [%v]", strSql)
-				lastInsertId, err = e.queryInsert(strSql)
+				lastInsertId, err = e.postgresQueryInsert(strSql)
 			}
 		}
 	default:
@@ -394,12 +389,12 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 			}
 
 			lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
-			if lastInsertId > 0 {
-				e.upsertCache(lastInsertId)
-			}
 		}
 	}
 
+	if lastInsertId > 0 {
+		e.upsertCache(lastInsertId)
+	}
 	return
 }
 
@@ -407,31 +402,43 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 // return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe id return 0
 // NOTE: Model function is must be called before call this function and call OnConflict function when you are on postgresql
 func (e *Engine) Upsert() (lastInsertId int64, err error) {
-	assert(!(e.adapterSqlx == AdapterSqlx_Mssql), "mssql-server un-support insert on duplicate update operation")
+
 	assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	assert(e.getSelectColumns(), "update columns is not set")
 	defer e.cleanWhereCondition()
 
 	e.setOperType(OperType_Upsert)
-	var strSqlx string
-	strSqlx = e.makeSqlxString()
+	var strSql string
+	strSql = e.makeSqlxString()
 
-	var r sql.Result
-	r, err = e.db.Exec(strSqlx)
-	if err != nil {
-		log.Errorf("error %v model %+v", err, e.model)
-		return
+	switch e.adapterSqlx {
+	case AdapterSqlx_Mssql:
+		{
+			lastInsertId, err = e.mssqlUpsert(e.makeSqlxInsert())
+		}
+	//case AdapterSqlx_Postgres:
+	//	{
+	//	}
+	default:
+		{
+			var r sql.Result
+			r, err = e.db.Exec(strSql)
+			if err != nil {
+				log.Errorf("error %v model %+v", err, e.model)
+				return
+			}
+			lastInsertId, err = r.LastInsertId()
+			if err != nil {
+				log.Errorf("get last insert id error %v model %+v", err, e.model)
+				return
+			}
+			if lastInsertId > 0 {
+				e.upsertCache(lastInsertId)
+			}
+		}
 	}
-	lastInsertId, err = r.LastInsertId()
-	if err != nil {
-		log.Errorf("get last insert id error %v model %+v", err, e.model)
-		return
-	}
-	log.Debugf("lastInsertId = %v", lastInsertId)
-	if lastInsertId > 0 {
-		e.upsertCache(lastInsertId)
-	}
+
 	return
 }
 
@@ -450,21 +457,21 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	if e.getCacheBefore() {
 		e.updateCache() //update data to cache before database updated
 	}
-	var strSqlx string
-	strSqlx = e.makeSqlxString()
+	var strSql string
+	strSql = e.makeSqlxString()
 
 	var r sql.Result
-	r, err = e.db.Exec(strSqlx)
+	r, err = e.db.Exec(strSql)
 	if err != nil {
 		log.Errorf("error %v model %+v", err, e.model)
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSqlx, e.model)
+		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSql, e.model)
 		return
 	}
-	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
+	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSql)
 
 	if rowsAffected > 0 && !e.getCacheBefore() {
 		e.updateCache() //update data to cache after database updated
@@ -475,21 +482,21 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 // orm delete record(s) from db and cache
 func (e *Engine) Delete() (rowsAffected int64, err error) {
 	e.setOperType(OperType_Delete)
-	strSqlx := e.makeSqlxString()
+	strSql := e.makeSqlxString()
 	defer e.cleanWhereCondition()
 
 	var r sql.Result
-	r, err = e.db.Exec(strSqlx)
+	r, err = e.db.Exec(strSql)
 	if err != nil {
 		log.Errorf("error %v model %+v", err, e.model)
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSqlx, e.model)
+		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSql, e.model)
 		return
 	}
-	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSqlx)
+	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSql)
 
 	if rowsAffected > 0 {
 		e.deleteCache() //delete from cache
@@ -509,9 +516,8 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 
 	var rows *sqlx.Rows
 	strQuery = e.formatString(strQuery, args...)
-	if e.isDebug() {
-		log.Debugf("query [%v]", strQuery)
-	}
+	log.Debugf("query [%v]", strQuery)
+
 	if rows, err = e.db.Queryx(strQuery); err != nil {
 		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
 		return
@@ -532,9 +538,8 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 	var rows *sqlx.Rows
 
 	strQuery = e.formatString(strQuery, args...)
-	if e.isDebug() {
-		log.Debugf("query [%v]", strQuery)
-	}
+	log.Debugf("query [%v]", strQuery)
+
 	if rows, err = e.db.Queryx(strQuery); err != nil {
 		log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
 		return
@@ -558,14 +563,8 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	e.setOperType(OperType_ExecRaw)
 
 	var r sql.Result
-	if e.isDebug() {
-		log.Debugf("query [%v] args %+v", strQuery, args)
-	}
-
 	strQuery = e.formatString(strQuery, args...)
-	if e.isDebug() {
-		log.Debugf("query [%v]", strQuery)
-	}
+	log.Debugf("query [%v]", strQuery)
 
 	if r, err = e.db.Exec(strQuery); err != nil {
 		log.Errorf("error [%v] model [%+v]", err, e.model)
@@ -590,9 +589,8 @@ func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (
 	var rows *sql.Rows
 
 	strQuery = e.formatString(strQuery, args...)
-	if e.isDebug() {
-		log.Debugf("query [%v]", strQuery)
-	}
+	log.Debugf("query [%v]", strQuery)
+
 	rows, err = e.tx.Query(strQuery)
 	if err != nil {
 		log.Errorf("TxGet sql [%v] args %v query error [%v]", strQuery, args, err.Error())
@@ -612,9 +610,8 @@ func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, row
 	var result sql.Result
 
 	strQuery = e.formatString(strQuery, args...)
-	if e.isDebug() {
-		log.Debugf("query [%v]", strQuery)
-	}
+	log.Debugf("query [%v]", strQuery)
+
 	result, err = e.tx.Exec(strQuery)
 
 	if err != nil {

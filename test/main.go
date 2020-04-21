@@ -3,12 +3,11 @@ package main
 import (
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca/test/mssql"
-	"github.com/civet148/sqlca/test/mysql"
 )
 
 func main() {
 	log.Infof("------------------------------------------------------MYSQL------------------------------------------------------------")
-	mysql.Benchmark()
+	//mysql.Benchmark()
 	log.Infof("----------------------------------------------------SQLSERVER----------------------------------------------------------")
 	mssql.Benchmark()
 

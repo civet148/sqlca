@@ -15,7 +15,7 @@ const (
 	DRIVER_NAME_MYSQL          = "mysql"
 	DRIVER_NAME_POSTGRES       = "postgres"
 	DRIVER_NAME_SQLITE         = "sqlite3"
-	DRIVER_NAME_MSSQL          = "adodb"
+	DRIVER_NAME_MSSQL          = "mssql"
 	DRIVER_NAME_REDIS          = "redis"
 	DATABASE_KEY_NAME_WHERE    = "WHERE"
 	DATABASE_KEY_NAME_UPDATE   = "UPDATE"

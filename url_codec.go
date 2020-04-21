@@ -196,13 +196,32 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
 	}
 	e.setDatabaseName(parseDatabaseName(ui.Path))
 
-	dsnArgs = append(dsnArgs, "Provider=SQLOLEDB") //set driver provider
-	if isWindowsAuth {                             //windows authentication
+	//dsnArgs = append(dsnArgs, "Provider=SQLOLEDB") //set driver provider
+	//if isWindowsAuth {                             //windows authentication
+	//	dsnArgs = append(dsnArgs, "integrated security=SSPI") //set security mode
+	//}
+	//
+	//strIP, strPort := getHostPort(ui.Host)
+	//strDataSource := fmt.Sprintf("Data Source=%s", strIP)      // set data source (host ip or domain)
+	//dsnArgs = append(dsnArgs, fmt.Sprintf("port=%s", strPort)) //set port to connect
+	//if strInst, ok := ui.Queries["instance"]; ok {
+	//	if strInst != "" {
+	//		strDataSource += "\\" + strInst //set instance name if not null
+	//	}
+	//}
+	//dsnArgs = append(dsnArgs, strDataSource)
+	//dsnArgs = append(dsnArgs, fmt.Sprintf("Initial Catalog=%s", e.getDatabaseName())) //database name
+	//dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", ui.User))
+	//dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", ui.Password))
+	//strDSN = strings.Join(dsnArgs, ";")
+
+	//dsnArgs = append(dsnArgs, "Provider=SQLOLEDB") //set driver provider
+	if isWindowsAuth { //windows authentication
 		dsnArgs = append(dsnArgs, "integrated security=SSPI") //set security mode
 	}
 
 	strIP, strPort := getHostPort(ui.Host)
-	strDataSource := fmt.Sprintf("Data Source=%s", strIP)      // set data source (host ip or domain)
+	strDataSource := fmt.Sprintf("server=%s", strIP)           // set data source (host ip or domain)
 	dsnArgs = append(dsnArgs, fmt.Sprintf("port=%s", strPort)) //set port to connect
 	if strInst, ok := ui.Queries["instance"]; ok {
 		if strInst != "" {
@@ -210,7 +229,7 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
 		}
 	}
 	dsnArgs = append(dsnArgs, strDataSource)
-	dsnArgs = append(dsnArgs, fmt.Sprintf("Initial Catalog=%s", e.getDatabaseName())) //database name
+	dsnArgs = append(dsnArgs, fmt.Sprintf("database=%s", e.getDatabaseName())) //database name
 	dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", ui.User))
 	dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", ui.Password))
 	strDSN = strings.Join(dsnArgs, ";")

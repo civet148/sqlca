@@ -35,7 +35,7 @@ func Benchmark() {
 	e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4") //MySQL
 	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable") //postgres
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
-	//e.Open("adodb://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
+	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 
 	MYSQL_OrmInsertByModel(e)
 	MYSQL_OrmUpsertByModel(e)

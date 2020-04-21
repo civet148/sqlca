@@ -1,6 +1,7 @@
 package sqlca
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/civet148/gotools/log"
 	"reflect"
@@ -250,6 +251,24 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 		return nil, err
 	}
 	txEngine.operType = OperType_Tx
+	return
+}
+
+func (e *Engine) queryInsert(strSQL string) (lastInsertId int64, err error) {
+	var rows *sql.Rows
+	if rows, err = e.db.Query(strSQL); err != nil {
+		log.Errorf("tx.Query error [%v]", err.Error())
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err = rows.Scan(&lastInsertId); err != nil {
+			log.Errorf("rows.Scan error [%v]", err.Error())
+			//_ = tx.Rollback()
+			return
+		}
+		//log.Debugf("rows.Scan lastInsertId=%v", lastInsertId)
+	}
 	return
 }
 

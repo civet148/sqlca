@@ -364,36 +364,30 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	defer e.cleanWhereCondition()
 
 	e.setOperType(OperType_Insert)
-	var strSqlx string
-	strSqlx = e.makeSqlxString()
+	var strSql string
+	strSql = e.makeSqlxString()
 
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
 		{
 			if e.isPkInteger() && e.isPkValueNil() {
-				//strSqlx += " SELECT SCOPE_IDENTITY() AS last_insert_id"
-				strSqlx += " SELECT SCOPE_IDENTITY() AS last_insert_id"
-				log.Debugf("[AdapterSqlx_Mssql] insert [%v]", strSqlx)
-				var rows *sql.Rows
-				if rows, err = e.db.Query(strSqlx); err != nil {
-					log.Errorf("tx.Query error [%v]", err.Error())
-					return
-				}
-				defer rows.Close()
-				for rows.Next() {
-					if err = rows.Scan(&lastInsertId); err != nil {
-						log.Errorf("rows.Scan error [%v]", err.Error())
-						//_ = tx.Rollback()
-						return
-					}
-					log.Debugf("rows.Scan lastInsertId=%v", lastInsertId)
-				}
+				strSql += " SELECT SCOPE_IDENTITY() AS last_insert_id"
+				log.Debugf("[AdapterSqlx_Mssql] insert [%v]", strSql)
+				lastInsertId, err = e.queryInsert(strSql)
+			}
+		}
+	case AdapterSqlx_Postgres:
+		{
+			if e.isPkInteger() && e.isPkValueNil() {
+				strSql += " RETURNING ID"
+				log.Debugf("[AdapterSqlx_Postgres] insert [%v]", strSql)
+				lastInsertId, err = e.queryInsert(strSql)
 			}
 		}
 	default:
 		{
 			var r sql.Result
-			r, err = e.db.Exec(strSqlx)
+			r, err = e.db.Exec(strSql)
 			if err != nil {
 				log.Errorf("error %v model %+v", err, e.model)
 				return

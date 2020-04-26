@@ -18,6 +18,7 @@ var argvTags = flag.String("tag", "", "golang struct tag name, default json,db")
 var argvPrefix = flag.String("prefix", "", "export file prefix")
 var argvSuffix = flag.String("suffix", "", "export file suffix")
 var argvPackage = flag.String("package", "", "export package name")
+var argvWithout = flag.String("without", "", "without columns")
 
 func main() {
 
@@ -58,6 +59,10 @@ func main() {
 
 	if *argvTables != "" {
 		si.Tables = strings.Split(*argvTables, ",")
+	}
+
+	if *argvWithout != "" {
+		si.Without = strings.Split(*argvWithout, ",")
 	}
 
 	si.Scheme = ui.Scheme

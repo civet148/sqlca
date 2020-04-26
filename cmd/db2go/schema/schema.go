@@ -4,6 +4,7 @@ type SchemaInfo struct {
 	ConnUrl     string
 	Databases   []string
 	Tables      []string
+	Without     []string
 	Scheme      string
 	Host        string
 	User        string

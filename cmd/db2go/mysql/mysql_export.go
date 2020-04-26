@@ -137,6 +137,15 @@ func exportTableSchema(si *schema.SchemaInfo, e *sqlca.Engine, tables []TableSch
 	return
 }
 
+func isInSlice(in string, s []string) bool {
+	for _, v := range s {
+		if v == in {
+			return true
+		}
+	}
+	return false
+}
+
 func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchema, strFileName string) (err error) {
 
 	File, err := os.OpenFile(strFileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
@@ -167,6 +176,10 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 
 	strContent += fmt.Sprintf("type %vDO struct { \n", strTableName)
 	for _, v := range TableCols {
+
+		if isInSlice(v.ColumnName, si.Without) {
+			continue
+		}
 
 		var tagValues []string
 		strColName := camelCaseConvert(v.ColumnName)

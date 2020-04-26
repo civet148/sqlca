@@ -165,10 +165,10 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 
 	/*
 	 SELECT `TABLE_NAME`, `COLUMN_NAME`, `DATA_TYPE`, `EXTRA`, `COLUMN_KEY`, `COLUMN_COMMENT` FROM `INFORMATION_SCHEMA`.`COLUMNS`
-	 WHERE `TABLE_SCHEMA` = 'accounts' AND `TABLE_NAME` = 'users'
+	 WHERE `TABLE_SCHEMA` = 'accounts' AND `TABLE_NAME` = 'users' ORDER BY ORDINAL_POSITION ASC
 	*/
 	e.Model(&TableCols).QueryRaw("SELECT `TABLE_NAME`, `COLUMN_NAME`, `DATA_TYPE`, `EXTRA`, `COLUMN_KEY`, `COLUMN_COMMENT` FROM `INFORMATION_SCHEMA`.`COLUMNS` "+
-		"WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v'", table.SchemeName, table.TableName)
+		"WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v' ORDER BY ORDINAL_POSITION ASC", table.SchemeName, table.TableName)
 
 	//write table name in camel case naming
 	strTableName := camelCaseConvert(table.TableName)

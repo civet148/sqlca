@@ -255,7 +255,25 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 
 func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err error) {
 	var rows *sql.Rows
-	strSQL += " RETURNING ID"
+	strSQL += fmt.Sprintf(" RETURNING \"%v\"", e.GetPkName())
+	log.Debugf("[%v]", strSQL)
+
+	if rows, err = e.db.Query(strSQL); err != nil {
+		log.Errorf("tx.Query error [%v]", err.Error())
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err = rows.Scan(&lastInsertId); err != nil {
+			log.Errorf("rows.Scan error [%v]", err.Error())
+			return
+		}
+	}
+	return
+}
+
+func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err error) {
+	var rows *sql.Rows
 	log.Debugf("[%v]", strSQL)
 
 	if rows, err = e.db.Query(strSQL); err != nil {
@@ -655,7 +673,7 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 	return false
 }
 
-func (e *Engine) getQuoteConflicts(strExcepts ...string) (strQuoteConflicts string) {
+func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 
 	if e.adapterSqlx != AdapterSqlx_Postgres {
 		return //only postgres need conflicts fields
@@ -667,10 +685,8 @@ func (e *Engine) getQuoteConflicts(strExcepts ...string) (strQuoteConflicts stri
 
 	for _, v := range e.getConflictColumns() {
 
-		if e.isColumnSelected(v, strExcepts...) {
-			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // postgresql conflict column name format to `id`,...
-			cols = append(cols, c)
-		}
+		c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // postgresql conflict column name format to `id`,...
+		cols = append(cols, c)
 	}
 
 	if len(cols) > 0 {
@@ -726,7 +742,7 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 		{
 			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 			if !isNilOrFalse(strUpdates) {
-				strDo = fmt.Sprintf("%v RETURNING %v", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
+				strDo = fmt.Sprintf("%v RETURNING \"%v\"", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}
 		}
 	case AdapterSqlx_Mssql:

@@ -417,9 +417,10 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 		{
 			lastInsertId, err = e.mssqlUpsert(e.makeSqlxInsert())
 		}
-	//case AdapterSqlx_Postgres:
-	//	{
-	//	}
+	case AdapterSqlx_Postgres:
+		{
+			lastInsertId, err = e.postgresQueryUpsert(strSql)
+		}
 	default:
 		{
 			var r sql.Result

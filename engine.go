@@ -44,7 +44,8 @@ type Engine struct {
 	notConditions   []condition            // not in condition
 	andConditions   []string               // and condition
 	cacheIndexes    []tableIndex           // index read or write cache
-	dbTags          []string               // custom db tag name
+	dbTags          []string               // custom db tag names
+	readOnly        []string               // read only column names
 }
 
 func init() {
@@ -57,7 +58,7 @@ func NewEngine(args ...interface{}) *Engine {
 		strPkName:  DEFAULT_PRIMARY_KEY_NAME,
 		expireTime: DEFAULT_CAHCE_EXPIRE_SECONDS,
 	}
-	e.dbTags = append(e.dbTags, TAG_NAME_DB)
+	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA)
 	return e
 }
 

@@ -18,6 +18,8 @@
 
 --tag       customer golang struct member tag [optional] 
 
+--without   ignore some column(s) [optional]
+
 ```shell script
 # db2go --url "mysql://root:123456@127.0.0.1:3306/test?charset=utf8" --db test --table users --package model --out $GOPATH/src/myproject
 ```

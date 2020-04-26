@@ -10,8 +10,9 @@ import (
 )
 
 type ModelReflector struct {
-	value interface{}            //value
-	dict  map[string]interface{} //dictionary of structure tag and value
+	value  interface{}            //value
+	engine *Engine                // database engine
+	dict   map[string]interface{} //dictionary of structure tag and value
 }
 
 type Fetcher struct {
@@ -23,11 +24,12 @@ type Fetcher struct {
 	arrIndex  int               //fetch index
 }
 
-func newReflector(v interface{}) *ModelReflector {
+func newReflector(e *Engine, v interface{}) *ModelReflector {
 
 	return &ModelReflector{
-		value: v,
-		dict:  make(map[string]interface{}),
+		value:  v,
+		engine: e,
+		dict:   make(map[string]interface{}),
 	}
 }
 
@@ -113,12 +115,27 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 		return
 	}
 
+	var tagVal string
 	for _, v := range dbTags {
-
-		tagVal := handleTagValue(v, s.getTag(field, v))
+		//parse db、json、protobuf tag
+		tagVal = handleTagValue(v, s.getTag(field, v))
 		if tagVal != "" {
 			s.dict[tagVal] = val.Interface()
-			return
+			break
+		}
+	}
+
+	for _, v := range dbTags {
+
+		if v == TAG_NAME_SQLCA { //parse sqlca tag
+			strTagValue := s.getTag(field, v)
+			vs := strings.Split(strTagValue, ",")
+			for _, vv := range vs {
+				if vv == SQLCAL_TAG_VALUE_READ_ONLY { //column is read only
+					s.engine.readOnly = append(s.engine.readOnly, tagVal)
+					//log.Debugf("%v [%v]", tagVal, SQLCAL_TAG_VALUE_READ_ONLY)
+				}
+			}
 		}
 	}
 }

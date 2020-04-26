@@ -9,15 +9,30 @@ import (
 )
 
 const (
-	TAG_NAME_DB                = "db"
-	TAG_NAME_JSON              = "json"
-	TAG_NAME_PROTOBUF          = "protobuf"
-	PROTOBUF_VALUE_NAME        = "name"
-	DRIVER_NAME_MYSQL          = "mysql"
-	DRIVER_NAME_POSTGRES       = "postgres"
-	DRIVER_NAME_SQLITE         = "sqlite3"
-	DRIVER_NAME_MSSQL          = "mssql"
-	DRIVER_NAME_REDIS          = "redis"
+	TAG_NAME_DB       = "db"
+	TAG_NAME_JSON     = "json"
+	TAG_NAME_PROTOBUF = "protobuf"
+	TAG_NAME_SQLCA    = "sqlca"
+)
+
+const (
+	SQLCAL_TAG_VALUE_AUTO_INCR = "autoincr" //auto increment
+	SQLCAL_TAG_VALUE_READ_ONLY = "readonly" //read only (eg. created_at)
+)
+
+const (
+	PROTOBUF_VALUE_NAME = "name"
+)
+
+const (
+	DRIVER_NAME_MYSQL    = "mysql"
+	DRIVER_NAME_POSTGRES = "postgres"
+	DRIVER_NAME_SQLITE   = "sqlite3"
+	DRIVER_NAME_MSSQL    = "mssql"
+	DRIVER_NAME_REDIS    = "redis"
+)
+
+const (
 	DATABASE_KEY_NAME_WHERE    = "WHERE"
 	DATABASE_KEY_NAME_UPDATE   = "UPDATE"
 	DATABASE_KEY_NAME_SET      = "SET"
@@ -209,7 +224,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 			e.model = models //base type argument like int/string/float32...
 		}
 		var selectColumns []string
-		e.dict = newReflector(e.model).ToMap(strings.Join(e.dbTags, ","))
+		e.dict = newReflector(e, e.model).ToMap(strings.Join(e.dbTags, ","))
 		for k, _ := range e.dict {
 			selectColumns = append(selectColumns, k)
 		}
@@ -652,6 +667,15 @@ func (e *Engine) isPkInteger() bool {
 	return false
 }
 
+func (e *Engine) isReadOnly(strIn string) bool {
+	for _, v := range e.readOnly {
+		if v == strIn {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 
 	for _, v := range strExcepts {
@@ -712,7 +736,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 	var cols []string
 	for _, v := range strColumns {
 
-		if e.isColumnSelected(v, strExcepts...) {
+		if e.isColumnSelected(v, strExcepts...) && !e.isReadOnly(v) {
 			strVal := handleSpecialChars(fmt.Sprintf("%v", e.getModelValue(v)))
 			c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), v, e.getBackQuote(), e.getSingleQuote(), strVal, e.getSingleQuote()) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
@@ -757,6 +781,10 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 	var cols, vals []string
 
 	for k, v := range e.dict {
+
+		if e.isReadOnly(k) {
+			continue
+		}
 
 		c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
 

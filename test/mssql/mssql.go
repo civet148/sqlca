@@ -17,12 +17,14 @@ type UserDO struct {
 	Sex     int8   `db:"sex"`
 	Email   string `db:"email"`
 	Disable int8   `db:"disable"`
+	//CreatedAt string `db:"created_at" sqlca:"readonly"`
 }
 
 type ClassDo struct {
 	Id      int32  `db:"id"`
 	UserId  int32  `db:"user_id"`
 	ClassNo string `db:"class_no"`
+	//CreatedAt string `db:"created_at" sqlca:"readonly"`
 }
 
 func Benchmark() {

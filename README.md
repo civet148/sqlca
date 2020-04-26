@@ -441,3 +441,14 @@ if count, err := e.Model(&users).
     log.Debugf("custom tag query results %+v rows [%v]", users, count)
 }
 ```
+
+## sqlca properties tag: readonly 
+```golang
+type UserDO struct {
+    Id    int32  `db:"id"` // protobuf tag
+    Name  string `db:"name"`   // json tag
+    Phone string `db:"phone"`    // db tag 
+    CreatedAt string `db:"created_at" sqlca:"readonly"` //sqlca tag: readonly
+}
+```
+

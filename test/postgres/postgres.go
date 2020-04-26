@@ -49,25 +49,25 @@ func Benchmark() {
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 
-	MYSQL_OrmInsertByModel(e)
-	MYSQL_OrmUpsertByModel(e)
-	MYSQL_OrmUpdateByModel(e)
-	MYSQL_OrmQueryIntoModel(e)
-	MYSQL_OrmQueryIntoModelSlice(e)
-	MYSQL_OrmUpdateIndexToCache(e)
-	MYSQL_OrmSelectMultiTable(e)
-	MYSQL_OrmDeleteFromTable(e)
-	MYSQL_OrmInCondition(e)
-	MYSQL_RawQueryIntoModel(e)
-	MYSQL_RawQueryIntoModelSlice(e)
-	MYSQL_RawQueryIntoMap(e)
-	MYSQL_RawExec(e)
-	MYSQL_TxGetExec(e)
-	MYSQL_TxRollback(e)
-	MYSQL_CustomTag(e)
+	POSTGRES_OrmInsertByModel(e)
+	POSTGRES_OrmUpsertByModel(e)
+	POSTGRES_OrmUpdateByModel(e)
+	POSTGRES_OrmQueryIntoModel(e)
+	POSTGRES_OrmQueryIntoModelSlice(e)
+	POSTGRES_OrmUpdateIndexToCache(e)
+	POSTGRES_OrmSelectMultiTable(e)
+	POSTGRES_OrmDeleteFromTable(e)
+	POSTGRES_OrmInCondition(e)
+	POSTGRES_RawQueryIntoModel(e)
+	POSTGRES_RawQueryIntoModelSlice(e)
+	POSTGRES_RawQueryIntoMap(e)
+	POSTGRES_RawExec(e)
+	POSTGRES_TxGetExec(e)
+	POSTGRES_TxRollback(e)
+	POSTGRES_CustomTag(e)
 }
 
-func MYSQL_OrmInsertByModel(e *sqlca.Engine) {
+func POSTGRES_OrmInsertByModel(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
@@ -86,7 +86,7 @@ func MYSQL_OrmInsertByModel(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_OrmUpsertByModel(e *sqlca.Engine) {
+func POSTGRES_OrmUpsertByModel(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
@@ -108,7 +108,7 @@ func MYSQL_OrmUpsertByModel(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_OrmUpdateByModel(e *sqlca.Engine) {
+func POSTGRES_OrmUpdateByModel(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
@@ -130,7 +130,7 @@ func MYSQL_OrmUpdateByModel(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_OrmQueryIntoModel(e *sqlca.Engine) {
+func POSTGRES_OrmQueryIntoModel(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
@@ -147,7 +147,7 @@ func MYSQL_OrmQueryIntoModel(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_OrmQueryIntoModelSlice(e *sqlca.Engine) {
+func POSTGRES_OrmQueryIntoModelSlice(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
@@ -169,7 +169,7 @@ func MYSQL_OrmQueryIntoModelSlice(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_RawQueryIntoModel(e *sqlca.Engine) {
+func POSTGRES_RawQueryIntoModel(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
@@ -183,7 +183,7 @@ func MYSQL_RawQueryIntoModel(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_RawQueryIntoModelSlice(e *sqlca.Engine) {
+func POSTGRES_RawQueryIntoModelSlice(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
@@ -198,7 +198,7 @@ func MYSQL_RawQueryIntoModelSlice(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_RawQueryIntoMap(e *sqlca.Engine) {
+func POSTGRES_RawQueryIntoMap(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
@@ -213,7 +213,7 @@ func MYSQL_RawQueryIntoMap(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_RawExec(e *sqlca.Engine) {
+func POSTGRES_RawExec(e *sqlca.Engine) {
 
 	//e.ExecRaw("UPDATE %v SET name='duck' WHERE id='%v'", TABLE_NAME_USERS, 2) //it will work well as question placeholder
 	rowsAffected, lasteInsertId, err := e.ExecRaw("UPDATE users SET name=? WHERE id=?", "duck", 1)
@@ -224,7 +224,7 @@ func MYSQL_RawExec(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_OrmUpdateIndexToCache(e *sqlca.Engine) {
+func POSTGRES_OrmUpdateIndexToCache(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
@@ -252,7 +252,7 @@ func MYSQL_OrmUpdateIndexToCache(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_OrmSelectMultiTable(e *sqlca.Engine) {
+func POSTGRES_OrmSelectMultiTable(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
@@ -279,7 +279,7 @@ func MYSQL_OrmSelectMultiTable(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_OrmDeleteFromTable(e *sqlca.Engine) {
+func POSTGRES_OrmDeleteFromTable(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
@@ -309,7 +309,7 @@ func MYSQL_OrmDeleteFromTable(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_OrmInCondition(e *sqlca.Engine) {
+func POSTGRES_OrmInCondition(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
@@ -328,7 +328,7 @@ func MYSQL_OrmInCondition(e *sqlca.Engine) {
 	}
 }
 
-func MYSQL_TxGetExec(e *sqlca.Engine) (err error) {
+func POSTGRES_TxGetExec(e *sqlca.Engine) (err error) {
 	log.Enter()
 	defer log.Leave()
 
@@ -382,7 +382,7 @@ func MYSQL_TxGetExec(e *sqlca.Engine) (err error) {
 	return
 }
 
-func MYSQL_TxRollback(e *sqlca.Engine) (err error) {
+func POSTGRES_TxRollback(e *sqlca.Engine) (err error) {
 
 	log.Enter()
 	defer log.Leave()
@@ -408,7 +408,7 @@ func MYSQL_TxRollback(e *sqlca.Engine) (err error) {
 	return
 }
 
-func MYSQL_CustomTag(e *sqlca.Engine) {
+func POSTGRES_CustomTag(e *sqlca.Engine) {
 	type CustomUser struct {
 		Id    int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // protobuf tag
 		Name  string `json:"name"`                                                // json tag

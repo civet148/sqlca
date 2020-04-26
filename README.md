@@ -96,11 +96,12 @@ insert  into `users`(`id`,`name`,`phone`,`sex`,`email`,`disable`,`created_at`,`u
 # data model
 ```golang
 type UserDO struct {
-	Id    int32  `db:"id"`  
-	Name  string `db:"name"`  
-	Phone string `db:"phone"` 
-	Sex   int8   `db:"sex"`   
-	Email string `db:"email"` 
+    Id    int32  `db:"id"`  
+    Name  string `db:"name"`  
+    Phone string `db:"phone"` 
+    Sex   int8   `db:"sex"`   
+    Email string `db:"email"` 
+    Disable int8 `db:"disable"`
 }
 ```
 

@@ -16,8 +16,8 @@ const (
 )
 
 const (
-	SQLCAL_TAG_VALUE_AUTO_INCR = "autoincr" //auto increment
-	SQLCAL_TAG_VALUE_READ_ONLY = "readonly" //read only (eg. created_at)
+	SQLCA_TAG_VALUE_AUTO_INCR = "autoincr" //auto increment
+	SQLCA_TAG_VALUE_READ_ONLY = "readonly" //read only (eg. created_at)
 )
 
 const (

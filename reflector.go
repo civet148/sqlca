@@ -131,7 +131,7 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 			strTagValue := s.getTag(field, v)
 			vs := strings.Split(strTagValue, ",")
 			for _, vv := range vs {
-				if vv == SQLCAL_TAG_VALUE_READ_ONLY { //column is read only
+				if vv == SQLCA_TAG_VALUE_READ_ONLY { //column is read only
 					s.engine.readOnly = append(s.engine.readOnly, tagVal)
 					//log.Debugf("%v [%v]", tagVal, SQLCAL_TAG_VALUE_READ_ONLY)
 				}

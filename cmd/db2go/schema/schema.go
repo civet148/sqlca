@@ -5,6 +5,8 @@ type SchemaInfo struct {
 	Databases   []string
 	Tables      []string
 	Without     []string
+	ReadOnly    []string
+	Tags        []string
 	Scheme      string
 	Host        string
 	User        string
@@ -14,5 +16,4 @@ type SchemaInfo struct {
 	Prefix      string
 	Suffix      string
 	PackageName string
-	Tags        string
 }

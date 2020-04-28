@@ -184,12 +184,14 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 		var tagValues []string
 		strColName := camelCaseConvert(v.ColumnName)
 		strColType := getColumnType(v.TableName, v.ColumnName, v.DataType, v.ColumnKey, v.Extra)
-		if si.Tags != "" {
-			tags := strings.Split(si.Tags, ",")
-			for _, t := range tags {
-				tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", t, v.ColumnName))
-			}
+
+		if isInSlice(v.ColumnName, si.ReadOnly) {
+			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", sqlca.TAG_NAME_SQLCA, sqlca.SQLCA_TAG_VALUE_READ_ONLY))
 		}
+		for _, t := range si.Tags {
+			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", t, v.ColumnName))
+		}
+
 		strContent += fmt.Sprintf("	%v %v `json:\"%v\" db:\"%v\" %v` //%v \n",
 			strColName, strColType, v.ColumnName, v.ColumnName, strings.Join(tagValues, " "), v.ColumnComment)
 

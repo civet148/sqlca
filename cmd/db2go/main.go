@@ -18,7 +18,8 @@ var argvTags = flag.String("tag", "", "golang struct tag name, default json,db")
 var argvPrefix = flag.String("prefix", "", "export file prefix")
 var argvSuffix = flag.String("suffix", "", "export file suffix")
 var argvPackage = flag.String("package", "", "export package name")
-var argvWithout = flag.String("without", "", "without columns")
+var argvWithout = flag.String("without", "", "exclude columns")
+var argvReadOnly = flag.String("readonly", "", "read only columns")
 
 func main() {
 
@@ -39,7 +40,12 @@ func main() {
 		return
 	}
 
-	si.Tags = *argvTags
+	if *argvTags != "" {
+		si.Tags = trimSpaceSlice(strings.Split(*argvTags, ","))
+	}
+	if *argvReadOnly != "" {
+		si.ReadOnly = trimSpaceSlice(strings.Split(*argvReadOnly, ","))
+	}
 	si.Prefix = *argvPackage
 	si.Prefix = *argvPrefix
 	si.Suffix = *argvSuffix
@@ -54,11 +60,11 @@ func main() {
 		si.Databases = append(si.Databases, getDatabaseName(ui.Path))
 	} else {
 		//use input databases
-		si.Databases = strings.Split(*argvDatabase, ",")
+		si.Databases = trimSpaceSlice(strings.Split(*argvDatabase, ","))
 	}
 
 	if *argvTables != "" {
-		si.Tables = strings.Split(*argvTables, ",")
+		si.Tables = trimSpaceSlice(strings.Split(*argvTables, ","))
 	}
 
 	if *argvWithout != "" {
@@ -80,6 +86,13 @@ func main() {
 
 func init() {
 	flag.Parse()
+}
+
+func trimSpaceSlice(s []string) (ts []string) {
+	for _, v := range s {
+		ts = append(ts, strings.TrimSpace(v))
+	}
+	return
 }
 
 func getDatabaseName(strPath string) (strName string) {

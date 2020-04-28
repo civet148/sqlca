@@ -117,6 +117,10 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 
 	var tagVal string
 	for _, v := range dbTags {
+
+		if v == TAG_NAME_SQLCA {
+			continue
+		}
 		//parse db、json、protobuf tag
 		tagVal = handleTagValue(v, s.getTag(field, v))
 		if tagVal != "" {

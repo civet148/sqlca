@@ -347,7 +347,7 @@ user := UserDO{
 
 //SQL: update users set name='john3', phone='8615011111114', sex='1', email='john3@gmail.com' where id='1'
 //index: name, phone
-//redis key:  sqlx:cache:[table]:[column]:[column value]
+//redis key:  sqlca:cache:[db]:[table]:[column]:[column value]
 if rowsAffected, err := e.Model(&user).
     Table(TABLE_NAME_USERS).
     Select("name", "phone", "email", "sex").

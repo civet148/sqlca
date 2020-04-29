@@ -280,7 +280,7 @@ func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err err
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Errorf("rows.Scan error [%v]", err.Error())
+			log.Warnf("rows.Scan warning [%v]", err.Error())
 			return
 		}
 	}
@@ -298,7 +298,7 @@ func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err err
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Errorf("rows.Scan error [%v]", err.Error())
+			log.Warnf("rows.Scan warning [%v]", err.Error())
 			return
 		}
 	}
@@ -317,7 +317,7 @@ func (e *Engine) mssqlQueryInsert(strSQL string) (lastInsertId int64, err error)
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Errorf("rows.Scan error [%v]", err.Error())
+			log.Warnf("rows.Scan warning [%v]", err.Error())
 			return
 		}
 	}

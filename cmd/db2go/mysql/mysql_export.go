@@ -174,7 +174,8 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 	strTableName := camelCaseConvert(table.TableName)
 	strContent += fmt.Sprintf("var TableName%v = \"%v\" //%v \n\n", strTableName, table.TableName, table.TableComment)
 
-	strContent += fmt.Sprintf("type %vDO struct { \n", strTableName)
+	strStructName := fmt.Sprintf("%vDO", strTableName)
+	strContent += fmt.Sprintf("type %v struct { \n", strStructName)
 	for _, v := range TableCols {
 
 		if isInSlice(v.ColumnName, si.Without) {
@@ -191,9 +192,8 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 		for _, t := range si.Tags {
 			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", t, v.ColumnName))
 		}
-
-		strContent += fmt.Sprintf("	%v %v `json:\"%v\" db:\"%v\" %v` //%v \n",
-			strColName, strColType, v.ColumnName, v.ColumnName, strings.Join(tagValues, " "), v.ColumnComment)
+		//添加成员和标签
+		strContent += makeTags(strColName, strColType, v.ColumnName, v.ColumnComment, strings.Join(tagValues, " "))
 
 		var colGo TableColumnGo
 		colGo.SchemeName = table.SchemeName
@@ -204,8 +204,37 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 	}
 
 	strContent += "}\n"
+
+	for _, v := range TableCols { //添加结构体成员Get/Set方法
+
+		if isInSlice(v.ColumnName, si.Without) {
+			continue
+		}
+		strColName := camelCaseConvert(v.ColumnName)
+		strColType := getColumnType(v.TableName, v.ColumnName, v.DataType, v.ColumnKey, v.Extra)
+		strContent += makeGetter(strStructName, strColName, strColType)
+		if !isInSlice(v.ColumnName, si.ReadOnly) {
+			strContent += makeSetter(strStructName, strColName, strColType)
+		}
+	}
+
 	_, _ = File.WriteString(strContent)
 	return
+}
+
+func makeTags(strColName, strColType, strTagValue, strComment string, strAppends string) string {
+	return fmt.Sprintf("	%v %v `json:\"%v\" db:\"%v\" %v` //%v \n",
+		strColName, strColType, strTagValue, strTagValue, strAppends, strComment)
+}
+
+func makeGetter(strStructName, strColName, strColType string) (strGetter string) {
+
+	return fmt.Sprintf("func (do *%v) Get%v() %v { return do.%v } \n", strStructName, strColName, strColType, strColName)
+}
+
+func makeSetter(strStructName, strColName, strColType string) (strSetter string) {
+
+	return fmt.Sprintf("func (do *%v) Set%v(v %v) { do.%v = v } \n", strStructName, strColName, strColType, strColName)
 }
 
 //将数据库字段类型转为go语言对应的数据类型

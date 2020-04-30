@@ -203,7 +203,7 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 		TableColsGo = append(TableColsGo, colGo)
 	}
 
-	strContent += "}\n"
+	strContent += "}\n\n"
 
 	for _, v := range TableCols { //添加结构体成员Get/Set方法
 

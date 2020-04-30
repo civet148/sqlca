@@ -32,7 +32,9 @@ func main() {
 	log.Infof("argument: tables [%v]", *argvTables)
 	log.Infof("argument: prefix [%v]", *argvPrefix)
 	log.Infof("argument: suffix [%v]", *argvSuffix)
-	log.Infof("argument: package name [%v]", *argvPackage)
+	log.Infof("argument: package [%v]", *argvPackage)
+	log.Infof("argument: without [%v]", *argvWithout)
+	log.Infof("argument: readonly [%v]", *argvReadOnly)
 
 	if *argvUrl == "" {
 		fmt.Println("need --url parameter")

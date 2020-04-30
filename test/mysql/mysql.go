@@ -35,6 +35,7 @@ func Benchmark() {
 	//e.Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 
 	e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4") //MySQL
+	//e.Open("root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4") // open with raw mysql DSN
 	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable") //postgres
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER

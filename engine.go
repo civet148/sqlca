@@ -63,7 +63,7 @@ func NewEngine(args ...interface{}) *Engine {
 }
 
 // get data base driver name and data source name
-func (e *Engine) getConnConfig(adapterType AdapterType, strUrl string) (strDriverName, strDSN string) {
+func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (strDriverName, strDSN string) {
 
 	strDriverName = adapterType.DriverName()
 	switch adapterType {
@@ -100,27 +100,29 @@ func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 
 	var err error
 	var adapterType AdapterType
-
+	var strDriverName, strDSN string
 	us := strings.Split(strUrl, URL_SCHEME_SEP)
-	if len(us) != 2 {
-		assert(false, "open url '%v' required", URL_SCHEME_SEP)
+	if len(us) != 2 { //default mysql
+		adapterType = AdapterSqlx_MySQL
+		strDriverName, strDSN = e.parseMysqlDSN(adapterType, strUrl)
+	} else {
+		adapterType = getAdapterType(us[0])
+		strDriverName, strDSN = e.getDriverNameAndDSN(adapterType, strUrl)
 	}
-	adapterType = getAdapterType(us[0])
 
-	strDriverName, strConfig := e.getConnConfig(adapterType, strUrl)
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-		if e.db, err = sqlx.Open(strDriverName, strConfig); err != nil {
-			assert(false, "open url [%v] driver name [%v] config [%v] error [%v]", strUrl, strDriverName, strConfig, err.Error())
+		if e.db, err = sqlx.Open(strDriverName, strDSN); err != nil {
+			assert(false, "open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
 		}
 		if err = e.db.Ping(); err != nil {
-			assert(false, "ping url [%v] driver name [%v] config [%v] error [%v]", strUrl, strDriverName, strConfig, err.Error())
+			assert(false, "ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
 		}
 		e.adapterSqlx = adapterType
 	case AdapterCache_Redis:
 		var err error
-		if e.cache, err = newCache(strDriverName, strConfig); err != nil {
-			assert(false, "new cache by driver name [%v] config [%v] error [%v]", strDriverName, strConfig, err.Error())
+		if e.cache, err = newCache(strDriverName, strDSN); err != nil {
+			assert(false, "new cache by driver name [%v] DSN [%v] error [%v]", strDriverName, strDSN, err.Error())
 		}
 		e.adapterCache = adapterType
 		if len(expireSeconds) > 0 {

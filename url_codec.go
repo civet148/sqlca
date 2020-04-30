@@ -259,3 +259,49 @@ func (e *Engine) parseRedisUrl(strUrl string) (strDSN string) {
 	}
 	return
 }
+
+//root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4
+func (e *Engine) parseMysqlDSN(adapterType AdapterType, strMySQLDSN string) (strDriverName, strDSN string) {
+	e.strDatabaseName = trimBetween(strMySQLDSN, "/", "?")
+	return adapterType.DriverName(), strMySQLDSN
+}
+
+func trimBetween(strIn, strLeftSep, strRightSep string) (strOut string) {
+	strOut = cutLeft(strIn, strLeftSep)
+	strOut = cutRight(strOut, strRightSep)
+	return
+}
+
+func cutLeft(strIn, strSep string) (strOut string) {
+
+	if strIn == "" || strSep == "" || len(strSep) != 1 {
+		return strIn
+	}
+
+	nIdx := strings.LastIndex(strIn, strSep)
+	if nIdx == -1 {
+		strOut = strIn
+	} else if nIdx == 0 {
+		if len(strIn) > 1 {
+			strOut = strIn[nIdx+1:]
+		}
+	} else {
+		strOut = strIn[nIdx+1:]
+	}
+	return
+}
+
+func cutRight(strIn, strSep string) (strOut string) {
+	if strIn == "" || strSep == "" || len(strSep) != 1 {
+		return strIn
+	}
+
+	nIdx := strings.Index(strIn, strSep)
+	if nIdx == -1 {
+		strOut = strIn
+	} else if nIdx > 0 {
+		strOut = strIn[:nIdx]
+	}
+
+	return
+}

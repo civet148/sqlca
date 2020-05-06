@@ -50,6 +50,7 @@ func Benchmark() {
 	MYSQL_OrmDeleteFromTable(e)
 	MYSQL_OrmInCondition(e)
 	MYSQL_OrmFind(e)
+	MYSQL_OrmToSQL(e)
 	MYSQL_RawQueryIntoModel(e)
 	MYSQL_RawQueryIntoModelSlice(e)
 	MYSQL_RawQueryIntoMap(e)
@@ -332,6 +333,20 @@ func MYSQL_OrmFind(e *sqlca.Engine) {
 	} else {
 		log.Debugf("select from table by find condition ok, affected rows [%v] users %+v", rows, users)
 	}
+}
+
+func MYSQL_OrmToSQL(e *sqlca.Engine) {
+	user := UserDO{
+		Id:    1,
+		Name:  "john3",
+		Phone: "8615011111114",
+		Sex:   1,
+		Email: "john3@gmail.com",
+	}
+	log.Debugf("ToSQL insert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Insert))
+	log.Debugf("ToSQL upsert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Upsert))
+	log.Debugf("ToSQL query [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Query))
+	log.Debugf("ToSQL delete [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Delete))
 }
 
 func MYSQL_TxGetExec(e *sqlca.Engine) (err error) {

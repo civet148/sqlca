@@ -445,9 +445,9 @@ if count, err := e.Model(&users).
 ## sqlca properties tag: readonly 
 ```golang
 type UserDO struct {
-    Id    int32  `db:"id"` // protobuf tag
-    Name  string `db:"name"`   // json tag
-    Phone string `db:"phone"`    // db tag 
+    Id    int32  `db:"id"` 
+    Name  string `db:"name"`   
+    Phone string `db:"phone"`    
     CreatedAt string `db:"created_at" sqlca:"readonly"` //sqlca tag: readonly
 }
 ```

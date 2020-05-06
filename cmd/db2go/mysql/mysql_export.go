@@ -252,13 +252,13 @@ func getColumnType(strTableName, strColName, strDataType, strColKey, strExtra st
 		strColType = "int8"
 	case "bool", "boolean":
 		strColType = "bool"
-	case "real", "decimal", "double", "float":
+	case "real", "double", "float", "decimal", "numeric":
 		strColType = "float64"
 	case "datetime", "year", "date", "time", "timestamp":
 		strColType = "string"
 	case "enum", "set", "varchar", "char", "text", "tinytext", "mediumtext", "longtext":
 		strColType = "string"
-	case "blob", "tinyblob", "mediumblob", "longblob", "binary", "varbinary":
+	case "blob", "tinyblob", "mediumblob", "longblob", "binary", "varbinary", "json":
 		strColType = "string"
 	default:
 		{

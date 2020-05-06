@@ -49,6 +49,7 @@ func Benchmark() {
 	MYSQL_OrmSelectMultiTable(e)
 	MYSQL_OrmDeleteFromTable(e)
 	MYSQL_OrmInCondition(e)
+	MYSQL_OrmFind(e)
 	MYSQL_RawQueryIntoModel(e)
 	MYSQL_RawQueryIntoModelSlice(e)
 	MYSQL_RawQueryIntoMap(e)
@@ -312,6 +313,24 @@ func MYSQL_OrmInCondition(e *sqlca.Engine) {
 		log.Errorf("select from table by in condition error [%v]", err.Error())
 	} else {
 		log.Debugf("select from table by in condition ok, affected rows [%v]", rows)
+	}
+}
+
+func MYSQL_OrmFind(e *sqlca.Engine) {
+
+	log.Enter()
+	defer log.Leave()
+
+	var users []UserDO
+	if rows, err := e.Model(&users).
+		Table(TABLE_NAME_USERS).
+		Find(map[string]interface{}{
+			"id":      1,
+			"disable": 1,
+		}); err != nil {
+		log.Errorf("select from table by find condition error [%v]", err.Error())
+	} else {
+		log.Debugf("select from table by find condition ok, affected rows [%v] users %+v", rows, users)
 	}
 }
 

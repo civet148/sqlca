@@ -357,6 +357,16 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	return e.fetchRows(rows)
 }
 
+// orm find with customer conditions (map[string]interface{})
+func (e *Engine) Find(conditions map[string]interface{}) (rowsAffected int64, err error) {
+	assert(len(conditions), "find condition is nil")
+	e.setOperType(OperType_Query)
+	for k, v := range conditions {
+		e.And("%v%v%v=%v%v%v", e.getForwardQuote(), k, e.getBackQuote(), e.getSingleQuote(), v, e.getSingleQuote())
+	}
+	return e.Query()
+}
+
 // orm insert
 // return last insert id and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function

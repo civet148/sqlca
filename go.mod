@@ -12,5 +12,6 @@ require (
 	github.com/lib/pq v1.0.0
 	github.com/mattn/go-adodb v0.0.1
 	github.com/mattn/go-sqlite3 v1.10.0
+	github.com/shopspring/decimal v1.2.0
 	google.golang.org/appengine v1.6.5 // indirect
 )

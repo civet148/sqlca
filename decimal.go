@@ -323,3 +323,18 @@ func (d Decimal) Sum(rest ...Decimal) Decimal {
 	}
 	return Decimal{dec: decimal.Sum(d.dec, r...)}
 }
+
+// Sin returns the sine of the radian argument x.
+func (d Decimal) Sin() Decimal {
+	return Decimal{dec: d.dec.Sin()}
+}
+
+// Cos returns the cosine of the radian argument x.
+func (d Decimal) Cos() Decimal {
+	return Decimal{dec: d.dec.Cos()}
+}
+
+// Tan returns the tangent of the radian argument x.
+func (d Decimal) Tan() Decimal {
+	return Decimal{dec: d.dec.Tan()}
+}

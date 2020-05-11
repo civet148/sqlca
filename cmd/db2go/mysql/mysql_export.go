@@ -173,6 +173,7 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 
 	//write table name in camel case naming
 	strTableName := camelCaseConvert(table.TableName)
+	table.TableComment = replaceCRLF(table.TableComment)
 	strContent += fmt.Sprintf("var TableName%v = \"%v\" //%v \n\n", strTableName, table.TableName, table.TableComment)
 
 	strStructName := fmt.Sprintf("%vDO", strTableName)
@@ -224,6 +225,7 @@ func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchem
 }
 
 func makeTags(strColName, strColType, strTagValue, strComment string, strAppends string) string {
+	strComment = replaceCRLF(strComment)
 	return fmt.Sprintf("	%v %v `json:\"%v\" db:\"%v\" %v` //%v \n",
 		strColName, strColType, strTagValue, strTagValue, strAppends, strComment)
 }
@@ -294,5 +296,11 @@ func camelCaseConvert(strIn string) (strOut string) {
 		}
 	}
 
+	return
+}
+
+func replaceCRLF(strIn string) (strOut string) {
+	strOut = strings.ReplaceAll(strIn, "\r", "")
+	strOut = strings.ReplaceAll(strOut, "\n", "")
 	return
 }

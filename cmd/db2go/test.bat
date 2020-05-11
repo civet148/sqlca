@@ -1,5 +1,5 @@
 @echo off
-go build
+go build -ldflags "-s -w"
 
 set OUT_DIR=.
 set PACK_NAME=dataobject

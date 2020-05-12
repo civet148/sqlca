@@ -11,13 +11,14 @@ const (
 )
 
 type UserDO struct {
-	Id        int32  `db:"id"`
-	Name      string `db:"name"`
-	Phone     string `db:"phone"`
-	Sex       int8   `db:"sex"`
-	Email     string `db:"email"`
-	Disable   int8   `db:"disable"`
-	CreatedAt string `db:"created_at" sqlca:"readonly"`
+	Id        int32         `db:"id"`
+	Name      string        `db:"name"`
+	Phone     string        `db:"phone"`
+	Sex       int8          `db:"sex"`
+	Email     string        `db:"email"`
+	Disable   int8          `db:"disable"`
+	Balance   sqlca.Decimal `db:"balance"`
+	CreatedAt string        `db:"created_at" sqlca:"readonly"`
 }
 
 type ClassDo struct {
@@ -69,11 +70,13 @@ func MYSQL_OrmInsertByModel(e *sqlca.Engine) {
 
 	user := UserDO{
 		//Id:    0,
-		Name:  "admin",
-		Phone: "8618600000000",
-		Sex:   1,
-		Email: "admin@golang.org",
+		Name:    "admin",
+		Phone:   "8618600000000",
+		Sex:     1,
+		Balance: sqlca.NewDecimal("123.45"),
+		Email:   "admin@golang.org",
 	}
+	log.Debugf("user [%+v]", user)
 	if lastInsertId, err := e.Model(&user).Table(TABLE_NAME_USERS).Insert(); err != nil {
 		log.Errorf("insert data model [%+v] error [%v]", user, err.Error())
 	} else {

@@ -224,7 +224,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 			e.model = models //base type argument like int/string/float32...
 		}
 		var selectColumns []string
-		e.dict = newReflector(e, e.model).ToMap(strings.Join(e.dbTags, ","))
+		e.dict = newReflector(e, e.model).ToMap(e.dbTags...)
 		for k, _ := range e.dict {
 			selectColumns = append(selectColumns, k)
 		}

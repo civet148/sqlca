@@ -10,7 +10,7 @@ type Decimal struct {
 	dec decimal.Decimal
 }
 
-func New(v interface{}) (d Decimal) {
+func NewDecimal(v interface{}) (d Decimal) {
 
 	var err error
 	switch v.(type) {
@@ -37,6 +37,18 @@ func New(v interface{}) (d Decimal) {
 		panic("type not support yet")
 	}
 	return
+}
+
+func (d *Decimal) FromString(v string) {
+	d.dec, _ = decimal.NewFromString(v)
+}
+
+func (d *Decimal) FromFloat(v float64) {
+	d.dec = decimal.NewFromFloat(v)
+}
+
+func (d *Decimal) FromInt(v int64) {
+	d.dec = decimal.NewFromInt(v)
 }
 
 // Add returns d + d2

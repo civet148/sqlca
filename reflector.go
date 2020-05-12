@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/civet148/gotools/log"
+	"github.com/shopspring/decimal"
 	"reflect"
 	"strconv"
 	"strings"
@@ -54,7 +55,7 @@ func handleSpecialChars(strIn string) (strOut string) {
 }
 
 // parse struct tag and value to map
-func (s *ModelReflector) ToMap(tagName string) map[string]interface{} {
+func (s *ModelReflector) ToMap(tagNames ...string) map[string]interface{} {
 
 	typ := reflect.TypeOf(s.value)
 	val := reflect.ValueOf(s.value)
@@ -65,11 +66,13 @@ func (s *ModelReflector) ToMap(tagName string) map[string]interface{} {
 	}
 
 	if typ.Kind() == reflect.Struct { // struct data model
-		s.parseStructField(typ, val, tagName)
+		s.parseStructField(typ, val, tagNames...)
 	} else if typ.Kind() == reflect.Slice { // struct slice data model
 		typ = val.Type().Elem()
 		val = reflect.New(typ).Elem()
-		s.parseStructField(typ, val, tagName)
+		s.parseStructField(typ, val, tagNames...)
+	} else {
+		log.Warnf("kind [%v] not support yet", typ.Kind())
 	}
 	return s.dict
 }
@@ -81,7 +84,7 @@ func (s *ModelReflector) getTag(sf reflect.StructField, tagName string) string {
 }
 
 // parse struct fields
-func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, tagName string) {
+func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, tagNames ...string) {
 
 	kind := typ.Kind()
 	if kind == reflect.Struct {
@@ -97,26 +100,37 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 			if !valField.IsValid() || !valField.CanInterface() {
 				continue
 			}
+			//log.Debugf("reflect.Struct field [%v] kind [%+v]", i, typField.Type.Kind())
 			if typField.Type.Kind() == reflect.Struct {
-				s.parseStructField(typField.Type, valField, tagName) //recurse every field that type is a struct
+
+				if d, ok := valField.Interface().(Decimal); ok {
+					s.parseDecimal(typField, valField, d, tagNames...) //decimal struct
+				} else {
+					s.parseStructField(typField.Type, valField, tagNames...) //recurse every field that type is a struct
+				}
 			} else {
-				s.setValueByField(typField, valField, tagName) // save field tag value and field value to map
+				s.setValueByField(typField, valField, tagNames...) // save field tag value and field value to map
 			}
 		}
 	}
 }
 
-//trim the field value's first and last blank character and save to map
-func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.Value, tagName string) {
+//parse decimal
+func (s *ModelReflector) parseDecimal(field reflect.StructField, val reflect.Value, d Decimal, tagNames ...string) {
 
-	dbTags := strings.Split(tagName, ",")
-	if len(dbTags) == 0 {
+	s.setValueByField(field, val, tagNames...)
+}
+
+//trim the field value's first and last blank character and save to map
+func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.Value, tagNames ...string) {
+
+	if len(tagNames) == 0 {
 		log.Errorf("ModelReflector.setValueByField no tag to set value")
 		return
 	}
 
 	var tagVal string
-	for _, v := range dbTags {
+	for _, v := range tagNames {
 
 		if v == TAG_NAME_SQLCA {
 			continue
@@ -124,12 +138,17 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 		//parse db、json、protobuf tag
 		tagVal = handleTagValue(v, s.getTag(field, v))
 		if tagVal != "" {
-			s.dict[tagVal] = val.Interface()
+			//log.Debugf("ModelReflector.setValueByField tag [%v] value [%+v]", tagVal, val.Interface())
+			if d, ok := val.Interface().(Decimal); ok {
+				s.dict[tagVal] = d.dec.String()
+			} else {
+				s.dict[tagVal] = val.Interface()
+			}
 			break
 		}
 	}
 
-	for _, v := range dbTags {
+	for _, v := range tagNames {
 
 		if v == TAG_NAME_SQLCA { //parse sqlca tag
 			strTagValue := s.getTag(field, v)
@@ -349,7 +368,11 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 			switch typField.Type.Kind() {
 			case reflect.Struct:
 				{
-					e.fetchToStruct(fetcher, typField.Type, valField)
+					if _, ok := valField.Interface().(Decimal); ok {
+						e.fetchToDecimal(fetcher, typField, valField)
+					} else {
+						e.fetchToStruct(fetcher, typField.Type, valField)
+					}
 				}
 			default:
 				{
@@ -360,6 +383,17 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 	}
 
 	return
+}
+
+func (e *Engine) fetchToDecimal(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
+	//优先给有db标签的成员变量赋值
+	strDbTagVal := e.getTagValue(field)
+	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
+		vp := val.Addr()
+		d := vp.Interface().(*Decimal)
+		d.dec, _ = decimal.NewFromString(v)
+		//log.Debugf("tag [%v] = %+v", strDbTagVal, d.dec.String())
+	}
 }
 
 func (e *Engine) fetchToBaseType(fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {

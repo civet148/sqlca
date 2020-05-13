@@ -203,8 +203,12 @@ func (e *Engine) saveToCache(kvs ...*cacheKeyValue) (ok bool) {
 
 func (e *Engine) upsertCache(lastInsertId int64) {
 
+	if !e.getUseCache() {
+		return
+	}
+
 	if e.isCacheNil() {
-		log.Debugf("cache instance is nil, can't update to cache")
+		log.Debugf("cache instance is nil, ignore it")
 		return
 	}
 

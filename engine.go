@@ -58,7 +58,7 @@ func NewEngine(args ...interface{}) *Engine {
 		strPkName:  DEFAULT_PRIMARY_KEY_NAME,
 		expireTime: DEFAULT_CAHCE_EXPIRE_SECONDS,
 	}
-	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA)
+	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA, TAG_NAME_PROTOBUF, TAG_NAME_JSON)
 	return e
 }
 

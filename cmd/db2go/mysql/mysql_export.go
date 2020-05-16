@@ -23,49 +23,25 @@ SELECT `TABLE_NAME`, `COLUMN_NAME`, `DATA_TYPE`, `EXTRA`,  `COLUMN_KEY`, `COLUMN
 WHERE `TABLE_SCHEMA` = 'accounts' AND `TABLE_NAME` = 'acc_3pl'
 */
 
-type TableSchema struct {
-	SchemeName   string `json:"TABLE_SCHEMA" db:"TABLE_SCHEMA"`
-	TableName    string `json:"TABLE_NAME" db:"TABLE_NAME"`
-	TableEngine  string `json:"ENGINE" db:"ENGINE"`
-	TableComment string `json:"TABLE_COMMENT" db:"TABLE_COMMENT"`
-	SchemeDir    string `json:"SCHEMA_DIR" db:"SCHEMA_DIR"`
-}
-
-type TableColumn struct {
-	TableName     string `json:"TABLE_NAME" db:"TABLE_NAME"`
-	ColumnName    string `json:"COLUMN_NAME" db:"COLUMN_NAME"`
-	DataType      string `json:"DATA_TYPE" db:"DATA_TYPE"`
-	ColumnKey     string `json:"COLUMN_KEY" db:"COLUMN_KEY"`
-	Extra         string `json:"EXTRA" db:"EXTRA"`
-	ColumnComment string `json:"COLUMN_COMMENT" db:"COLUMN_COMMENT"`
-}
-
-type TableColumnGo struct {
-	SchemeName string
-	TableName  string
-	ColumnName string
-	ColumnType string
-}
-
-func Export(si *schema.SchemaInfo) (err error) {
+func Export(cmd *schema.Commander) (err error) {
 
 	e := sqlca.NewEngine(false)
 	e.Debug(true)
-	e.Open(si.ConnUrl)
+	e.Open(cmd.ConnUrl)
 	var strQuery string
-	var tableSchemas []TableSchema
+	var tableSchemas []schema.TableSchema
 
 	var dbs, tables []string
 
-	for _, v := range si.Databases {
+	for _, v := range cmd.Databases {
 		dbs = append(dbs, fmt.Sprintf("'%v'", v))
 	}
 
 	if len(dbs) == 0 {
 		return fmt.Errorf("no database selected")
 	}
-	log.Infof("ready to export tables [%v]", si.Tables)
-	for _, v := range si.Tables {
+	log.Infof("ready to export tables [%v]", cmd.Tables)
+	for _, v := range cmd.Tables {
 		tables = append(tables, fmt.Sprintf("'%v'", v))
 	}
 
@@ -85,33 +61,35 @@ func Export(si *schema.SchemaInfo) (err error) {
 		return
 	}
 
-	return exportTableSchema(si, e, tableSchemas)
+	return exportTableSchema(cmd, e, tableSchemas)
 }
 
-func exportTableSchema(si *schema.SchemaInfo, e *sqlca.Engine, tables []TableSchema) (err error) {
+func exportTableSchema(cmd *schema.Commander, e *sqlca.Engine, tables []schema.TableSchema) (err error) {
 
 	for _, v := range tables {
 
-		_, errStat := os.Stat(si.OutDir)
+		_, errStat := os.Stat(cmd.OutDir)
 		if errStat != nil && os.IsNotExist(errStat) {
 
-			log.Info("mkdir [%v]", si.OutDir)
-			if err = os.Mkdir(si.OutDir, os.ModeDir); err != nil {
-				log.Error("mkdir [%v] error (%v)", si.OutDir, err.Error())
+			log.Info("mkdir [%v]", cmd.OutDir)
+			if err = os.Mkdir(cmd.OutDir, os.ModeDir); err != nil {
+				log.Error("mkdir [%v] error (%v)", cmd.OutDir, err.Error())
 				return
 			}
 		}
 
-		if si.PackageName == "" {
+		v.OutDir = cmd.OutDir
+
+		if cmd.PackageName == "" {
 			//mkdir by output dir + scheme name
-			si.PackageName = v.SchemeName
-			if strings.LastIndex(si.OutDir, fmt.Sprintf("%v", os.PathSeparator)) == -1 {
-				v.SchemeDir = fmt.Sprintf("%v/%v", si.OutDir, si.PackageName)
+			cmd.PackageName = v.SchemeName
+			if strings.LastIndex(cmd.OutDir, fmt.Sprintf("%v", os.PathSeparator)) == -1 {
+				v.SchemeDir = fmt.Sprintf("%v/%v", cmd.OutDir, cmd.PackageName)
 			} else {
-				v.SchemeDir = fmt.Sprintf("%v%v", si.OutDir, si.PackageName)
+				v.SchemeDir = fmt.Sprintf("%v%v", cmd.OutDir, cmd.PackageName)
 			}
 		} else {
-			v.SchemeDir = fmt.Sprintf("%v/%v", si.OutDir, si.PackageName) //mkdir by package name
+			v.SchemeDir = fmt.Sprintf("%v/%v", cmd.OutDir, cmd.PackageName) //mkdir by package name
 		}
 
 		_, errStat = os.Stat(v.SchemeDir)
@@ -126,14 +104,15 @@ func exportTableSchema(si *schema.SchemaInfo, e *sqlca.Engine, tables []TableSch
 		}
 
 		var strPrefix, strSuffix string
-		if si.Prefix != "" {
-			strPrefix = fmt.Sprintf("%v_", si.Prefix)
+		if cmd.Prefix != "" {
+			strPrefix = fmt.Sprintf("%v_", cmd.Prefix)
 		}
-		if si.Suffix != "" {
-			strSuffix = fmt.Sprintf("_%v", si.Suffix)
+		if cmd.Suffix != "" {
+			strSuffix = fmt.Sprintf("_%v", cmd.Suffix)
 		}
-		strFileName := fmt.Sprintf("%v/%v%v%v.go", v.SchemeDir, strPrefix, v.TableName, strSuffix)
-		if err = exportTableColumns(si, e, v, strFileName); err != nil {
+
+		v.FileName = fmt.Sprintf("%v/%v%v%v.go", v.SchemeDir, strPrefix, v.TableName, strSuffix)
+		if err = exportTableColumns(cmd, e, v); err != nil {
 			return
 		}
 	}
@@ -141,60 +120,52 @@ func exportTableSchema(si *schema.SchemaInfo, e *sqlca.Engine, tables []TableSch
 	return
 }
 
-func isInSlice(in string, s []string) bool {
-	for _, v := range s {
-		if v == in {
-			return true
-		}
-	}
-	return false
-}
+func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table schema.TableSchema) (err error) {
 
-func exportTableColumns(si *schema.SchemaInfo, e *sqlca.Engine, table TableSchema, strFileName string) (err error) {
-
-	File, err := os.OpenFile(strFileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
+	var File *os.File
+	File, err = os.OpenFile(table.FileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
 	if err != nil {
-		log.Errorf("open file [%v] error (%v)", strFileName, err.Error())
+		log.Errorf("open file [%v] error (%v)", table.FileName, err.Error())
 		return
 	}
-	log.Infof("exporting table schema [%v] to file [%v]", table.TableName, strFileName)
+	log.Infof("exporting table schema [%v] to file [%v]", table.TableName, table.FileName)
 
 	var strHead, strContent string
 
 	//write package name
 	strHead += fmt.Sprintf("// Code generated by db2go. DO NOT EDIT.\n")
-	strHead += fmt.Sprintf("package %v\n\n", si.PackageName)
+	strHead += fmt.Sprintf("package %v\n\n", cmd.PackageName)
 
-	var TableCols []TableColumn
-	var TableColsGo []TableColumnGo
+	//var TableCols []schema.TableColumnDB
+	//var TableColsGo []schema.TableColumnGo
 
 	/*
 	 SELECT `TABLE_NAME`, `COLUMN_NAME`, `DATA_TYPE`, `EXTRA`, `COLUMN_KEY`, `COLUMN_COMMENT` FROM `INFORMATION_SCHEMA`.`COLUMNS`
 	 WHERE `TABLE_SCHEMA` = 'accounts' AND `TABLE_NAME` = 'users' ORDER BY ORDINAL_POSITION ASC
 	*/
-	e.Model(&TableCols).QueryRaw("SELECT `TABLE_NAME`, `COLUMN_NAME`, `DATA_TYPE`, `EXTRA`, `COLUMN_KEY`, `COLUMN_COMMENT` FROM `INFORMATION_SCHEMA`.`COLUMNS` "+
+	e.Model(&table.Columns).QueryRaw("SELECT `TABLE_NAME`, `COLUMN_NAME`, `DATA_TYPE`, `EXTRA`, `COLUMN_KEY`, `COLUMN_COMMENT` FROM `INFORMATION_SCHEMA`.`COLUMNS` "+
 		"WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v' ORDER BY ORDINAL_POSITION ASC", table.SchemeName, table.TableName)
 
 	//write table name in camel case naming
 	strTableName := camelCaseConvert(table.TableName)
-	table.TableComment = replaceCRLF(table.TableComment)
+	table.TableComment = schema.ReplaceCRLF(table.TableComment)
 	strContent += fmt.Sprintf("var TableName%v = \"%v\" //%v \n\n", strTableName, table.TableName, table.TableComment)
 
-	strStructName := fmt.Sprintf("%vDO", strTableName)
+	table.StructName = fmt.Sprintf("%vDO", strTableName)
 
-	if haveDecimal(TableCols) {
-		strHead += IMPORT_SQLCA+"\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
+	if haveDecimal(table, table.Columns) {
+		strHead += IMPORT_SQLCA + "\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
 	}
-	strContent += makeTableStructure(si, table, TableCols, TableColsGo, strStructName)
-	strContent += makeMethods(si, TableCols, strStructName)
+	strContent += makeTableStructure(cmd, table)
+	strContent += makeMethods(cmd, table)
 
-	_, _ = File.WriteString(strHead+strContent)
+	_, _ = File.WriteString(strHead + strContent)
 	return
 }
 
-func haveDecimal(TableCols []TableColumn) (ok bool) {
+func haveDecimal(table schema.TableSchema, TableCols []schema.TableColumn) (ok bool) {
 	for _, v := range TableCols {
-		_, ok = getColumnType(v.TableName, v.ColumnName, v.DataType, v.ColumnKey, v.Extra)
+		_, ok = getColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra)
 		if ok {
 			break
 		}
@@ -202,73 +173,54 @@ func haveDecimal(TableCols []TableColumn) (ok bool) {
 	return
 }
 
-func makeMethods(si *schema.SchemaInfo,TableCols []TableColumn, strStructName string) (strContent string) {
-	for _, v := range TableCols { //添加结构体成员Get/Set方法
+func makeMethods(cmd *schema.Commander, table schema.TableSchema) (strContent string) {
 
-		if isInSlice(v.ColumnName, si.Without) {
+	for _, v := range table.Columns { //添加结构体成员Get/Set方法
+
+		if schema.IsInSlice(v.Name, cmd.Without) {
 			continue
 		}
-		strColName := camelCaseConvert(v.ColumnName)
-		strColType, _ := getColumnType(v.TableName, v.ColumnName, v.DataType, v.ColumnKey, v.Extra)
-		strContent += makeGetter(strStructName, strColName, strColType)
-		if !isInSlice(v.ColumnName, si.ReadOnly) {
-			strContent += makeSetter(strStructName, strColName, strColType)
+		strColName := camelCaseConvert(v.Name)
+		strColType, _ := getColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra)
+		strContent += schema.MakeGetter(table.StructName, strColName, strColType)
+		if !schema.IsInSlice(v.Name, cmd.ReadOnly) {
+			strContent += schema.MakeSetter(table.StructName, strColName, strColType)
 		}
 	}
 	return
 }
 
-func makeTableStructure(si *schema.SchemaInfo, table TableSchema, TableCols []TableColumn, TableColsGo []TableColumnGo, strStructName string) (strContent string) {
+func makeTableStructure(cmd *schema.Commander, table schema.TableSchema) (strContent string) {
 
-	strContent += fmt.Sprintf("type %v struct { \n", strStructName)
+	strContent += fmt.Sprintf("type %v struct { \n", table.StructName)
 
-	for _, v := range TableCols {
+	for _, v := range table.Columns {
 
-		if isInSlice(v.ColumnName, si.Without) {
+		if schema.IsInSlice(v.Name, cmd.Without) {
 			continue
 		}
 
 		var tagValues []string
 		var strColType, strColName string
-		strColName = camelCaseConvert(v.ColumnName)
-		strColType, _ = getColumnType(v.TableName, v.ColumnName, v.DataType, v.ColumnKey, v.Extra)
+		strColName = camelCaseConvert(v.Name)
+		strColType, _ = getColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra)
 
-		if isInSlice(v.ColumnName, si.ReadOnly) {
+		if schema.IsInSlice(v.Name, cmd.ReadOnly) {
 			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", sqlca.TAG_NAME_SQLCA, sqlca.SQLCA_TAG_VALUE_READ_ONLY))
 		}
-		for _, t := range si.Tags {
-			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", t, v.ColumnName))
+		for _, t := range cmd.Tags {
+			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", t, v.Name))
 		}
 		//添加成员和标签
-		strContent += makeTags(strColName, strColType, v.ColumnName, v.ColumnComment, strings.Join(tagValues, " "))
+		strContent += schema.MakeTags(strColName, strColType, v.Name, v.Comment, strings.Join(tagValues, " "))
 
-		var colGo TableColumnGo
-		colGo.SchemeName = table.SchemeName
-		colGo.TableName = v.TableName
-		colGo.ColumnName = strColName
-		colGo.ColumnType = strColType
-		TableColsGo = append(TableColsGo, colGo)
+		v.GoName = strColName
+		v.GoType = strColType
 	}
 
 	strContent += "}\n\n"
 
 	return
-}
-
-func makeTags(strColName, strColType, strTagValue, strComment string, strAppends string) string {
-	strComment = replaceCRLF(strComment)
-	return fmt.Sprintf("	%v %v `json:\"%v\" db:\"%v\" %v` //%v \n",
-		strColName, strColType, strTagValue, strTagValue, strAppends, strComment)
-}
-
-func makeGetter(strStructName, strColName, strColType string) (strGetter string) {
-
-	return fmt.Sprintf("func (do *%v) Get%v() %v { return do.%v } \n", strStructName, strColName, strColType, strColName)
-}
-
-func makeSetter(strStructName, strColName, strColType string) (strSetter string) {
-
-	return fmt.Sprintf("func (do *%v) Set%v(v %v) { do.%v = v } \n", strStructName, strColName, strColType, strColName)
 }
 
 //将数据库字段类型转为go语言对应的数据类型
@@ -330,11 +282,5 @@ func camelCaseConvert(strIn string) (strOut string) {
 		}
 	}
 
-	return
-}
-
-func replaceCRLF(strIn string) (strOut string) {
-	strOut = strings.ReplaceAll(strIn, "\r", "")
-	strOut = strings.ReplaceAll(strOut, "\n", "")
 	return
 }

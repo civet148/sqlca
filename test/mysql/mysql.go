@@ -52,6 +52,7 @@ func Benchmark() {
 	MYSQL_OrmDeleteFromTable(e)
 	MYSQL_OrmInCondition(e)
 	MYSQL_OrmFind(e)
+	MYSQL_OrmWhereRequire(e)
 	MYSQL_OrmToSQL(e)
 	MYSQL_RawQueryIntoModel(e)
 	MYSQL_RawQueryIntoModelSlice(e)
@@ -337,6 +338,19 @@ func MYSQL_OrmFind(e *sqlca.Engine) {
 		log.Errorf("select from table by find condition error [%v]", err.Error())
 	} else {
 		log.Debugf("select from table by find condition ok, affected rows [%v] users %+v", rows, users)
+	}
+}
+
+func MYSQL_OrmWhereRequire(e *sqlca.Engine) {
+
+	var user = UserDO{
+		Disable: 2,
+	}
+	if _, err := e.Model(&user).Table(TABLE_NAME_USERS).Update(); err != nil { // expect return error
+		log.Errorf("%v", err.Error())
+	}
+	if _, err := e.Model(&user).Table(TABLE_NAME_USERS).Delete(); err != nil { // expect return error
+		log.Errorf("%v", err.Error())
 	}
 }
 

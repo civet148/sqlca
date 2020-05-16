@@ -884,7 +884,12 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 	if strWhere == "" {
 		strCustomer := e.getCustomWhere()
 		if strCustomer == "" {
-			strWhere += "1=1"
+			//where condition required when update or delete
+			if e.operType != OperType_Update && e.operType != OperType_Delete {
+				strWhere += "1=1"
+			} else {
+				log.Warnf("where condition required when use orm update or delete")
+			}
 		} else {
 			strWhere += strCustomer
 		}
@@ -899,6 +904,7 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 	for _, v := range e.notConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeNotCondition(v))
 	}
+
 	strWhere = DATABASE_KEY_NAME_WHERE + " " + strWhere
 	return
 }

@@ -24,7 +24,7 @@ var argvReadOnly = flag.String("readonly", "", "read only columns")
 func main() {
 
 	//var err error
-	var si schema.SchemaInfo
+	var cmd schema.Commander
 	log.Infof("argument: url [%v]", *argvUrl)
 	log.Infof("argument: databases [%v]", *argvDatabase)
 	log.Infof("argument: output [%v]", *argvOutput)
@@ -43,46 +43,46 @@ func main() {
 	}
 
 	if *argvTags != "" {
-		si.Tags = trimSpaceSlice(strings.Split(*argvTags, ","))
+		cmd.Tags = trimSpaceSlice(strings.Split(*argvTags, ","))
 	}
 	if *argvReadOnly != "" {
-		si.ReadOnly = trimSpaceSlice(strings.Split(*argvReadOnly, ","))
+		cmd.ReadOnly = trimSpaceSlice(strings.Split(*argvReadOnly, ","))
 	}
-	si.Prefix = *argvPackage
-	si.Prefix = *argvPrefix
-	si.Suffix = *argvSuffix
-	si.OutDir = *argvOutput
-	si.ConnUrl = *argvUrl
-	si.PackageName = *argvPackage
+	cmd.Prefix = *argvPackage
+	cmd.Prefix = *argvPrefix
+	cmd.Suffix = *argvSuffix
+	cmd.OutDir = *argvOutput
+	cmd.ConnUrl = *argvUrl
+	cmd.PackageName = *argvPackage
 
 	ui := sqlca.ParseUrl(*argvUrl)
 
 	if *argvDatabase == "" {
 		//use default database
-		si.Databases = append(si.Databases, getDatabaseName(ui.Path))
+		cmd.Databases = append(cmd.Databases, getDatabaseName(ui.Path))
 	} else {
 		//use input databases
-		si.Databases = trimSpaceSlice(strings.Split(*argvDatabase, ","))
+		cmd.Databases = trimSpaceSlice(strings.Split(*argvDatabase, ","))
 	}
 
 	if *argvTables != "" {
-		si.Tables = trimSpaceSlice(strings.Split(*argvTables, ","))
+		cmd.Tables = trimSpaceSlice(strings.Split(*argvTables, ","))
 	}
 
 	if *argvWithout != "" {
-		si.Without = strings.Split(*argvWithout, ",")
+		cmd.Without = strings.Split(*argvWithout, ",")
 	}
 
-	si.Scheme = ui.Scheme
-	si.Host = ui.Host
-	si.User = ui.User
-	si.Password = ui.Password
+	cmd.Scheme = ui.Scheme
+	cmd.Host = ui.Host
+	cmd.User = ui.User
+	cmd.Password = ui.Password
 
-	switch si.Scheme {
+	switch cmd.Scheme {
 	case "mysql":
-		exportMysql(&si)
+		exportMysql(&cmd)
 	case "postgres":
-		exportPostgres(&si)
+		exportPostgres(&cmd)
 	}
 }
 
@@ -105,12 +105,12 @@ func getDatabaseName(strPath string) (strName string) {
 	return strPath[idx+1:]
 }
 
-func exportMysql(si *schema.SchemaInfo) {
-	if err := mysql.Export(si); err != nil {
+func exportMysql(cmd *schema.Commander) {
+	if err := mysql.Export(cmd); err != nil {
 		log.Errorf("export mysql schema error [%v]", err.Error())
 	}
 }
 
-func exportPostgres(si *schema.SchemaInfo) {
+func exportPostgres(cmd *schema.Commander) {
 
 }

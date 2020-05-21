@@ -60,7 +60,10 @@ func (s *ModelReflector) ToMap(tagNames ...string) map[string]interface{} {
 	typ := reflect.TypeOf(s.value)
 	val := reflect.ValueOf(s.value)
 
-	if typ.Kind() == reflect.Ptr { // pointer type
+	for {
+		if typ.Kind() != reflect.Ptr { // pointer type
+			break
+		}
 		typ = typ.Elem()
 		val = val.Elem()
 	}
@@ -217,10 +220,17 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err
 				}
 				for {
 					fetcher, _ := e.getFecther(rows)
-					elemTyp := val.Type().Elem()
-					elemVal := reflect.New(elemTyp).Elem()
+					var elemVal reflect.Value
+					var elemTyp reflect.Type
+					elemTyp = val.Type().Elem()
 
-					if elemTyp.Kind() == reflect.Struct {
+					if elemTyp.Kind() == reflect.Ptr {
+						elemVal = reflect.New(elemTyp.Elem())
+					} else {
+						elemVal = reflect.New(elemTyp).Elem()
+					}
+
+					if elemTyp.Kind() == reflect.Struct || elemTyp.Kind() == reflect.Ptr {
 						err = e.fetchToStruct(fetcher, elemTyp, elemVal) // assign to struct type variant
 					} else {
 						err = e.fetchToBaseType(fetcher, elemTyp, elemVal) // assign to base type variant
@@ -354,8 +364,13 @@ func (e *Engine) fetchToMap(fetcher *Fetcher, arg interface{}) (err error) {
 //fetch row data to struct/slice
 func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {
 
-	kind := typ.Kind()
-	if kind == reflect.Struct {
+	if typ.Kind() == reflect.Ptr {
+
+		typ = typ.Elem()
+		val = val.Elem()
+	}
+
+	if typ.Kind() == reflect.Struct {
 		NumField := val.NumField()
 		for i := 0; i < NumField; i++ {
 			typField := typ.Field(i)

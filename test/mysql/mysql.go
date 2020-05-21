@@ -131,13 +131,13 @@ func MYSQL_OrmQueryIntoModel(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	user := UserDO{}
+	user := &UserDO{}
 
 	//SQL: select id, name, phone from users where id=1
 	//e.Model(&user).Table(TABLE_NAME_USERS).Id(1).Select("id", "name", "phone").Query();
 
 	// select * from users where id=1
-	if rowsAffected, err := e.Model(&user).Table(TABLE_NAME_USERS).Id(1).Query(); err != nil {
+	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Query(); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", user, err.Error())
 	} else {
 		log.Debugf("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)
@@ -148,7 +148,7 @@ func MYSQL_OrmQueryIntoModelSlice(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	var users []UserDO
+	var users []*UserDO
 
 	//SQL: select id, name, phone from users limit 3
 	//e.Model(&user).Table(TABLE_NAME_USERS).Select("id", "name", "phone").Limit(3).Query();
@@ -161,7 +161,9 @@ func MYSQL_OrmQueryIntoModelSlice(e *sqlca.Engine) {
 		if len(users) == 0 {
 			log.Errorf("query into model failed, rows affected [%v]", rowsAffected)
 		} else {
-			log.Debugf("query into model [%+v] ok, rows affected [%v]", users, rowsAffected)
+			for i, v := range users {
+				log.Debugf("query into model slice of [%v]*User [%+v] ", i, v)
+			}
 		}
 	}
 }

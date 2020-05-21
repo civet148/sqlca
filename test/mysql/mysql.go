@@ -120,7 +120,7 @@ func MYSQL_OrmUpdateByModel(e *sqlca.Engine) {
 	}
 
 	//SQL: update users set name='john', phone='8618699999999', sex='1', email='john@gmail.com' where id='1'
-	if rowsAffected, err := e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "email", "sex").Update(); err != nil {
+	if rowsAffected, err := e.Model(&user).Table(TABLE_NAME_USERS).Id(1).Update(); err != nil {
 		log.Errorf("update data model [%+v] error [%v]", user, err.Error())
 	} else {
 		log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
@@ -473,7 +473,7 @@ func MYSQL_TxForUpdate(e *sqlca.Engine) {
 				return
 			}
 
-			time.Sleep(5 * time.Second) //sleep for lock the record where id=1
+			time.Sleep(2 * time.Second) //sleep for lock the record where id=1
 
 			log.Infof("[TX1] id [%v] update ok", id)
 			if err = tx.TxCommit(); err != nil {
@@ -509,8 +509,7 @@ func MYSQL_TxForUpdate(e *sqlca.Engine) {
 		}
 	}()
 
-	time.Sleep(60 * time.Second)
-
+	time.Sleep(3 * time.Second)
 }
 
 func MYSQL_CustomTag(e *sqlca.Engine) {

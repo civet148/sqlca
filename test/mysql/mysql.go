@@ -19,6 +19,7 @@ type UserDO struct {
 	Disable   int8          `db:"disable"`
 	Balance   sqlca.Decimal `db:"balance"`
 	CreatedAt string        `db:"created_at" sqlca:"readonly"`
+	IgnoreMe  string        `db:"-"`
 }
 
 type ClassDo struct {
@@ -26,6 +27,7 @@ type ClassDo struct {
 	UserId    int32  `db:"user_id"`
 	ClassNo   string `db:"class_no"`
 	CreatedAt string `db:"created_at" sqlca:"readonly"`
+	IgnoreMe  string `db:"-"`
 }
 
 func Benchmark() {
@@ -511,9 +513,10 @@ func MYSQL_TxForUpdate(e *sqlca.Engine) {
 
 func MYSQL_CustomTag(e *sqlca.Engine) {
 	type CustomUser struct {
-		Id    int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // protobuf tag
-		Name  string `json:"name"`                                                // json tag
-		Phone string `db:"phone"`                                                 // db tag
+		Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // protobuf tag
+		Name     string `json:"name"`                                                // json tag
+		Phone    string `db:"phone"`                                                 // db tag
+		IgnoreMe string `db:"-" json:"-"`
 	}
 
 	var users []CustomUser

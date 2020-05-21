@@ -21,9 +21,19 @@ func NewDecimal(v interface{}) (d Decimal) {
 	case int32:
 		d.dec = decimal.NewFromInt32(v.(int32))
 	case int64:
-		d.dec = decimal.NewFromInt(int64(v.(int64)))
+		d.dec = decimal.NewFromInt(v.(int64))
 	case int:
 		d.dec = decimal.NewFromInt(int64(v.(int)))
+	case uint8:
+		d.dec = decimal.NewFromInt32(int32(v.(uint8)))
+	case uint16:
+		d.dec = decimal.NewFromInt32(int32(v.(uint16)))
+	case uint32:
+		d.dec = decimal.NewFromInt32(int32(v.(uint32)))
+	case uint64:
+		d.dec = decimal.NewFromInt(int64(v.(uint64)))
+	case uint:
+		d.dec = decimal.NewFromInt(int64(v.(uint)))
 	case float32:
 		d.dec = decimal.NewFromFloat32(v.(float32))
 	case float64:

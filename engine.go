@@ -206,9 +206,6 @@ func (e *Engine) GetPkName() string {
 
 // set orm primary key's value
 func (e *Engine) Id(value interface{}) *Engine {
-
-	//TODO @libin sql syntax differences of MySQL/Postgresql/Sqlite/Mssql...
-	e.setSelectColumns("*")
 	e.setPkValue(value)
 	return e
 }

@@ -78,9 +78,13 @@ func (s *ModelReflector) ToMap(tagNames ...string) map[string]interface{} {
 }
 
 // get struct field's tag value
-func (s *ModelReflector) getTag(sf reflect.StructField, tagName string) string {
+func (s *ModelReflector) getTag(sf reflect.StructField, tagName string) (strValue string) {
 
-	return sf.Tag.Get(tagName)
+	strValue = sf.Tag.Get(tagName)
+	if strValue == SQLCA_TAG_VALUE_IGNORE {
+		return ""
+	}
+	return
 }
 
 // parse struct fields
@@ -429,7 +433,7 @@ func (e *Engine) getTagValue(sf reflect.StructField) (strValue string) {
 
 	for _, v := range e.dbTags { //support multiple tag
 		strValue = handleTagValue(v, sf.Tag.Get(v))
-		if strValue != "" {
+		if strValue != "" || strValue == SQLCA_TAG_VALUE_IGNORE {
 			return
 		}
 	}

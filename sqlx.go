@@ -738,9 +738,30 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 	for _, v := range strColumns {
 
 		if e.isColumnSelected(v, strExcepts...) && !e.isReadOnly(v) {
-			strVal := handleSpecialChars(fmt.Sprintf("%v", e.getModelValue(v)))
+			val := e.getModelValue(v)
+			if val == nil {
+				//log.Warnf("column [%v] selected but have no value", v)
+				continue
+			}
+			strVal := handleSpecialChars(fmt.Sprintf("%v", val))
 			c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), v, e.getBackQuote(), e.getSingleQuote(), strVal, e.getSingleQuote()) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
+		}
+	}
+
+	if len(cols) == 0 {
+		//may be model is a base type slice
+		args := e.model.([]interface{})
+		count := len(args)
+		//log.Debugf("args count [%v] values [%+v]", count, args)
+		for i, k := range strColumns {
+			if i < count {
+				v := args[i]
+				val := reflect.ValueOf(v)
+				//log.Debugf("columns[%v] name [%v] value [%v]", i, k, val.Elem().Interface())
+				c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), k, e.getBackQuote(), e.getSingleQuote(), val.Elem().Interface(), e.getSingleQuote()) // column name format to `date`='1583055138',...
+				cols = append(cols, c)
+			}
 		}
 	}
 

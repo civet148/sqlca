@@ -210,7 +210,7 @@ func (e *Engine) upsertCache(lastInsertId int64) {
 	}
 
 	if e.isCacheNil() {
-		log.Debugf("cache instance is nil, ignore it")
+		//log.Debugf("cache instance is nil, ignore it")
 		return
 	}
 
@@ -233,7 +233,7 @@ func (e *Engine) upsertCache(lastInsertId int64) {
 func (e *Engine) updateCache() (ok bool) {
 
 	if e.isCacheNil() {
-		log.Debugf("cache instance is nil, can't update to cache")
+		//log.Debugf("cache instance is nil, can't update to cache")
 		return
 	}
 
@@ -242,7 +242,7 @@ func (e *Engine) updateCache() (ok bool) {
 
 func (e *Engine) deleteCache() {
 	if e.isCacheNil() {
-		log.Debugf("cache instance is nil, can't delete from cache")
+		//log.Debugf("cache instance is nil, can't delete from cache")
 		return
 	}
 	kvs := e.makeUpdateCacheKv()

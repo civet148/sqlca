@@ -214,8 +214,8 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 		case reflect.Slice: //  slice
 			e.setModelType(ModelType_Slice)
 		case reflect.Map: // map
-			e.setModelType(ModelType_Map)
-			assert(false, "map type model not support yet")
+			//e.setModelType(ModelType_Map)
+			log.Errorf("map type model not support yet")
 		default: //base type
 			e.setModelType(ModelType_BaseType)
 		}
@@ -414,7 +414,7 @@ func (e *Engine) setIndexes(name string, value interface{}) {
 	typ := reflect.TypeOf(value)
 	switch typ.Kind() {
 	case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array, reflect.Func, reflect.Ptr, reflect.Chan, reflect.UnsafePointer:
-		assert(false, "index value type [%v] illegal", typ.Kind())
+		log.Errorf("index value type [%v] illegal", typ.Kind())
 	}
 	e.cacheIndexes = append(e.cacheIndexes, tableIndex{
 		Name:  name,
@@ -449,17 +449,17 @@ func (e *Engine) setPkValue(value interface{}) {
 	case string:
 		strValue = value.(string)
 		if strValue == "" {
-			assert(false, "primary key's value is nil")
+			log.Debugf("primary key's value is nil")
 		}
 	case int8, int16, int, int32, int64, uint8, uint16, uint, uint32, uint64:
 		{
 			strValue = fmt.Sprintf("%v", value)
 			if strValue == "0" {
-				assert(false, "primary key's value is 0")
+				log.Debugf("primary key's value is 0")
 			}
 		}
 	default:
-		assert(false, "primary key's value type illegal")
+		log.Errorf("primary key's value type illegal")
 	}
 	e.strPkValue = strValue
 }
@@ -843,7 +843,7 @@ func (e *Engine) makeSqlxString() (strSql string) {
 	case OperType_Delete:
 		strSql = e.makeSqlxDelete()
 	default:
-		assert(false, "operation illegal")
+		log.Errorf("operation illegal")
 	}
 
 	log.Debugf("[%v] SQL [%s]", e.operType, strSql)

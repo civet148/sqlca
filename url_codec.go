@@ -3,6 +3,7 @@ package sqlca
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/civet148/gotools/log"
 	"github.com/civet148/redigogo"
 	"net/url"
 	"strconv"
@@ -125,7 +126,7 @@ func ParseUrl(strUrl string) (ui *UrlInfo) {
 func parseDatabaseName(strPath string) string {
 	idx := strings.LastIndex(strPath, "/")
 	if idx == -1 {
-		assert(false, "[%v] invalid database path", strPath)
+		log.Errorf("[%v] invalid database path", strPath)
 	}
 	return strPath[idx+1:]
 }
@@ -253,7 +254,7 @@ func (e *Engine) parseRedisUrl(strUrl string) (strDSN string) {
 	}
 
 	if jsonData, err := json.Marshal(cc); err != nil {
-		assert(false, "url [%v] illegal", strUrl)
+		log.Errorf("url [%v] illegal", strUrl)
 	} else {
 		strDSN = string(jsonData)
 	}

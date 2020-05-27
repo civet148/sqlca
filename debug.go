@@ -11,7 +11,7 @@ import (
 //assert bool and string/struct/slice/map nil, call panic
 func assert(v interface{}, strMsg string, args ...interface{}) {
 	if isNilOrFalse(v) {
-		panic(fmt.Sprintf(strMsg, args...))
+		log.Errorf(strMsg, args...)
 	}
 }
 

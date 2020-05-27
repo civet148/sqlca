@@ -60,12 +60,14 @@ func newCache(strScheme string, strConfig string) (cache redigogo.Cache, err err
 
 	var config redigogo.Config
 	if err = json.Unmarshal([]byte(strConfig), &config); err != nil {
-		assert(false, "cache config [%v] illegal", strConfig)
+		err = fmt.Errorf("cache config [%v] illegal", strConfig)
+		return nil, err
 	}
 
 	cache = redigogo.NewCache(&config)
 	if err != nil {
-		assert(false, "redis cache with config [%+v] create error [%v]", config, err.Error())
+		err = fmt.Errorf("redis cache with config [%+v] create error [%v]", config, err.Error())
+		return nil, err
 	}
 	return
 }

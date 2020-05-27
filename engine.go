@@ -113,16 +113,18 @@ func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
 		if e.db, err = sqlx.Open(strDriverName, strDSN); err != nil {
-			assert(false, "open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
+			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
+			return nil
 		}
 		if err = e.db.Ping(); err != nil {
-			assert(false, "ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
+			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
+			return nil
 		}
 		e.adapterSqlx = adapterType
 	case AdapterCache_Redis:
 		var err error
 		if e.cache, err = newCache(strDriverName, strDSN); err != nil {
-			assert(false, "new cache by driver name [%v] DSN [%v] error [%v]", strDriverName, strDSN, err.Error())
+			log.Errorf("new cache by driver name [%v] DSN [%v] error [%v]", strDriverName, strDSN, err.Error())
 		}
 		e.adapterCache = adapterType
 		if len(expireSeconds) > 0 {
@@ -131,7 +133,7 @@ func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 			e.expireTime = 3600 //one hour expire
 		}
 	default:
-		assert(false, "adapter instance type [%v] url [%s] not support", adapterType, strUrl)
+		log.Errorf("adapter instance type [%v] url [%s] not support", adapterType, strUrl)
 	}
 
 	//log.Struct(e)
@@ -659,7 +661,7 @@ func (e *Engine) ToSQL(operType OperType) (strSql string) {
 	case OperType_Delete:
 		strSql = e.makeSqlxDelete()
 	default:
-		assert(false, "operation illegal")
+		log.Errorf("operation illegal")
 	}
 	return
 }
@@ -681,4 +683,9 @@ func (e *Engine) SetCacheBefore(ok bool) {
 // get cache update before database
 func (e *Engine) getCacheBefore() bool {
 	return e.isCacheBefore
+}
+
+// ping database
+func (e *Engine) Ping() (err error) {
+	return e.db.Ping()
 }

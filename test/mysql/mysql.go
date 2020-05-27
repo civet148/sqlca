@@ -64,6 +64,7 @@ func Benchmark() {
 	MYSQL_TxRollback(e)
 	MYSQL_TxForUpdate(e)
 	MYSQL_CustomTag(e)
+	MYSQL_BaseTypesUpdate(e)
 }
 
 func MYSQL_OrmInsertByModel(e *sqlca.Engine) {
@@ -530,5 +531,16 @@ func MYSQL_CustomTag(e *sqlca.Engine) {
 		log.Errorf("custom tag query error [%v]", err.Error())
 	} else {
 		log.Debugf("custom tag query results %+v rows [%v]", users, count)
+	}
+}
+
+func MYSQL_BaseTypesUpdate(e *sqlca.Engine) {
+
+	var sex = 3
+	//var disable=4
+	if rows, err := e.Model(&sex).Table(TABLE_NAME_USERS).Id(2).Select("sex", "disable").Update(); err != nil {
+		log.Error(err.Error())
+	} else {
+		log.Debugf("base type update ok, affected rows [%v]", rows)
 	}
 }

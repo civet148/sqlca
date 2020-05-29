@@ -20,6 +20,8 @@ var argvSuffix = flag.String("suffix", "", "export file suffix")
 var argvPackage = flag.String("package", "", "export package name")
 var argvWithout = flag.String("without", "", "exclude columns")
 var argvReadOnly = flag.String("readonly", "", "read only columns")
+var argvProtobuf = flag.Bool("proto", false, "output proto buffer file")
+var argvDisableDecimal = flag.Bool("disable-decimal", false, "decimal as float type")
 
 func main() {
 
@@ -35,6 +37,7 @@ func main() {
 	log.Infof("argument: package [%v]", *argvPackage)
 	log.Infof("argument: without [%v]", *argvWithout)
 	log.Infof("argument: readonly [%v]", *argvReadOnly)
+	log.Infof("argument: proto [%v]", *argvProtobuf)
 
 	if *argvUrl == "" {
 		fmt.Println("need --url parameter")
@@ -54,6 +57,8 @@ func main() {
 	cmd.OutDir = *argvOutput
 	cmd.ConnUrl = *argvUrl
 	cmd.PackageName = *argvPackage
+	cmd.Protobuf = *argvProtobuf
+	cmd.DisableDecimal = *argvDisableDecimal
 
 	ui := sqlca.ParseUrl(*argvUrl)
 
@@ -77,12 +82,17 @@ func main() {
 	cmd.Host = ui.Host
 	cmd.User = ui.User
 	cmd.Password = ui.Password
+	e := sqlca.NewEngine(false)
+	e.Debug(true)
+	e.Open(cmd.ConnUrl)
 
 	switch cmd.Scheme {
 	case "mysql":
-		exportMysql(&cmd)
+		exportMysql(&cmd, e)
 	case "postgres":
-		exportPostgres(&cmd)
+		exportPostgres(&cmd, e)
+	case "mssql":
+		exportMssql(&cmd, e)
 	}
 }
 
@@ -105,12 +115,23 @@ func getDatabaseName(strPath string) (strName string) {
 	return strPath[idx+1:]
 }
 
-func exportMysql(cmd *schema.Commander) {
-	if err := mysql.Export(cmd); err != nil {
-		log.Errorf("export mysql schema error [%v]", err.Error())
+func exportMysql(cmd *schema.Commander, e *sqlca.Engine) {
+
+	if cmd.Protobuf {
+		if err := mysql.ExportProtobuf(cmd, e); err != nil {
+			log.Errorf("export mysql schema protobuf error [%v]", err.Error())
+		}
+	} else {
+		if err := mysql.ExportGoStruct(cmd, e); err != nil {
+			log.Errorf("export mysql schema structure error [%v]", err.Error())
+		}
 	}
 }
 
-func exportPostgres(cmd *schema.Commander) {
+func exportPostgres(cmd *schema.Commander, e *sqlca.Engine) {
+	log.Warnf("export postgres not implement yet")
+}
 
+func exportMssql(cmd *schema.Commander, e *sqlca.Engine) {
+	log.Warnf("export mssql not implement yet")
 }

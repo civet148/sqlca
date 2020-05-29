@@ -9,10 +9,6 @@ import (
 	"strings"
 )
 
-const (
-	IMPORT_SQLCA = `import "github.com/civet148/sqlca"`
-)
-
 /*
 -- 查询数据库表名、引擎及注释
 SELECT `TABLE_SCHEMA`, `TABLE_NAME`, `ENGINE`, `TABLE_COMMENT` FROM `INFORMATION_SCHEMA`.`TABLES`
@@ -154,7 +150,7 @@ func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table *schema.Ta
 		table.Columns[i].Comment = schema.ReplaceCRLF(v.Comment)
 	}
 	if haveDecimal(table, table.Columns) && !cmd.DisableDecimal {
-		strHead += IMPORT_SQLCA + "\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
+		strHead += schema.IMPORT_SQLCA + "\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
 	}
 	strContent += makeTableStructure(cmd, table)
 	strContent += makeMethods(cmd, table)
@@ -175,12 +171,12 @@ func haveDecimal(table *schema.TableSchema, TableCols []schema.TableColumn) (ok 
 
 func makeMethods(cmd *schema.Commander, table *schema.TableSchema) (strContent string) {
 
-	for i, v := range table.Columns { //添加结构体成员Get/Set方法
+	for _, v := range table.Columns { //添加结构体成员Get/Set方法
 
 		if schema.IsInSlice(v.Name, cmd.Without) {
 			continue
 		}
-		strColName := camelCaseConvert(v.Name)
+		strColName := schema.CamelCaseConvert(v.Name)
 		strColType, _ := getGoColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra, cmd.DisableDecimal)
 		strContent += schema.MakeGetter(table.StructName, strColName, strColType)
 		if !schema.IsInSlice(v.Name, cmd.ReadOnly) {
@@ -202,7 +198,7 @@ func makeTableStructure(cmd *schema.Commander, table *schema.TableSchema) (strCo
 
 		var tagValues []string
 		var strColType, strColName string
-		strColName = camelCaseConvert(v.Name)
+		strColName = schema.CamelCaseConvert(v.Name)
 		strColType, _ = getGoColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra, cmd.DisableDecimal)
 
 		if schema.IsInSlice(v.Name, cmd.ReadOnly) {

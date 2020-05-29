@@ -37,6 +37,16 @@ func makeProtoHead(cmd *schema.Commander, table *schema.TableSchema) (strContent
 
 	strContent += "syntax = \"proto3\";\n"
 	strContent += fmt.Sprintf("package %v;\n\n", cmd.PackageName)
+
+	if len(cmd.GogoOptions) > 0 {
+		strContent += schema.IMPORT_GOGO_PROTO + "\n"
+		//strContent += schema.IMPORT_GOOGOLE_PROTOBUF + "\n"
+	}
+	strContent += "\n"
+	for _, v := range cmd.GogoOptions {
+		strContent += fmt.Sprintf("option %v;\n", v)
+	}
+	strContent += "\n"
 	return
 }
 
@@ -48,7 +58,7 @@ func makeProtoBody(cmd *schema.Commander, table *schema.TableSchema) (strContent
 		no := i + 1
 		strColName := v.Name
 		strColType := getProtoColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra, true)
-		strContent += fmt.Sprintf("	%-8s %-16s = %-2d; //%v\n", strColType, strColName, no, v.Comment)
+		strContent += fmt.Sprintf("	%-10s %-22s = %-2d; //%v\n", strColType, strColName, no, v.Comment)
 	}
 	strContent += "}\n\n"
 	return

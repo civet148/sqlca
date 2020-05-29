@@ -22,6 +22,7 @@ var argvWithout = flag.String("without", "", "exclude columns")
 var argvReadOnly = flag.String("readonly", "", "read only columns")
 var argvProtobuf = flag.Bool("proto", false, "output proto buffer file")
 var argvDisableDecimal = flag.Bool("disable-decimal", false, "decimal as float type")
+var argvGogoOptions = flag.String("gogo-options", "", "gogo proto options")
 
 func main() {
 
@@ -39,6 +40,17 @@ func main() {
 	log.Infof("argument: readonly [%v]", *argvReadOnly)
 	log.Infof("argument: proto [%v]", *argvProtobuf)
 
+	if *argvProtobuf {
+		log.Infof("argument: gogo proto options [%v]", *argvGogoOptions)
+		if *argvGogoOptions != "" {
+			cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ","))
+			if len(cmd.GogoOptions) == 0 {
+				cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ";"))
+			}
+		}
+	}
+
+	log.Infof("")
 	if *argvUrl == "" {
 		fmt.Println("need --url parameter")
 		flag.Usage()
@@ -46,10 +58,10 @@ func main() {
 	}
 
 	if *argvTags != "" {
-		cmd.Tags = trimSpaceSlice(strings.Split(*argvTags, ","))
+		cmd.Tags = schema.TrimSpaceSlice(strings.Split(*argvTags, ","))
 	}
 	if *argvReadOnly != "" {
-		cmd.ReadOnly = trimSpaceSlice(strings.Split(*argvReadOnly, ","))
+		cmd.ReadOnly = schema.TrimSpaceSlice(strings.Split(*argvReadOnly, ","))
 	}
 	cmd.Prefix = *argvPackage
 	cmd.Prefix = *argvPrefix
@@ -64,14 +76,14 @@ func main() {
 
 	if *argvDatabase == "" {
 		//use default database
-		cmd.Databases = append(cmd.Databases, getDatabaseName(ui.Path))
+		cmd.Databases = append(cmd.Databases, schema.GetDatabaseName(ui.Path))
 	} else {
 		//use input databases
-		cmd.Databases = trimSpaceSlice(strings.Split(*argvDatabase, ","))
+		cmd.Databases = schema.TrimSpaceSlice(strings.Split(*argvDatabase, ","))
 	}
 
 	if *argvTables != "" {
-		cmd.Tables = trimSpaceSlice(strings.Split(*argvTables, ","))
+		cmd.Tables = schema.TrimSpaceSlice(strings.Split(*argvTables, ","))
 	}
 
 	if *argvWithout != "" {
@@ -98,21 +110,6 @@ func main() {
 
 func init() {
 	flag.Parse()
-}
-
-func trimSpaceSlice(s []string) (ts []string) {
-	for _, v := range s {
-		ts = append(ts, strings.TrimSpace(v))
-	}
-	return
-}
-
-func getDatabaseName(strPath string) (strName string) {
-	idx := strings.LastIndex(strPath, "/")
-	if idx == -1 {
-		return
-	}
-	return strPath[idx+1:]
 }
 
 func exportMysql(cmd *schema.Commander, e *sqlca.Engine) {

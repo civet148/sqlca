@@ -23,6 +23,7 @@ var argvReadOnly = flag.String("readonly", "", "read only columns")
 var argvProtobuf = flag.Bool("proto", false, "output proto buffer file")
 var argvDisableDecimal = flag.Bool("disable-decimal", false, "decimal as float type")
 var argvGogoOptions = flag.String("gogo-options", "", "gogo proto options")
+var argvOneFile = flag.Bool("one-file", false, "output go/proto file into one file which named by database name")
 
 func main() {
 
@@ -39,9 +40,17 @@ func main() {
 	log.Infof("argument: without [%v]", *argvWithout)
 	log.Infof("argument: readonly [%v]", *argvReadOnly)
 	log.Infof("argument: proto [%v]", *argvProtobuf)
+	log.Infof("argument: one-file [%v]", *argvOneFile)
+	log.Infof("argument: gogo-options [%v]", *argvGogoOptions)
+
+	if *argvUrl == "" {
+		log.Infof("")
+		fmt.Println("need --url parameter")
+		flag.Usage()
+		return
+	}
 
 	if *argvProtobuf {
-		log.Infof("argument: gogo proto options [%v]", *argvGogoOptions)
 		if *argvGogoOptions != "" {
 			cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ","))
 			if len(cmd.GogoOptions) == 0 {
@@ -50,11 +59,8 @@ func main() {
 		}
 	}
 
-	log.Infof("")
-	if *argvUrl == "" {
-		fmt.Println("need --url parameter")
-		flag.Usage()
-		return
+	if *argvOneFile {
+		cmd.OneFile = true
 	}
 
 	if *argvTags != "" {
@@ -76,10 +82,10 @@ func main() {
 
 	if *argvDatabase == "" {
 		//use default database
-		cmd.Databases = append(cmd.Databases, schema.GetDatabaseName(ui.Path))
+		cmd.Database = schema.GetDatabaseName(ui.Path)
 	} else {
-		//use input databases
-		cmd.Databases = schema.TrimSpaceSlice(strings.Split(*argvDatabase, ","))
+		//use input database
+		cmd.Database = strings.TrimSpace(*argvDatabase)
 	}
 
 	if *argvTables != "" {

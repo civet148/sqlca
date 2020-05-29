@@ -150,7 +150,10 @@ func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table *schema.Ta
 
 	table.StructName = fmt.Sprintf("%vDO", strTableName)
 
-	if haveDecimal(table, table.Columns) {
+	for i, v := range table.Columns {
+		table.Columns[i].Comment = schema.ReplaceCRLF(v.Comment)
+	}
+	if haveDecimal(table, table.Columns) && !cmd.DisableDecimal {
 		strHead += IMPORT_SQLCA + "\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
 	}
 	strContent += makeTableStructure(cmd, table)
@@ -173,7 +176,7 @@ func haveDecimal(table *schema.TableSchema, TableCols []schema.TableColumn) (ok 
 func makeMethods(cmd *schema.Commander, table *schema.TableSchema) (strContent string) {
 
 	for i, v := range table.Columns { //添加结构体成员Get/Set方法
-		table.Columns[i].Comment = schema.ReplaceCRLF(v.Comment)
+
 		if schema.IsInSlice(v.Name, cmd.Without) {
 			continue
 		}

@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+const (
+	IMPORT_GOGO_PROTO = `import "github.com/gogo/protobuf/gogoproto/gogo.proto";`
+	IMPORT_SQLCA      = `import "github.com/civet148/sqlca"`
+)
+
 type Commander struct {
 	ConnUrl        string
 	Databases      []string
@@ -25,6 +30,7 @@ type Commander struct {
 	PackageName    string
 	Protobuf       bool
 	DisableDecimal bool
+	GogoOptions    []string
 }
 
 type TableSchema struct {
@@ -169,4 +175,19 @@ func CamelCaseConvert(strIn string) (strOut string) {
 	}
 
 	return
+}
+
+func TrimSpaceSlice(s []string) (ts []string) {
+	for _, v := range s {
+		ts = append(ts, strings.TrimSpace(v))
+	}
+	return
+}
+
+func GetDatabaseName(strPath string) (strName string) {
+	idx := strings.LastIndex(strPath, "/")
+	if idx == -1 {
+		return
+	}
+	return strPath[idx+1:]
 }

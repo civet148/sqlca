@@ -5,8 +5,13 @@ package dataobject
 
 import (
 	fmt "fmt"
+	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
+	io "io"
 	math "math"
+	math_bits "math/bits"
+	reflect "reflect"
+	strings "strings"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -38,16 +43,25 @@ func (*ClassesDO) Descriptor() ([]byte, []int) {
 	return fileDescriptor_b2d01f57cea8ae6f, []int{0}
 }
 func (m *ClassesDO) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ClassesDO.Unmarshal(m, b)
+	return m.Unmarshal(b)
 }
 func (m *ClassesDO) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ClassesDO.Marshal(b, m, deterministic)
+	if deterministic {
+		return xxx_messageInfo_ClassesDO.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
 }
 func (m *ClassesDO) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_ClassesDO.Merge(m, src)
 }
 func (m *ClassesDO) XXX_Size() int {
-	return xxx_messageInfo_ClassesDO.Size(m)
+	return m.Size()
 }
 func (m *ClassesDO) XXX_DiscardUnknown() {
 	xxx_messageInfo_ClassesDO.DiscardUnknown(m)
@@ -97,16 +111,422 @@ func init() {
 func init() { proto.RegisterFile("classes_do.proto", fileDescriptor_b2d01f57cea8ae6f) }
 
 var fileDescriptor_b2d01f57cea8ae6f = []byte{
-	// 162 bytes of a gzipped FileDescriptorProto
+	// 212 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x48, 0xce, 0x49, 0x2c,
 	0x2e, 0x4e, 0x2d, 0x8e, 0x4f, 0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x4a, 0x49,
-	0x2c, 0x49, 0xcc, 0x4f, 0xca, 0x4a, 0x4d, 0x2e, 0x51, 0xea, 0x65, 0xe4, 0xe2, 0x74, 0x86, 0x28,
-	0x70, 0xf1, 0x17, 0xe2, 0xe3, 0x62, 0xca, 0x4c, 0x91, 0x60, 0x54, 0x60, 0xd4, 0x60, 0x0d, 0x62,
-	0xca, 0x4c, 0x11, 0x92, 0xe4, 0xe2, 0x00, 0xeb, 0x8e, 0xcf, 0xcb, 0x97, 0x60, 0x52, 0x60, 0xd4,
-	0xe0, 0x0c, 0x62, 0x07, 0xf3, 0xfd, 0xf2, 0x85, 0xc4, 0xb9, 0xd8, 0x4b, 0x8b, 0x53, 0x8b, 0xe2,
-	0x33, 0x53, 0x24, 0x98, 0xc1, 0xea, 0xd9, 0x40, 0x5c, 0xcf, 0x14, 0x21, 0x59, 0x2e, 0xae, 0xe4,
-	0xa2, 0xd4, 0xc4, 0x92, 0xd4, 0x94, 0xf8, 0xc4, 0x12, 0x09, 0x16, 0xb0, 0x2e, 0x4e, 0xa8, 0x88,
-	0x63, 0x09, 0x48, 0xba, 0xb4, 0x20, 0x05, 0x26, 0xcd, 0x0a, 0x91, 0x86, 0x8a, 0x38, 0x96, 0x24,
-	0xb1, 0x81, 0x9d, 0x68, 0x0c, 0x08, 0x00, 0x00, 0xff, 0xff, 0x44, 0x9e, 0xfc, 0x99, 0xb6, 0x00,
-	0x00, 0x00,
+	0x2c, 0x49, 0xcc, 0x4f, 0xca, 0x4a, 0x4d, 0x2e, 0x91, 0xd2, 0x4d, 0xcf, 0x2c, 0xc9, 0x28, 0x4d,
+	0xd2, 0x4b, 0xce, 0xcf, 0xd5, 0x4f, 0xcf, 0x4f, 0xcf, 0xd7, 0x07, 0x2b, 0x49, 0x2a, 0x4d, 0x03,
+	0xf3, 0xc0, 0x1c, 0x30, 0x0b, 0xa2, 0x55, 0xa9, 0x97, 0x91, 0x8b, 0xd3, 0x19, 0x62, 0x9e, 0x8b,
+	0xbf, 0x10, 0x1f, 0x17, 0x53, 0x66, 0x8a, 0x04, 0xa3, 0x02, 0xa3, 0x06, 0x6b, 0x10, 0x53, 0x66,
+	0x8a, 0x90, 0x24, 0x17, 0x07, 0xd8, 0xb2, 0xf8, 0xbc, 0x7c, 0x09, 0x26, 0x05, 0x46, 0x0d, 0xce,
+	0x20, 0x76, 0x30, 0xdf, 0x2f, 0x5f, 0x48, 0x9c, 0x8b, 0xbd, 0xb4, 0x38, 0xb5, 0x28, 0x3e, 0x33,
+	0x45, 0x82, 0x19, 0xac, 0x9e, 0x0d, 0xc4, 0xf5, 0x4c, 0x11, 0x92, 0xe5, 0xe2, 0x4a, 0x2e, 0x4a,
+	0x4d, 0x2c, 0x49, 0x4d, 0x89, 0x4f, 0x2c, 0x91, 0x60, 0x01, 0xeb, 0xe2, 0x84, 0x8a, 0x38, 0x96,
+	0x80, 0xa4, 0x4b, 0x0b, 0x52, 0x60, 0xd2, 0xac, 0x10, 0x69, 0xa8, 0x88, 0x63, 0x89, 0x93, 0xc0,
+	0x87, 0x87, 0x72, 0x8c, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0xf8, 0xe0, 0x91, 0x1c,
+	0x63, 0x12, 0x1b, 0xd8, 0xa1, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x71, 0xc6, 0xcf, 0x33,
+	0xf7, 0x00, 0x00, 0x00,
 }
+
+func (this *ClassesDO) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 9)
+	s = append(s, "&dataobject.ClassesDO{")
+	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
+	s = append(s, "ClassNo: "+fmt.Sprintf("%#v", this.ClassNo)+",\n")
+	s = append(s, "UserId: "+fmt.Sprintf("%#v", this.UserId)+",\n")
+	s = append(s, "CreatedAt: "+fmt.Sprintf("%#v", this.CreatedAt)+",\n")
+	s = append(s, "UpdatedAt: "+fmt.Sprintf("%#v", this.UpdatedAt)+",\n")
+	if this.XXX_unrecognized != nil {
+		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func valueToGoStringClassesDo(v interface{}, typ string) string {
+	rv := reflect.ValueOf(v)
+	if rv.IsNil() {
+		return "nil"
+	}
+	pv := reflect.Indirect(rv).Interface()
+	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
+}
+func (m *ClassesDO) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ClassesDO) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ClassesDO) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.UpdatedAt) > 0 {
+		i -= len(m.UpdatedAt)
+		copy(dAtA[i:], m.UpdatedAt)
+		i = encodeVarintClassesDo(dAtA, i, uint64(len(m.UpdatedAt)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.CreatedAt) > 0 {
+		i -= len(m.CreatedAt)
+		copy(dAtA[i:], m.CreatedAt)
+		i = encodeVarintClassesDo(dAtA, i, uint64(len(m.CreatedAt)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.UserId != 0 {
+		i = encodeVarintClassesDo(dAtA, i, uint64(m.UserId))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.ClassNo) > 0 {
+		i -= len(m.ClassNo)
+		copy(dAtA[i:], m.ClassNo)
+		i = encodeVarintClassesDo(dAtA, i, uint64(len(m.ClassNo)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Id != 0 {
+		i = encodeVarintClassesDo(dAtA, i, uint64(m.Id))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func encodeVarintClassesDo(dAtA []byte, offset int, v uint64) int {
+	offset -= sovClassesDo(v)
+	base := offset
+	for v >= 1<<7 {
+		dAtA[offset] = uint8(v&0x7f | 0x80)
+		v >>= 7
+		offset++
+	}
+	dAtA[offset] = uint8(v)
+	return base
+}
+func (m *ClassesDO) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Id != 0 {
+		n += 1 + sovClassesDo(uint64(m.Id))
+	}
+	l = len(m.ClassNo)
+	if l > 0 {
+		n += 1 + l + sovClassesDo(uint64(l))
+	}
+	if m.UserId != 0 {
+		n += 1 + sovClassesDo(uint64(m.UserId))
+	}
+	l = len(m.CreatedAt)
+	if l > 0 {
+		n += 1 + l + sovClassesDo(uint64(l))
+	}
+	l = len(m.UpdatedAt)
+	if l > 0 {
+		n += 1 + l + sovClassesDo(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func sovClassesDo(x uint64) (n int) {
+	return (math_bits.Len64(x|1) + 6) / 7
+}
+func sozClassesDo(x uint64) (n int) {
+	return sovClassesDo(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+}
+func (m *ClassesDO) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowClassesDo
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ClassesDO: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ClassesDO: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			m.Id = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowClassesDo
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Id |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ClassNo", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowClassesDo
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthClassesDo
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthClassesDo
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ClassNo = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UserId", wireType)
+			}
+			m.UserId = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowClassesDo
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.UserId |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CreatedAt", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowClassesDo
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthClassesDo
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthClassesDo
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.CreatedAt = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UpdatedAt", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowClassesDo
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthClassesDo
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthClassesDo
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.UpdatedAt = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipClassesDo(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthClassesDo
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthClassesDo
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func skipClassesDo(dAtA []byte) (n int, err error) {
+	l := len(dAtA)
+	iNdEx := 0
+	depth := 0
+	for iNdEx < l {
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return 0, ErrIntOverflowClassesDo
+			}
+			if iNdEx >= l {
+				return 0, io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		wireType := int(wire & 0x7)
+		switch wireType {
+		case 0:
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowClassesDo
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				iNdEx++
+				if dAtA[iNdEx-1] < 0x80 {
+					break
+				}
+			}
+		case 1:
+			iNdEx += 8
+		case 2:
+			var length int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return 0, ErrIntOverflowClassesDo
+				}
+				if iNdEx >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				length |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if length < 0 {
+				return 0, ErrInvalidLengthClassesDo
+			}
+			iNdEx += length
+		case 3:
+			depth++
+		case 4:
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupClassesDo
+			}
+			depth--
+		case 5:
+			iNdEx += 4
+		default:
+			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
+		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthClassesDo
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
+	}
+	return 0, io.ErrUnexpectedEOF
+}
+
+var (
+	ErrInvalidLengthClassesDo        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowClassesDo          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupClassesDo = fmt.Errorf("proto: unexpected end of group")
+)

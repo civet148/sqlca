@@ -3,8 +3,9 @@ go build -ldflags "-s -w"
 
 set OUT_DIR=.
 set PACK_NAME=dataobject
+set GOGO_OPTIONS="(gogoproto.marshaler_all)=true,(gogoproto.sizer_all)=true,(gogoproto.unmarshaler_all)=true,(gogoproto.gostring_all)=true"
 
-db2go.exe --url "mysql://root:123456@127.0.0.1:3306/test?charset=utf8" --disable-decimal --proto ^
---out %OUT_DIR% --db "test" --table "users, classes" --suffix do --package %PACK_NAME% --readonly "created_at, updated_at"
+go run main.go --url "mysql://root:123456@127.0.0.1:3306/test?charset=utf8" --disable-decimal --proto --gogo-options %GOGO_OPTIONS% ^
+--out %OUT_DIR% --db "test" --table "users, classes" --suffix do --package %PACK_NAME% 
 echo generate protobuf file ok
 pause

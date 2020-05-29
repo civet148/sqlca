@@ -23,13 +23,10 @@ SELECT `TABLE_NAME`, `COLUMN_NAME`, `DATA_TYPE`, `EXTRA`,  `COLUMN_KEY`, `COLUMN
 WHERE `TABLE_SCHEMA` = 'accounts' AND `TABLE_NAME` = 'acc_3pl'
 */
 
-func Export(cmd *schema.Commander) (err error) {
+func ExportGoStruct(cmd *schema.Commander, e *sqlca.Engine) (err error) {
 
-	e := sqlca.NewEngine(false)
-	e.Debug(true)
-	e.Open(cmd.ConnUrl)
 	var strQuery string
-	var tableSchemas []schema.TableSchema
+	var tableSchemas []*schema.TableSchema
 
 	var dbs, tables []string
 
@@ -64,7 +61,7 @@ func Export(cmd *schema.Commander) (err error) {
 	return exportTableSchema(cmd, e, tableSchemas)
 }
 
-func exportTableSchema(cmd *schema.Commander, e *sqlca.Engine, tables []schema.TableSchema) (err error) {
+func exportTableSchema(cmd *schema.Commander, e *sqlca.Engine, tables []*schema.TableSchema) (err error) {
 
 	for _, v := range tables {
 
@@ -120,7 +117,7 @@ func exportTableSchema(cmd *schema.Commander, e *sqlca.Engine, tables []schema.T
 	return
 }
 
-func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table schema.TableSchema) (err error) {
+func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table *schema.TableSchema) (err error) {
 
 	var File *os.File
 	File, err = os.OpenFile(table.FileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
@@ -153,7 +150,10 @@ func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table schema.Tab
 
 	table.StructName = fmt.Sprintf("%vDO", strTableName)
 
-	if haveDecimal(table, table.Columns) {
+	for i, v := range table.Columns {
+		table.Columns[i].Comment = schema.ReplaceCRLF(v.Comment)
+	}
+	if haveDecimal(table, table.Columns) && !cmd.DisableDecimal {
 		strHead += IMPORT_SQLCA + "\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
 	}
 	strContent += makeTableStructure(cmd, table)
@@ -163,9 +163,9 @@ func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table schema.Tab
 	return
 }
 
-func haveDecimal(table schema.TableSchema, TableCols []schema.TableColumn) (ok bool) {
+func haveDecimal(table *schema.TableSchema, TableCols []schema.TableColumn) (ok bool) {
 	for _, v := range TableCols {
-		_, ok = getColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra)
+		_, ok = getGoColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra, false)
 		if ok {
 			break
 		}
@@ -173,15 +173,15 @@ func haveDecimal(table schema.TableSchema, TableCols []schema.TableColumn) (ok b
 	return
 }
 
-func makeMethods(cmd *schema.Commander, table schema.TableSchema) (strContent string) {
+func makeMethods(cmd *schema.Commander, table *schema.TableSchema) (strContent string) {
 
-	for _, v := range table.Columns { //添加结构体成员Get/Set方法
+	for i, v := range table.Columns { //添加结构体成员Get/Set方法
 
 		if schema.IsInSlice(v.Name, cmd.Without) {
 			continue
 		}
 		strColName := camelCaseConvert(v.Name)
-		strColType, _ := getColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra)
+		strColType, _ := getGoColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra, cmd.DisableDecimal)
 		strContent += schema.MakeGetter(table.StructName, strColName, strColType)
 		if !schema.IsInSlice(v.Name, cmd.ReadOnly) {
 			strContent += schema.MakeSetter(table.StructName, strColName, strColType)
@@ -190,7 +190,7 @@ func makeMethods(cmd *schema.Commander, table schema.TableSchema) (strContent st
 	return
 }
 
-func makeTableStructure(cmd *schema.Commander, table schema.TableSchema) (strContent string) {
+func makeTableStructure(cmd *schema.Commander, table *schema.TableSchema) (strContent string) {
 
 	strContent += fmt.Sprintf("type %v struct { \n", table.StructName)
 
@@ -203,7 +203,7 @@ func makeTableStructure(cmd *schema.Commander, table schema.TableSchema) (strCon
 		var tagValues []string
 		var strColType, strColName string
 		strColName = camelCaseConvert(v.Name)
-		strColType, _ = getColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra)
+		strColType, _ = getGoColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra, cmd.DisableDecimal)
 
 		if schema.IsInSlice(v.Name, cmd.ReadOnly) {
 			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", sqlca.TAG_NAME_SQLCA, sqlca.SQLCA_TAG_VALUE_READ_ONLY))
@@ -219,68 +219,6 @@ func makeTableStructure(cmd *schema.Commander, table schema.TableSchema) (strCon
 	}
 
 	strContent += "}\n\n"
-
-	return
-}
-
-//将数据库字段类型转为go语言对应的数据类型
-func getColumnType(strTableName, strColName, strDataType, strColKey, strExtra string) (strColType string, isDecimal bool) {
-
-	switch strDataType {
-	case "bigint":
-		strColType = "int64"
-	case "int", "integer", "mediumint":
-		strColType = "int32"
-	case "smallint":
-		strColType = "int16"
-	case "tinyint", "bit":
-		strColType = "int8"
-	case "bool", "boolean":
-		strColType = "bool"
-	case "decimal":
-		strColType = "sqlca.Decimal"
-		isDecimal = true
-	case "real", "double", "float", "numeric":
-		strColType = "float64"
-	case "datetime", "year", "date", "time", "timestamp":
-		strColType = "string"
-	case "enum", "set", "varchar", "char", "text", "tinytext", "mediumtext", "longtext":
-		strColType = "string"
-	case "blob", "tinyblob", "mediumblob", "longblob", "binary", "varbinary", "json":
-		strColType = "string"
-	default:
-		{
-			err := fmt.Errorf("table [%v] column [%v] data type [%v] unsupport", strTableName, strColName, strDataType)
-			log.Errorf("%v", err.Error())
-			panic(err.Error())
-		}
-	}
-	return
-}
-
-func camelCaseConvert(strIn string) (strOut string) {
-
-	var idxUnderLine = int(-1)
-	for i, v := range strIn {
-		strChr := string(v)
-
-		if i == 0 {
-
-			strOut += strings.ToUpper(strChr)
-		} else {
-			if v == '_' {
-				idxUnderLine = i //ignore
-			} else {
-
-				if i == idxUnderLine+1 {
-
-					strOut += strings.ToUpper(strChr)
-				} else {
-					strOut += strChr
-				}
-			}
-		}
-	}
 
 	return
 }

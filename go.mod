@@ -3,7 +3,7 @@ module github.com/civet148/sqlca
 go 1.13
 
 require (
-	github.com/civet148/gotools v1.0.5
+	github.com/civet148/gotools v1.0.6
 	github.com/civet148/redigogo v1.0.4
 	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e
 	github.com/go-ole/go-ole v1.2.4 // indirect

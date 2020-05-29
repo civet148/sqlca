@@ -144,7 +144,7 @@ func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table *schema.Ta
 		"WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v' ORDER BY ORDINAL_POSITION ASC", table.SchemeName, table.TableName)
 
 	//write table name in camel case naming
-	strTableName := camelCaseConvert(table.TableName)
+	strTableName := schema.CamelCaseConvert(table.TableName)
 	table.TableComment = schema.ReplaceCRLF(table.TableComment)
 	strContent += fmt.Sprintf("var TableName%v = \"%v\" //%v \n\n", strTableName, table.TableName, table.TableComment)
 

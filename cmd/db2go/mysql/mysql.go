@@ -139,30 +139,3 @@ func getProtoColumnType(strTableName, strColName, strDataType, strColKey, strExt
 	}
 	return
 }
-
-func camelCaseConvert(strIn string) (strOut string) {
-
-	var idxUnderLine = int(-1)
-	for i, v := range strIn {
-		strChr := string(v)
-
-		if i == 0 {
-
-			strOut += strings.ToUpper(strChr)
-		} else {
-			if v == '_' {
-				idxUnderLine = i //ignore
-			} else {
-
-				if i == idxUnderLine+1 {
-
-					strOut += strings.ToUpper(strChr)
-				} else {
-					strOut += strChr
-				}
-			}
-		}
-	}
-
-	return
-}

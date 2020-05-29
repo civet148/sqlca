@@ -42,7 +42,7 @@ func makeProtoHead(cmd *schema.Commander, table *schema.TableSchema) (strContent
 
 func makeProtoBody(cmd *schema.Commander, table *schema.TableSchema) (strContent string) {
 
-	strTableName := camelCaseConvert(table.TableName)
+	strTableName := schema.CamelCaseConvert(table.TableName)
 	strContent += fmt.Sprintf("message %vDO {\n", strTableName)
 	for i, v := range table.Columns {
 		no := i + 1

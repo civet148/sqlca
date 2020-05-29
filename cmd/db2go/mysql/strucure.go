@@ -26,7 +26,7 @@ WHERE `TABLE_SCHEMA` = 'accounts' AND `TABLE_NAME` = 'acc_3pl'
 func ExportGoStruct(cmd *schema.Commander, e *sqlca.Engine) (err error) {
 
 	var strQuery string
-	var tableSchemas []schema.TableSchema
+	var tableSchemas []*schema.TableSchema
 
 	var dbs, tables []string
 
@@ -61,7 +61,7 @@ func ExportGoStruct(cmd *schema.Commander, e *sqlca.Engine) (err error) {
 	return exportTableSchema(cmd, e, tableSchemas)
 }
 
-func exportTableSchema(cmd *schema.Commander, e *sqlca.Engine, tables []schema.TableSchema) (err error) {
+func exportTableSchema(cmd *schema.Commander, e *sqlca.Engine, tables []*schema.TableSchema) (err error) {
 
 	for _, v := range tables {
 
@@ -117,7 +117,7 @@ func exportTableSchema(cmd *schema.Commander, e *sqlca.Engine, tables []schema.T
 	return
 }
 
-func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table schema.TableSchema) (err error) {
+func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table *schema.TableSchema) (err error) {
 
 	var File *os.File
 	File, err = os.OpenFile(table.FileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
@@ -160,7 +160,7 @@ func exportTableColumns(cmd *schema.Commander, e *sqlca.Engine, table schema.Tab
 	return
 }
 
-func haveDecimal(table schema.TableSchema, TableCols []schema.TableColumn) (ok bool) {
+func haveDecimal(table *schema.TableSchema, TableCols []schema.TableColumn) (ok bool) {
 	for _, v := range TableCols {
 		_, ok = getGoColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra, false)
 		if ok {
@@ -170,10 +170,10 @@ func haveDecimal(table schema.TableSchema, TableCols []schema.TableColumn) (ok b
 	return
 }
 
-func makeMethods(cmd *schema.Commander, table schema.TableSchema) (strContent string) {
+func makeMethods(cmd *schema.Commander, table *schema.TableSchema) (strContent string) {
 
-	for _, v := range table.Columns { //添加结构体成员Get/Set方法
-
+	for i, v := range table.Columns { //添加结构体成员Get/Set方法
+		table.Columns[i].Comment = schema.ReplaceCRLF(v.Comment)
 		if schema.IsInSlice(v.Name, cmd.Without) {
 			continue
 		}
@@ -187,7 +187,7 @@ func makeMethods(cmd *schema.Commander, table schema.TableSchema) (strContent st
 	return
 }
 
-func makeTableStructure(cmd *schema.Commander, table schema.TableSchema) (strContent string) {
+func makeTableStructure(cmd *schema.Commander, table *schema.TableSchema) (strContent string) {
 
 	strContent += fmt.Sprintf("type %v struct { \n", table.StructName)
 

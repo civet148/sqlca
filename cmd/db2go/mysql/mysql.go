@@ -59,6 +59,9 @@ func queryTableColumns(cmd *schema.Commander, e *sqlca.Engine, table *schema.Tab
 	}
 	//write table name in camel case naming
 	table.TableComment = schema.ReplaceCRLF(table.TableComment)
+	for i, v := range table.Columns {
+		table.Columns[i].Comment = schema.ReplaceCRLF(v.Comment)
+	}
 	return
 }
 

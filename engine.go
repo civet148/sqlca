@@ -660,6 +660,8 @@ func (e *Engine) ToSQL(operType OperType) (strSql string) {
 		strSql = e.makeSqlxUpsert()
 	case OperType_Delete:
 		strSql = e.makeSqlxDelete()
+	case OperType_ForUpdate:
+		strSql = e.makeSqlxForUpdate()
 	default:
 		log.Errorf("operation illegal")
 	}

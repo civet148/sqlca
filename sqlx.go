@@ -34,20 +34,21 @@ const (
 )
 
 const (
-	DATABASE_KEY_NAME_WHERE    = "WHERE"
-	DATABASE_KEY_NAME_UPDATE   = "UPDATE"
-	DATABASE_KEY_NAME_SET      = "SET"
-	DATABASE_KEY_NAME_FROM     = "FROM"
-	DATABASE_KEY_NAME_DELETE   = "DELETE"
-	DATABASE_KEY_NAME_SELECT   = "SELECT"
-	DATABASE_KEY_NAME_DISTINCT = "DISTINCT"
-	DATABASE_KEY_NAME_IN       = "IN"
-	DATABASE_KEY_NAME_NOT_IN   = "NOT IN"
-	DATABASE_KEY_NAME_OR       = "OR"
-	DATABASE_KEY_NAME_AND      = "AND"
-	DATABASE_KEY_NAME_INSERT   = "INSERT INTO"
-	DATABASE_KEY_NAME_VALUE    = "VALUE"
-	DATABASE_KEY_NAME_VALUES   = "VALUES"
+	DATABASE_KEY_NAME_WHERE      = "WHERE"
+	DATABASE_KEY_NAME_UPDATE     = "UPDATE"
+	DATABASE_KEY_NAME_SET        = "SET"
+	DATABASE_KEY_NAME_FROM       = "FROM"
+	DATABASE_KEY_NAME_DELETE     = "DELETE"
+	DATABASE_KEY_NAME_SELECT     = "SELECT"
+	DATABASE_KEY_NAME_DISTINCT   = "DISTINCT"
+	DATABASE_KEY_NAME_IN         = "IN"
+	DATABASE_KEY_NAME_NOT_IN     = "NOT IN"
+	DATABASE_KEY_NAME_OR         = "OR"
+	DATABASE_KEY_NAME_AND        = "AND"
+	DATABASE_KEY_NAME_INSERT     = "INSERT INTO"
+	DATABASE_KEY_NAME_VALUE      = "VALUE"
+	DATABASE_KEY_NAME_VALUES     = "VALUES"
+	DATABASE_KEY_NAME_FOR_UPDATE = "FOR UPDATE"
 )
 
 type AdapterType int
@@ -124,15 +125,16 @@ func getAdapterType(name string) AdapterType {
 type OperType int
 
 const (
-	OperType_Query    OperType = 1 // orm: query sql
-	OperType_Update   OperType = 2 // orm: update sql
-	OperType_Insert   OperType = 3 // orm: insert sql
-	OperType_Upsert   OperType = 4 // orm: insert or update sql
-	OperType_Tx       OperType = 5 // orm: tx sql
-	OperType_QueryRaw OperType = 6 // raw: query sql into model
-	OperType_ExecRaw  OperType = 7 // raw: insert/update sql
-	OperType_QueryMap OperType = 8 // raw: query sql into map
-	OperType_Delete   OperType = 9 // orm: delete sql
+	OperType_Query     OperType = 1  // orm: query sql
+	OperType_Update    OperType = 2  // orm: update sql
+	OperType_Insert    OperType = 3  // orm: insert sql
+	OperType_Upsert    OperType = 4  // orm: insert or update sql
+	OperType_Tx        OperType = 5  // orm: tx sql
+	OperType_QueryRaw  OperType = 6  // raw: query sql into model
+	OperType_ExecRaw   OperType = 7  // raw: insert/update sql
+	OperType_QueryMap  OperType = 8  // raw: query sql into map
+	OperType_Delete    OperType = 9  // orm: delete sql
+	OperType_ForUpdate OperType = 10 // orm: select ... for update sql
 )
 
 func (o OperType) GoString() string {
@@ -946,6 +948,10 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 	}
 
 	return
+}
+
+func (e *Engine) makeSqlxForUpdate() (strSqlx string) {
+	return e.makeSqlxQuery() + " " + DATABASE_KEY_NAME_FOR_UPDATE
 }
 
 func (e *Engine) makeSqlxUpdate() (strSqlx string) {

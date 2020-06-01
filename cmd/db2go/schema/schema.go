@@ -14,7 +14,7 @@ const (
 
 type Commander struct {
 	ConnUrl        string
-	Databases      []string
+	Database       string
 	Tables         []string
 	Without        []string
 	ReadOnly       []string
@@ -30,6 +30,7 @@ type Commander struct {
 	PackageName    string
 	Protobuf       bool
 	DisableDecimal bool
+	OneFile        bool
 	GogoOptions    []string
 }
 
@@ -90,7 +91,7 @@ func ReplaceCRLF(strIn string) (strOut string) {
 	return
 }
 
-func CreateOutputFile(cmd *Commander, table *TableSchema, strFileSuffix string) (file *os.File, err error) {
+func CreateOutputFile(cmd *Commander, table *TableSchema, strFileSuffix string, append bool) (file *os.File, err error) {
 
 	var strOutDir = cmd.OutDir
 	var strPackageName = cmd.PackageName
@@ -139,14 +140,24 @@ func CreateOutputFile(cmd *Commander, table *TableSchema, strFileSuffix string) 
 		strNameSuffix = fmt.Sprintf("_%v", strNameSuffix)
 	}
 
-	table.FileName = fmt.Sprintf("%v/%v%v%v.%v", table.SchemeDir, strNamePrefix, table.TableName, strNameSuffix, strFileSuffix)
+	var flag = os.O_CREATE | os.O_RDWR | os.O_TRUNC
 
-	file, err = os.OpenFile(table.FileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
+	if append {
+		flag = os.O_CREATE | os.O_RDWR | os.O_APPEND
+	}
+
+	if cmd.OneFile { //数据库名称作为文件名
+		table.FileName = fmt.Sprintf("%v/%v%v%v.%v", table.SchemeDir, strNamePrefix, table.SchemeName, strNameSuffix, strFileSuffix)
+	} else { //数据表名作为文件名
+		table.FileName = fmt.Sprintf("%v/%v%v%v.%v", table.SchemeDir, strNamePrefix, table.TableName, strNameSuffix, strFileSuffix)
+	}
+
+	file, err = os.OpenFile(table.FileName, flag, 0)
 	if err != nil {
 		log.Errorf("open file [%v] error (%v)", table.FileName, err.Error())
 		return
 	}
-	log.Infof("create file [%v] ok", table.FileName)
+	log.Infof("open file [%v] ok", table.FileName)
 	return
 }
 

@@ -689,3 +689,8 @@ func (e *Engine) getCacheBefore() bool {
 func (e *Engine) Ping() (err error) {
 	return e.db.Ping()
 }
+
+// set read only columns
+func (e *Engine) SetReadOnly(columns ...string) {
+	e.readOnly = columns
+}

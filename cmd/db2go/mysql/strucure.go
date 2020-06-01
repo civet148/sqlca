@@ -9,43 +9,31 @@ import (
 	"strings"
 )
 
-/*
--- 查询数据库表名、引擎及注释
-SELECT `TABLE_SCHEMA`, `TABLE_NAME`, `ENGINE`, `TABLE_COMMENT` FROM `INFORMATION_SCHEMA`.`TABLES`
-WHERE `TABLE_SCHEMA`='accounts' AND (`ENGINE`='MyISAM' OR `ENGINE` = 'InnoDB' OR `ENGINE` = 'TokuDB')
-
--- 查询数据表字段名、字段类型及注释
-SELECT `TABLE_NAME`, `COLUMN_NAME`, `DATA_TYPE`, `EXTRA`,  `COLUMN_KEY`, `COLUMN_COMMENT` FROM `INFORMATION_SCHEMA`.`COLUMNS`
-WHERE `TABLE_SCHEMA` = 'accounts' AND `TABLE_NAME` = 'acc_3pl'
-*/
-
 func ExportGoStruct(cmd *schema.Commander, e *sqlca.Engine) (err error) {
 
 	var strQuery string
 	var tableSchemas []*schema.TableSchema
+	var tableNames []string
 
-	var dbs, tables []string
-
-	for _, v := range cmd.Databases {
-		dbs = append(dbs, fmt.Sprintf("'%v'", v))
+	if cmd.Database == "" {
+		err = fmt.Errorf("no database selected")
+		log.Error(err.Error())
+		return
 	}
-
-	if len(dbs) == 0 {
-		return fmt.Errorf("no database selected")
-	}
+	var strDatabaseName = fmt.Sprintf("'%v'", cmd.Database)
 	log.Infof("ready to export tables [%v]", cmd.Tables)
 	for _, v := range cmd.Tables {
-		tables = append(tables, fmt.Sprintf("'%v'", v))
+		tableNames = append(tableNames, fmt.Sprintf("'%v'", v))
 	}
 
-	if len(tables) == 0 {
+	if len(tableNames) == 0 {
 		strQuery = fmt.Sprintf("SELECT `TABLE_SCHEMA`, `TABLE_NAME`, `ENGINE`, `TABLE_COMMENT` FROM `INFORMATION_SCHEMA`.`TABLES` "+
 			"WHERE (`ENGINE`='MyISAM' OR `ENGINE` = 'InnoDB' OR `ENGINE` = 'TokuDB') AND `TABLE_SCHEMA` IN (%v) ORDER BY TABLE_SCHEMA",
-			strings.Join(dbs, ","))
+			strDatabaseName)
 	} else {
 		strQuery = fmt.Sprintf("SELECT `TABLE_SCHEMA`, `TABLE_NAME`, `ENGINE`, `TABLE_COMMENT` FROM `INFORMATION_SCHEMA`.`TABLES` "+
 			"WHERE (`ENGINE`='MyISAM' OR `ENGINE` = 'InnoDB' OR `ENGINE` = 'TokuDB') AND `TABLE_SCHEMA` IN (%v) AND TABLE_NAME IN (%v) ORDER BY TABLE_SCHEMA",
-			strings.Join(dbs, ","), strings.Join(tables, ","))
+			strDatabaseName, strings.Join(tableNames, ","))
 	}
 
 	_, err = e.Model(&tableSchemas).QueryRaw(strQuery)

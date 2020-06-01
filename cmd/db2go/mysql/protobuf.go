@@ -15,25 +15,39 @@ func ExportProtobuf(cmd *schema.Commander, e *sqlca.Engine) (err error) {
 		log.Errorf(err.Error())
 		return
 	}
-	for _, v := range schemas {
+
+	var file *os.File
+	strHead := makeProtoHead(cmd)
+	for i, v := range schemas {
 		if err = queryTableColumns(cmd, e, v); err != nil {
 			log.Error(err.Error())
 			return
 		}
-		var file *os.File
-		if file, err = schema.CreateOutputFile(cmd, v, "proto"); err != nil {
+
+		var append bool
+		if i > 0 && cmd.OneFile {
+			append = true
+		}
+
+		strBody := makeProtoBody(cmd, v)
+
+		if file, err = schema.CreateOutputFile(cmd, v, "proto", append); err != nil {
 			log.Error(err.Error())
 			return
 		}
 
-		strHead := makeProtoHead(cmd, v)
-		strBody := makeProtoBody(cmd, v)
-		file.WriteString(strHead + strBody)
+		if i == 0 {
+			file.WriteString(strHead)
+		} else if !cmd.OneFile {
+			file.WriteString(strHead)
+		}
+		file.WriteString(strBody)
 	}
+	file.Close()
 	return
 }
 
-func makeProtoHead(cmd *schema.Commander, table *schema.TableSchema) (strContent string) {
+func makeProtoHead(cmd *schema.Commander) (strContent string) {
 
 	strContent += "syntax = \"proto3\";\n"
 	strContent += fmt.Sprintf("package %v;\n\n", cmd.PackageName)

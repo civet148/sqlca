@@ -25,7 +25,7 @@ func ExportProtobuf(cmd *schema.Commander, e *sqlca.Engine) (err error) {
 		}
 
 		var append bool
-		if cmd.OneFile {
+		if i > 0 && cmd.OneFile {
 			append = true
 		}
 

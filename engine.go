@@ -40,6 +40,7 @@ type Engine struct {
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string               // order by columns
 	groupByColumns  []string               // group by columns
+	havingCondition string                 // having condition
 	inConditions    []condition            // in condition
 	notConditions   []condition            // not in condition
 	andConditions   []string               // and condition
@@ -276,6 +277,13 @@ func (e *Engine) Limit(args ...int) *Engine {
 // query offset (for mysql/postgres)
 func (e *Engine) Offset(offset int) *Engine {
 	e.setOffset(fmt.Sprintf("OFFSET %v", offset))
+	return e
+}
+
+// having [condition]
+func (e *Engine) Having(strFmt string, args ...interface{}) *Engine {
+	strCondition := e.formatString(strFmt, args...)
+	e.setHaving(strCondition)
 	return e
 }
 
@@ -660,6 +668,8 @@ func (e *Engine) ToSQL(operType OperType) (strSql string) {
 		strSql = e.makeSqlxUpsert()
 	case OperType_Delete:
 		strSql = e.makeSqlxDelete()
+	case OperType_ForUpdate:
+		strSql = e.makeSqlxForUpdate()
 	default:
 		log.Errorf("operation illegal")
 	}

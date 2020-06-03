@@ -34,20 +34,23 @@ const (
 )
 
 const (
-	DATABASE_KEY_NAME_WHERE    = "WHERE"
-	DATABASE_KEY_NAME_UPDATE   = "UPDATE"
-	DATABASE_KEY_NAME_SET      = "SET"
-	DATABASE_KEY_NAME_FROM     = "FROM"
-	DATABASE_KEY_NAME_DELETE   = "DELETE"
-	DATABASE_KEY_NAME_SELECT   = "SELECT"
-	DATABASE_KEY_NAME_DISTINCT = "DISTINCT"
-	DATABASE_KEY_NAME_IN       = "IN"
-	DATABASE_KEY_NAME_NOT_IN   = "NOT IN"
-	DATABASE_KEY_NAME_OR       = "OR"
-	DATABASE_KEY_NAME_AND      = "AND"
-	DATABASE_KEY_NAME_INSERT   = "INSERT INTO"
-	DATABASE_KEY_NAME_VALUE    = "VALUE"
-	DATABASE_KEY_NAME_VALUES   = "VALUES"
+	DATABASE_KEY_NAME_WHERE      = "WHERE"
+	DATABASE_KEY_NAME_UPDATE     = "UPDATE"
+	DATABASE_KEY_NAME_SET        = "SET"
+	DATABASE_KEY_NAME_FROM       = "FROM"
+	DATABASE_KEY_NAME_DELETE     = "DELETE"
+	DATABASE_KEY_NAME_SELECT     = "SELECT"
+	DATABASE_KEY_NAME_DISTINCT   = "DISTINCT"
+	DATABASE_KEY_NAME_IN         = "IN"
+	DATABASE_KEY_NAME_NOT_IN     = "NOT IN"
+	DATABASE_KEY_NAME_OR         = "OR"
+	DATABASE_KEY_NAME_AND        = "AND"
+	DATABASE_KEY_NAME_INSERT     = "INSERT INTO"
+	DATABASE_KEY_NAME_VALUE      = "VALUE"
+	DATABASE_KEY_NAME_VALUES     = "VALUES"
+	DATABASE_KEY_NAME_FOR_UPDATE = "FOR UPDATE"
+	DATABASE_KEY_NAME_ORDER_BY   = "ORDER BY"
+	DATABASE_KEY_NAME_HAVING     = "HAVING"
 )
 
 type AdapterType int
@@ -124,15 +127,16 @@ func getAdapterType(name string) AdapterType {
 type OperType int
 
 const (
-	OperType_Query    OperType = 1 // orm: query sql
-	OperType_Update   OperType = 2 // orm: update sql
-	OperType_Insert   OperType = 3 // orm: insert sql
-	OperType_Upsert   OperType = 4 // orm: insert or update sql
-	OperType_Tx       OperType = 5 // orm: tx sql
-	OperType_QueryRaw OperType = 6 // raw: query sql into model
-	OperType_ExecRaw  OperType = 7 // raw: insert/update sql
-	OperType_QueryMap OperType = 8 // raw: query sql into map
-	OperType_Delete   OperType = 9 // orm: delete sql
+	OperType_Query     OperType = 1  // orm: query sql
+	OperType_Update    OperType = 2  // orm: update sql
+	OperType_Insert    OperType = 3  // orm: insert sql
+	OperType_Upsert    OperType = 4  // orm: insert or update sql
+	OperType_Tx        OperType = 5  // orm: tx sql
+	OperType_QueryRaw  OperType = 6  // raw: query sql into model
+	OperType_ExecRaw   OperType = 7  // raw: insert/update sql
+	OperType_QueryMap  OperType = 8  // raw: query sql into map
+	OperType_Delete    OperType = 9  // orm: delete sql
+	OperType_ForUpdate OperType = 10 // orm: select ... for update sql
 )
 
 func (o OperType) GoString() string {
@@ -635,11 +639,23 @@ func (e *Engine) getOrderBy() (strOrderBy string) {
 	if isNilOrFalse(e.orderByColumns) {
 		return
 	}
-	return fmt.Sprintf("ORDER BY %v %v", strings.Join(e.orderByColumns, ","), e.getAscOrDesc())
+	return fmt.Sprintf("%v %v %v", DATABASE_KEY_NAME_ORDER_BY, strings.Join(e.orderByColumns, ","), e.getAscOrDesc())
 }
 
 func (e *Engine) setGroupBy(strColumns ...string) {
 	e.groupByColumns = strColumns
+}
+
+func (e *Engine) setHaving(havingCondition string) {
+	e.havingCondition = havingCondition
+}
+
+func (e *Engine) getHaving() (strHaving string) {
+
+	if isNilOrFalse(e.havingCondition) {
+		return
+	}
+	return fmt.Sprintf("%v %v", DATABASE_KEY_NAME_HAVING, e.havingCondition)
 }
 
 func (e *Engine) getGroupBy() (strGroupBy string) {
@@ -936,16 +952,20 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
-		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v",
-			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
-			strWhere, e.getOrderBy(), e.getGroupBy())
-	default:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
+			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
+	default:
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
 			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
-			strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset())
+			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), e.getLimit(), e.getOffset())
 	}
 
 	return
+}
+
+func (e *Engine) makeSqlxForUpdate() (strSqlx string) {
+	return e.makeSqlxQuery() + " " + DATABASE_KEY_NAME_FOR_UPDATE
 }
 
 func (e *Engine) makeSqlxUpdate() (strSqlx string) {

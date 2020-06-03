@@ -56,6 +56,7 @@ func Benchmark() {
 	MYSQL_OrmFind(e)
 	MYSQL_OrmWhereRequire(e)
 	MYSQL_OrmToSQL(e)
+	MYSQL_OrmGroupByHaving(e)
 	MYSQL_RawQueryIntoModel(e)
 	MYSQL_RawQueryIntoModelSlice(e)
 	MYSQL_RawQueryIntoMap(e)
@@ -65,6 +66,7 @@ func Benchmark() {
 	MYSQL_TxForUpdate(e)
 	MYSQL_CustomTag(e)
 	MYSQL_BaseTypesUpdate(e)
+	MYSQL_DuplicateUpdateGetId(e)
 }
 
 func MYSQL_OrmInsertByModel(e *sqlca.Engine) {
@@ -373,6 +375,21 @@ func MYSQL_OrmToSQL(e *sqlca.Engine) {
 	log.Debugf("ToSQL delete [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Delete))
 }
 
+func MYSQL_OrmGroupByHaving(e *sqlca.Engine) {
+	var users []UserDO
+	rows, err := e.Model(&users).
+		Table(TABLE_NAME_USERS).
+		GroupBy("name").
+		Having("name=?", "li2").
+		OrderBy("created_at").Desc().
+		Query()
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		log.Infof("rows [%v] users [%+v]", rows, users)
+	}
+}
+
 func MYSQL_TxGetExec(e *sqlca.Engine) (err error) {
 	log.Enter()
 	defer log.Leave()
@@ -542,5 +559,14 @@ func MYSQL_BaseTypesUpdate(e *sqlca.Engine) {
 		log.Error(err.Error())
 	} else {
 		log.Debugf("base type update ok, affected rows [%v]", rows)
+	}
+}
+
+func MYSQL_DuplicateUpdateGetId(e *sqlca.Engine) {
+	strSQL := "INSERT INTO users(NAME, phone, sex, uniq_no) VALUE('li2','', 1, 'UNIQNO2') ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)"
+	if rowsAffected, lastInsertId, err := e.ExecRaw(strSQL); err != nil {
+		log.Errorf(err.Error())
+	} else {
+		log.Infof("rows affected [%v] last insert id [%v] ", rowsAffected, lastInsertId)
 	}
 }

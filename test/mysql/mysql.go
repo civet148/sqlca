@@ -565,7 +565,7 @@ func MYSQL_BaseTypesUpdate(e *sqlca.Engine) {
 }
 
 func MYSQL_DuplicateUpdateGetId(e *sqlca.Engine) {
-	strSQL := "INSERT INTO users(NAME, phone, sex, uniq_no) VALUE('li2','', 1, 'UNIQNO2') ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)"
+	strSQL := "INSERT INTO users(id, NAME, phone, sex) VALUE(1, 'li2','', 1) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)"
 	if rowsAffected, lastInsertId, err := e.ExecRaw(strSQL); err != nil {
 		log.Errorf(err.Error())
 	} else {

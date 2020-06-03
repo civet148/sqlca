@@ -50,6 +50,8 @@ const (
 	DATABASE_KEY_NAME_VALUES     = "VALUES"
 	DATABASE_KEY_NAME_FOR_UPDATE = "FOR UPDATE"
 	DATABASE_KEY_NAME_ORDER_BY   = "ORDER BY"
+	DATABASE_KEY_NAME_ASC        = "ASC"
+	DATABASE_KEY_NAME_DESC       = "DESC"
 	DATABASE_KEY_NAME_HAVING     = "HAVING"
 )
 
@@ -487,12 +489,31 @@ func (e *Engine) getSelectColumns() (strColumns []string) {
 	return e.selectColumns
 }
 
-func (e *Engine) setAscOrDesc(strSort string) {
-	e.strAscOrDesc = strSort
+func (e *Engine) setAscColumns(strColumns ...string) {
+	e.ascColumns = strColumns
 }
 
-func (e *Engine) getAscOrDesc() string {
-	return e.strAscOrDesc
+func (e *Engine) setDescColumns(strColumns ...string) {
+	e.descColumns = strColumns
+}
+
+// SELECT ... FROM xxx ORDER BY c1, c2 ASC, c3 DESC
+func (e *Engine) getAscAndDesc() (strAscDesc string) {
+
+	var ss []string
+	//make ASC expression
+	if len(e.ascColumns) > 0 {
+		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.ascColumns, ","), DATABASE_KEY_NAME_ASC))
+	} else {
+		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.orderByColumns, ","), DATABASE_KEY_NAME_ASC))
+	}
+
+	//make DESC expression
+	if len(e.descColumns) > 0 {
+		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.descColumns, ","), DATABASE_KEY_NAME_DESC))
+	}
+
+	return strings.Join(ss, ",")
 }
 
 // use Where function to set custom where condition
@@ -636,10 +657,10 @@ func (e *Engine) setOrderBy(strColumns ...string) {
 
 func (e *Engine) getOrderBy() (strOrderBy string) {
 
-	if isNilOrFalse(e.orderByColumns) {
+	if isNilOrFalse(e.orderByColumns) && isNilOrFalse(e.ascColumns) && isNilOrFalse(e.descColumns) {
 		return
 	}
-	return fmt.Sprintf("%v %v %v", DATABASE_KEY_NAME_ORDER_BY, strings.Join(e.orderByColumns, ","), e.getAscOrDesc())
+	return fmt.Sprintf("%v %v", DATABASE_KEY_NAME_ORDER_BY, e.getAscAndDesc())
 }
 
 func (e *Engine) setGroupBy(strColumns ...string) {

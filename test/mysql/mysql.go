@@ -379,9 +379,11 @@ func MYSQL_OrmGroupByHaving(e *sqlca.Engine) {
 	var users []UserDO
 	rows, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
-		GroupBy("name").
-		Having("name=?", "li2").
-		OrderBy("created_at").Desc().
+		GroupBy("id", "name").
+		Having("id>?", 1).
+		OrderBy().
+		Asc("name").
+		Desc("created_at").
 		Query()
 	if err != nil {
 		log.Error(err.Error())

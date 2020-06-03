@@ -273,7 +273,7 @@ func (e *Engine) queryCache() (count int64, ok bool) {
 		return
 	}
 
-	if e.getOrderBy() != "" || e.getAscOrDesc() != "" || e.getGroupBy() != "" || e.getLimit() != "" || e.getOffset() != "" {
+	if e.getOrderBy() != "" || e.getAscAndDesc() != "" || e.getGroupBy() != "" || e.getLimit() != "" || e.getOffset() != "" {
 
 		log.Warnf("query from cache can't use ORDER BY/GROUP BY/LIMIT/OFFSET key words")
 		return 0, false

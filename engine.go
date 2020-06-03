@@ -34,12 +34,13 @@ type Engine struct {
 	strWhere        string                 // where condition to query or update
 	strLimit        string                 // limit
 	strOffset       string                 // offset (only for postgres)
-	strAscOrDesc    string                 // order by ... [asc|desc]
 	strDistinct     string                 // distinct
 	selectColumns   []string               // columns to query: select
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string               // order by columns
 	groupByColumns  []string               // group by columns
+	ascColumns      []string               // order by xxx ASC
+	descColumns     []string               // order by xxx DESC
 	havingCondition string                 // having condition
 	inConditions    []condition            // in condition
 	notConditions   []condition            // not in condition
@@ -287,21 +288,31 @@ func (e *Engine) Having(strFmt string, args ...interface{}) *Engine {
 	return e
 }
 
-// order by [field1,field2...]
+// order by [field1,field2...] [ASC]
 func (e *Engine) OrderBy(strColumns ...string) *Engine {
 	e.setOrderBy(strColumns...)
 	return e
 }
 
 // order by [field1,field2...] asc
-func (e *Engine) Asc() *Engine {
-	e.setAscOrDesc(ORDER_BY_ASC)
+func (e *Engine) Asc(strColumns ...string) *Engine {
+
+	if len(strColumns) == 0 {
+		e.setAscColumns(e.orderByColumns...) // default order by columns as asc
+	} else {
+		e.setAscColumns(strColumns...) //custom order by asc columns
+	}
 	return e
 }
 
 // order by [field1,field2...] desc
-func (e *Engine) Desc() *Engine {
-	e.setAscOrDesc(ORDER_BY_DESC)
+func (e *Engine) Desc(strColumns ...string) *Engine {
+
+	if len(strColumns) == 0 {
+		e.setAscColumns(e.orderByColumns...) // default order by columns as desc
+	} else {
+		e.setDescColumns(strColumns...) //custom order by desc columns
+	}
 	return e
 }
 

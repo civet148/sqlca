@@ -49,6 +49,8 @@ const (
 	DATABASE_KEY_NAME_VALUE      = "VALUE"
 	DATABASE_KEY_NAME_VALUES     = "VALUES"
 	DATABASE_KEY_NAME_FOR_UPDATE = "FOR UPDATE"
+	DATABASE_KEY_NAME_ORDER_BY   = "ORDER BY"
+	DATABASE_KEY_NAME_HAVING     = "HAVING"
 )
 
 type AdapterType int
@@ -637,11 +639,23 @@ func (e *Engine) getOrderBy() (strOrderBy string) {
 	if isNilOrFalse(e.orderByColumns) {
 		return
 	}
-	return fmt.Sprintf("ORDER BY %v %v", strings.Join(e.orderByColumns, ","), e.getAscOrDesc())
+	return fmt.Sprintf("%v %v %v", DATABASE_KEY_NAME_ORDER_BY, strings.Join(e.orderByColumns, ","), e.getAscOrDesc())
 }
 
 func (e *Engine) setGroupBy(strColumns ...string) {
 	e.groupByColumns = strColumns
+}
+
+func (e *Engine) setHaving(havingCondition string) {
+	e.havingCondition = havingCondition
+}
+
+func (e *Engine) getHaving() (strHaving string) {
+
+	if isNilOrFalse(e.havingCondition) {
+		return
+	}
+	return fmt.Sprintf("%v %v", DATABASE_KEY_NAME_HAVING, e.havingCondition)
 }
 
 func (e *Engine) getGroupBy() (strGroupBy string) {
@@ -938,13 +952,13 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
-		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v",
-			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
-			strWhere, e.getOrderBy(), e.getGroupBy())
-	default:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
+			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
+	default:
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
 			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
-			strWhere, e.getOrderBy(), e.getGroupBy(), e.getLimit(), e.getOffset())
+			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), e.getLimit(), e.getOffset())
 	}
 
 	return

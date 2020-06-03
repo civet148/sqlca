@@ -504,15 +504,15 @@ func (e *Engine) getAscAndDesc() (strAscDesc string) {
 	//make ASC expression
 	if len(e.ascColumns) > 0 {
 		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.ascColumns, ","), DATABASE_KEY_NAME_ASC))
-	} else {
-		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.orderByColumns, ","), DATABASE_KEY_NAME_ASC))
 	}
-
 	//make DESC expression
 	if len(e.descColumns) > 0 {
 		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.descColumns, ","), DATABASE_KEY_NAME_DESC))
 	}
-
+	//make default order by expression
+	if len(ss) == 0 {
+		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.orderByColumns, ","), DATABASE_KEY_NAME_ASC))
+	}
 	return strings.Join(ss, ",")
 }
 

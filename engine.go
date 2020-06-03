@@ -309,7 +309,7 @@ func (e *Engine) Asc(strColumns ...string) *Engine {
 func (e *Engine) Desc(strColumns ...string) *Engine {
 
 	if len(strColumns) == 0 {
-		e.setAscColumns(e.orderByColumns...) // default order by columns as desc
+		e.setDescColumns(e.orderByColumns...) // default order by columns as desc
 	} else {
 		e.setDescColumns(strColumns...) //custom order by desc columns
 	}

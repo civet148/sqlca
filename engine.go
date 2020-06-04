@@ -380,7 +380,7 @@ func (e *Engine) Find(conditions map[string]interface{}) (rowsAffected int64, er
 	assert(len(conditions), "find condition is nil")
 	e.setOperType(OperType_Query)
 	for k, v := range conditions {
-		e.And("%v%v%v=%v%v%v", e.getForwardQuote(), k, e.getBackQuote(), e.getSingleQuote(), v, e.getSingleQuote())
+		e.And("%v=%v", e.getQuoteColumnName(k), e.getQuoteColumnValue(v))
 	}
 	return e.Query()
 }

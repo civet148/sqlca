@@ -971,7 +971,9 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 	for _, v := range e.notConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeNotCondition(v))
 	}
-
+	for _, v := range e.orConditions {
+		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_OR, v)
+	}
 	strWhere = DATABASE_KEY_NAME_WHERE + " " + strWhere
 	return
 }

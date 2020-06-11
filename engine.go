@@ -45,6 +45,7 @@ type Engine struct {
 	inConditions    []condition            // in condition
 	notConditions   []condition            // not in condition
 	andConditions   []string               // and condition
+	orConditions    []string               // or condition
 	cacheIndexes    []tableIndex           // index read or write cache
 	dbTags          []string               // custom db tag names
 	readOnly        []string               // read only column names
@@ -54,13 +55,32 @@ func init() {
 	log.SetLevel(log.LEVEL_INFO)
 }
 
-func NewEngine(args ...interface{}) *Engine {
+// args: a url format string for database driver eg. "mysql://root:123456@127.0.0.1/test?charset=utf8mb4"
+// more detail see Open method
+func NewEngine(strUrl ...interface{}) *Engine {
 
 	e := &Engine{
 		strPkName:  DEFAULT_PRIMARY_KEY_NAME,
 		expireTime: DEFAULT_CAHCE_EXPIRE_SECONDS,
 	}
 	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA, TAG_NAME_PROTOBUF, TAG_NAME_JSON)
+
+	var argc = len(strUrl)
+	if argc == 0 {
+		return e
+	} else if argc > 0 {
+		if argc == 1 {
+			if strOpenUrl, ok := strUrl[0].(string); ok {
+				e.Open(strOpenUrl)
+			}
+		} else {
+			if strFmt, ok := strUrl[0].(string); ok {
+				strOpenUrl := fmt.Sprintf(strFmt, strUrl[1:]...)
+				e.Open(strOpenUrl)
+			}
+		}
+	}
+
 	return e
 }
 
@@ -83,14 +103,14 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (st
 	return strDriverName, strUrl
 }
 
-// open a sqlx database or cache connection
+// open a database or cache connection pool
 // strUrl:
 //
 //  1. data source name
 //
-// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/mydb?charset=utf8mb4")
-// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/mydb?sslmode=disable")
-// 	   [sqlite]   Open("sqlite:///var/lib/my.db")
+// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
+// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable")
+// 	   [sqlite]   Open("sqlite:///var/lib/test.db")
 // 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
 //
 //  2. cache config
@@ -239,6 +259,11 @@ func (e *Engine) And(strFmt string, args ...interface{}) *Engine {
 	return e
 }
 
+func (e *Engine) Or(strFmt string, args ...interface{}) *Engine {
+	e.orConditions = append(e.orConditions, e.formatString(strFmt, args...))
+	return e
+}
+
 // set the conflict columns for upsert
 // only for postgresql
 func (e *Engine) OnConflict(strColumns ...string) *Engine {
@@ -380,7 +405,7 @@ func (e *Engine) Find(conditions map[string]interface{}) (rowsAffected int64, er
 	assert(len(conditions), "find condition is nil")
 	e.setOperType(OperType_Query)
 	for k, v := range conditions {
-		e.And("%v%v%v=%v%v%v", e.getForwardQuote(), k, e.getBackQuote(), e.getSingleQuote(), v, e.getSingleQuote())
+		e.And("%v=%v", e.getQuoteColumnName(k), e.getQuoteColumnValue(v))
 	}
 	return e.Query()
 }

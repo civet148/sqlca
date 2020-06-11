@@ -32,13 +32,12 @@ type ClassDo struct {
 
 func Benchmark() {
 
-	e := sqlca.NewEngine(true)
+	e := sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
 	e.Debug(true) //debug on
 
-	e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
+	//e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
 	//e.Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
-
-	e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4") //MySQL
+	//e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4") //MySQL
 	//e.Open("root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4") // open with raw mysql DSN
 	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable") //postgres
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
@@ -323,6 +322,7 @@ func MYSQL_OrmInCondition(e *sqlca.Engine) {
 		Where("id > 2").
 		In("id", 1, 3, 6, 7).
 		In("disable", 0, 1).
+		Or("created_at > ?", "2020-06-01 00:00:00").
 		Query(); err != nil {
 		log.Errorf("select from table by in condition error [%v]", err.Error())
 	} else {
@@ -373,6 +373,7 @@ func MYSQL_OrmToSQL(e *sqlca.Engine) {
 	log.Debugf("ToSQL upsert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Upsert))
 	log.Debugf("ToSQL query [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Query))
 	log.Debugf("ToSQL delete [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Delete))
+	log.Debugf("ToSQL for update [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_ForUpdate))
 }
 
 func MYSQL_OrmGroupByHaving(e *sqlca.Engine) {

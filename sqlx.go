@@ -526,8 +526,8 @@ func (e *Engine) getIndexWhere() (strCondition string) {
 
 		var conditions []string
 		for _, v := range e.getIndexes() {
-			cond := fmt.Sprintf("%v%v%v=%v%v%v",
-				e.getForwardQuote(), v.Name, e.getBackQuote(), e.getSingleQuote(), v.Value, e.getSingleQuote())
+			cond := fmt.Sprintf("%v=%v",
+				e.getQuoteColumnName(v.Name), e.getQuoteColumnValue(v.Value))
 			conditions = append(conditions, cond)
 		}
 		strCondition = strings.Join(conditions, " AND ")
@@ -542,9 +542,17 @@ func (e *Engine) getPkWhere() (strCondition string) {
 		log.Debugf("query condition primary key or index is nil")
 		return
 	}
-	strCondition = fmt.Sprintf("%v%v%v=%v%v%v",
-		e.getForwardQuote(), e.GetPkName(), e.getBackQuote(), e.getSingleQuote(), e.getPkValue(), e.getSingleQuote())
+	strCondition = fmt.Sprintf("%v=%v",
+		e.getQuoteColumnName(e.GetPkName()), e.getQuoteColumnValue(e.getPkValue()))
 	return
+}
+
+func (e *Engine) getQuoteColumnName(v string) (strColumn string) {
+	return fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote())
+}
+
+func (e *Engine) getQuoteColumnValue(v interface{}) (strValue string) {
+	return fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote())
 }
 
 func (e *Engine) setWhere(strWhere string) {
@@ -781,7 +789,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 				continue
 			}
 			strVal := handleSpecialChars(fmt.Sprintf("%v", val))
-			c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), v, e.getBackQuote(), e.getSingleQuote(), strVal, e.getSingleQuote()) // column name format to `date`='1583055138',...
+			c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(v), e.getQuoteColumnValue(strVal)) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
 		}
 	}
@@ -796,7 +804,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 				v := args[i]
 				val := reflect.ValueOf(v)
 				//log.Debugf("columns[%v] name [%v] value [%v]", i, k, val.Elem().Interface())
-				c := fmt.Sprintf("%v%v%v=%v%v%v", e.getForwardQuote(), k, e.getBackQuote(), e.getSingleQuote(), val.Elem().Interface(), e.getSingleQuote()) // column name format to `date`='1583055138',...
+				c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(k), e.getQuoteColumnValue(val.Elem().Interface())) // column name format to `date`='1583055138',...
 				cols = append(cols, c)
 			}
 		}
@@ -903,7 +911,7 @@ func (e *Engine) makeSqlxString() (strSql string) {
 	default:
 		log.Errorf("operation illegal")
 	}
-
+	strSql = strings.TrimSpace(strSql)
 	log.Debugf("[%v] SQL [%s]", e.operType, strSql)
 
 	return
@@ -963,7 +971,9 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 	for _, v := range e.notConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeNotCondition(v))
 	}
-
+	for _, v := range e.orConditions {
+		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_OR, v)
+	}
 	strWhere = DATABASE_KEY_NAME_WHERE + " " + strWhere
 	return
 }

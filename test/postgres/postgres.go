@@ -26,7 +26,7 @@ type ClassDo struct {
 
 func Benchmark() {
 
-	e := sqlca.NewEngine(true)
+	e := sqlca.NewEngine("postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable")
 	e.Debug(true) //debug on
 
 	/*
@@ -45,7 +45,7 @@ func Benchmark() {
 	//e.Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 
 	//e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4") //MySQL
-	e.Open("postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable") //postgres
+	//e.Open("postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable") //postgres
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 

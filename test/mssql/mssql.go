@@ -29,7 +29,7 @@ type ClassDo struct {
 
 func Benchmark() {
 
-	e := sqlca.NewEngine(true)
+	e := sqlca.NewEngine("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false")
 	e.Debug(true) //debug on
 
 	e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
@@ -38,7 +38,7 @@ func Benchmark() {
 	//e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4") //MySQL
 	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable") //postgres
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
-	e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
+	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 
 	MSSQL_OrmInsertByModel(e)
 	MSSQL_OrmUpsertByModel(e)

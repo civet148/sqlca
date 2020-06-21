@@ -258,6 +258,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		expireTime:      e.expireTime,
 		strDatabaseName: e.strDatabaseName,
 		dbTags:          e.dbTags,
+		bForce:          e.bForce,
 	}
 
 	engine.setModel(models...)
@@ -714,6 +715,10 @@ func (e *Engine) isPkInteger() bool {
 }
 
 func (e *Engine) isReadOnly(strIn string) bool {
+
+	if e.bForce {
+		return false
+	}
 	for _, v := range e.readOnly {
 		if v == strIn {
 			return true

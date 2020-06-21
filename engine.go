@@ -25,6 +25,7 @@ type Engine struct {
 	expireTime      int                    // cache expire time of seconds
 	bUseCache       bool                   // can update to cache or read from cache? (true=yes false=no)
 	bCacheFirst     bool                   // cache first or database first (true=cache first; false=db first)
+	bForce          bool                   // force update/insert read only column(s)
 	model           interface{}            // data model [struct object or struct slice]
 	dict            map[string]interface{} // data model db dictionary
 	strDatabaseName string                 // database name
@@ -635,6 +636,12 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	}
 	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
 	return
+}
+
+// force update/insert read only column(s)
+func (e *Engine) Force() *Engine {
+	e.bForce = true
+	return e
 }
 
 func (e *Engine) TxBegin() (*Engine, error) {

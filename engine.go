@@ -406,17 +406,8 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	strSql := e.makeSqlxString()
 
 	var rows *sql.Rows
-	var db *sqlx.DB
 
-	if !e.slave {
-		db = e.getMaster()
-	} else {
-		db = e.getSlave()
-		if db == nil {
-			db = e.getMaster()
-		}
-	}
-
+	db := e.getQueryDB()
 	if rows, err = db.Query(strSql); err != nil {
 		log.Errorf("query [%v] error [%v]", strSql, err.Error())
 		return
@@ -468,11 +459,6 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 			var db *sqlx.DB
 
 			db = e.getMaster()
-			if db == nil {
-				err = fmt.Errorf("no db connection")
-				log.Errorf(err.Error())
-				return 0, err
-			}
 			r, err = db.Exec(strSql)
 			if err != nil {
 				log.Errorf("error %v model %+v", err, e.model)
@@ -614,7 +600,8 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	var rows *sqlx.Rows
 	strQuery = e.formatString(strQuery, args...)
 	log.Debugf("query [%v]", strQuery)
-	db := e.getMaster()
+
+	db := e.getQueryDB()
 	if rows, err = db.Queryx(strQuery); err != nil {
 		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
 		return
@@ -636,7 +623,7 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 
 	strQuery = e.formatString(strQuery, args...)
 	log.Debugf("query [%v]", strQuery)
-	db := e.getMaster()
+	db := e.getQueryDB()
 	if rows, err = db.Queryx(strQuery); err != nil {
 		log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
 		return

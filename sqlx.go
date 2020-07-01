@@ -223,6 +223,18 @@ func (e *Engine) appendSlave(db *sqlx.DB) {
 	log.Debugf("db slaves [%v]", len(e.dbSlaves))
 }
 
+// get slave db instance if use Slave() method to query, if not exist return a master db instance
+func (e *Engine) getQueryDB() (db *sqlx.DB) {
+	if e.slave {
+		db = e.getSlave()
+		if db != nil {
+			return
+		}
+	}
+	return e.getMaster()
+}
+
+// get a master db instance
 func (e *Engine) getMaster() *sqlx.DB {
 
 	n := len(e.dbMasters)
@@ -232,12 +244,13 @@ func (e *Engine) getMaster() *sqlx.DB {
 	return nil
 }
 
+// get a slave db instance
 func (e *Engine) getSlave() *sqlx.DB {
 	n := len(e.dbSlaves)
 	if n > 0 {
 		return e.dbSlaves[rand.Intn(n)]
 	}
-	return nil
+	return e.getMaster()
 }
 
 func (e *Engine) setModel(models ...interface{}) *Engine {

@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	URL_SCHEME_SEP = "://"
+	URL_SCHEME_SEP  = "://"
+	URL_QUERY_SLAVE = "slave"
 )
 
 type UrlInfo struct {
@@ -140,16 +141,30 @@ func getHostPort(strHost string) (ip, port string) {
 	return
 }
 
+func parseSlaveFlagFromQueries(ui *UrlInfo) (ok bool) {
+	var slave string
+	if slave, ok = ui.Queries[URL_QUERY_SLAVE]; ok {
+		if slave != "true" {
+			ok = false
+		}
+		delete(ui.Queries, URL_QUERY_SLAVE)
+	}
+	return
+}
+
 //DSN="root:123456@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4"
-func (e *Engine) parseMysqlUrl(strUrl string) (strDSN string) {
+func (e *Engine) parseMysqlUrl(strUrl string) (strDSN string, slave bool) {
 
 	ui := ParseUrl(strUrl)
 	e.setDatabaseName(parseDatabaseName(ui.Path))
 	strDSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
 	var queries []string
+
+	slave = parseSlaveFlagFromQueries(ui)
 	for k, v := range ui.Queries {
 		queries = append(queries, fmt.Sprintf("%v=%v", k, v))
 	}
+
 	if len(queries) > 0 {
 		strDSN += fmt.Sprintf("?%s", strings.Join(queries, "&"))
 	}
@@ -157,7 +172,7 @@ func (e *Engine) parseMysqlUrl(strUrl string) (strDSN string) {
 }
 
 //DSN="host=127.0.0.1 port=5432 user=root password=123456 dbname=mydb sslmode=disable"
-func (e *Engine) parsePostgresUrl(strUrl string) (strDSN string) {
+func (e *Engine) parsePostgresUrl(strUrl string) (strDSN string, slave bool) {
 
 	ui := ParseUrl(strUrl)
 	e.setDatabaseName(parseDatabaseName(ui.Path))
@@ -166,6 +181,9 @@ func (e *Engine) parsePostgresUrl(strUrl string) (strDSN string) {
 
 	var ok bool
 	var strSSLMode string
+
+	slave = parseSlaveFlagFromQueries(ui)
+
 	if strSSLMode, ok = ui.Queries["sslmode"]; !ok {
 		strSSLMode = "disable"
 	}
@@ -174,7 +192,7 @@ func (e *Engine) parsePostgresUrl(strUrl string) (strDSN string) {
 }
 
 //DSN: "/var/lib/my.db"
-func (e *Engine) parseSqliteUrl(strUrl string) (strDSN string) {
+func (e *Engine) parseSqliteUrl(strUrl string) (strDSN string, slave bool) {
 
 	s := strings.Split(strUrl, URL_SCHEME_SEP)
 	assert(len(s) == 2, "invalid url [%v] of sqlite, eg. 'sqlite:///var/lib/my.db'", strUrl)
@@ -184,12 +202,13 @@ func (e *Engine) parseSqliteUrl(strUrl string) (strDSN string) {
 
 //DSN no windows authentication: "Provider=SQLOLEDB;port=1433;Data Source=127.0.0.1;Initial Catalog=mydb;user id=sa;password=123456"
 //DSN with windows authentication: "Provider=SQLOLEDB;integrated security=SSPI;port=1433;Data Source=127.0.0.1;Initial Catalog=mydb;user id=sa;password=123456"
-func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
+func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string, slave bool) {
 
 	var isWindowsAuth bool
 	var dsnArgs []string
 
 	ui := ParseUrl(strUrl)
+	slave = parseSlaveFlagFromQueries(ui)
 	if strWindowsAuth, ok := ui.Queries["windows"]; ok {
 		if strWindowsAuth == "true" {
 			isWindowsAuth = true
@@ -234,11 +253,11 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string) {
 	dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", ui.User))
 	dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", ui.Password))
 	strDSN = strings.Join(dsnArgs, ";")
-	return
+	return strDSN, false
 }
 
 //DSN: `{"password":"123456","db_index":0,"master_host":"127.0.0.1:6379","replicate_hosts":["127.0.0.1:6380","127.0.0.1:6381"]}`
-func (e *Engine) parseRedisUrl(strUrl string) (strDSN string) {
+func (e *Engine) parseRedisUrl(strUrl string) (strDSN string, slave bool) {
 
 	ui := ParseUrl(strUrl)
 	cc := &redigogo.Config{
@@ -262,9 +281,9 @@ func (e *Engine) parseRedisUrl(strUrl string) (strDSN string) {
 }
 
 //root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4
-func (e *Engine) parseMysqlDSN(adapterType AdapterType, strMySQLDSN string) (strDriverName, strDSN string) {
+func (e *Engine) parseMysqlDSN(adapterType AdapterType, strMySQLDSN string) (strDriverName, strDSN string, slave bool) {
 	e.strDatabaseName = trimBetween(strMySQLDSN, "/", "?")
-	return adapterType.DriverName(), strMySQLDSN
+	return adapterType.DriverName(), strMySQLDSN, false
 }
 
 func trimBetween(strIn, strLeftSep, strRightSep string) (strOut string) {

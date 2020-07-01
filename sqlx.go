@@ -4,8 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/civet148/gotools/log"
+	"github.com/jmoiron/sqlx"
+	"math/rand"
 	"reflect"
 	"strings"
+	"time"
 )
 
 const (
@@ -206,6 +209,50 @@ type condition struct {
 	ColumnValues []interface{}
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func (e *Engine) appendMaster(db *sqlx.DB) {
+	e.dbMasters = append(e.dbMasters, db)
+	log.Debugf("db masters [%v]", len(e.dbMasters))
+}
+
+func (e *Engine) appendSlave(db *sqlx.DB) {
+	e.dbSlaves = append(e.dbSlaves, db)
+	log.Debugf("db slaves [%v]", len(e.dbSlaves))
+}
+
+// get slave db instance if use Slave() method to query, if not exist return a master db instance
+func (e *Engine) getQueryDB() (db *sqlx.DB) {
+	if e.slave {
+		db = e.getSlave()
+		if db != nil {
+			return
+		}
+	}
+	return e.getMaster()
+}
+
+// get a master db instance
+func (e *Engine) getMaster() *sqlx.DB {
+
+	n := len(e.dbMasters)
+	if n > 0 {
+		return e.dbMasters[rand.Intn(n)]
+	}
+	return nil
+}
+
+// get a slave db instance
+func (e *Engine) getSlave() *sqlx.DB {
+	n := len(e.dbSlaves)
+	if n > 0 {
+		return e.dbSlaves[rand.Intn(n)]
+	}
+	return e.getMaster()
+}
+
 func (e *Engine) setModel(models ...interface{}) *Engine {
 
 	for _, v := range models {
@@ -250,7 +297,8 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 func (e *Engine) clone(models ...interface{}) *Engine {
 
 	engine := &Engine{
-		db:              e.db,
+		dbMasters:       e.dbMasters,
+		dbSlaves:        e.dbSlaves,
 		cache:           e.cache,
 		adapterSqlx:     e.adapterSqlx,
 		adapterCache:    e.adapterCache,
@@ -258,6 +306,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		expireTime:      e.expireTime,
 		strDatabaseName: e.strDatabaseName,
 		dbTags:          e.dbTags,
+		bForce:          e.bForce,
 	}
 
 	engine.setModel(models...)
@@ -267,7 +316,8 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 func (e *Engine) newTx() (txEngine *Engine, err error) {
 
 	txEngine = e.clone()
-	if txEngine.tx, err = e.db.Begin(); err != nil {
+	db := e.getMaster()
+	if txEngine.tx, err = db.Begin(); err != nil {
 		log.Errorf("newTx error [%+v]", err.Error())
 		return nil, err
 	}
@@ -279,8 +329,8 @@ func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err err
 	var rows *sql.Rows
 	strSQL += fmt.Sprintf(" RETURNING \"%v\"", e.GetPkName())
 	log.Debugf("[%v]", strSQL)
-
-	if rows, err = e.db.Query(strSQL); err != nil {
+	db := e.getMaster()
+	if rows, err = db.Query(strSQL); err != nil {
 		log.Errorf("tx.Query error [%v]", err.Error())
 		return
 	}
@@ -297,8 +347,8 @@ func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err err
 func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err error) {
 	var rows *sql.Rows
 	log.Debugf("[%v]", strSQL)
-
-	if rows, err = e.db.Query(strSQL); err != nil {
+	db := e.getMaster()
+	if rows, err = db.Query(strSQL); err != nil {
 		log.Errorf("tx.Query error [%v]", err.Error())
 		return
 	}
@@ -316,8 +366,8 @@ func (e *Engine) mssqlQueryInsert(strSQL string) (lastInsertId int64, err error)
 	var rows *sql.Rows
 	strSQL += " SELECT SCOPE_IDENTITY() AS last_insert_id"
 	log.Debugf("[%v]", strSQL)
-
-	if rows, err = e.db.Query(strSQL); err != nil {
+	db := e.getMaster()
+	if rows, err = db.Query(strSQL); err != nil {
 		log.Errorf("tx.Query error [%v]", err.Error())
 		return
 	}
@@ -714,6 +764,10 @@ func (e *Engine) isPkInteger() bool {
 }
 
 func (e *Engine) isReadOnly(strIn string) bool {
+
+	if e.bForce {
+		return false
+	}
 	for _, v := range e.readOnly {
 		if v == strIn {
 			return true

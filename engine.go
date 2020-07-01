@@ -14,7 +14,9 @@ import (
 )
 
 type Engine struct {
-	db              *sqlx.DB               // sqlx instance
+	slave           bool                   // use slave to query ?
+	dbMasters       []*sqlx.DB             // DB instance masters
+	dbSlaves        []*sqlx.DB             // DB instance slaves
 	tx              *sql.Tx                // sql tx instance
 	cache           redigogo.Cache         // redis cache instance
 	isCacheBefore   bool                   // is cache update before db or not (default false)
@@ -86,22 +88,27 @@ func NewEngine(strUrl ...interface{}) *Engine {
 }
 
 // get data base driver name and data source name
-func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (strDriverName, strDSN string) {
+func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (strDriverName, strDSN string, slave bool) {
 
 	strDriverName = adapterType.DriverName()
 	switch adapterType {
 	case AdapterSqlx_MySQL:
-		return strDriverName, e.parseMysqlUrl(strUrl)
+		strDSN, slave = e.parseMysqlUrl(strUrl)
+		return
 	case AdapterSqlx_Postgres:
-		return strDriverName, e.parsePostgresUrl(strUrl)
+		strDSN, slave = e.parsePostgresUrl(strUrl)
+		return
 	case AdapterSqlx_Sqlite:
-		return strDriverName, e.parseSqliteUrl(strUrl)
+		strDSN, slave = e.parseSqliteUrl(strUrl)
+		return
 	case AdapterSqlx_Mssql:
-		return strDriverName, e.parseMssqlUrl(strUrl)
+		strDSN, slave = e.parseMssqlUrl(strUrl)
+		return
 	case AdapterCache_Redis:
-		return strDriverName, e.parseRedisUrl(strUrl)
+		strDSN, slave = e.parseRedisUrl(strUrl)
+		return
 	}
-	return strDriverName, strUrl
+	return
 }
 
 // open a database or cache connection pool
@@ -109,8 +116,8 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (st
 //
 //  1. data source name
 //
-// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
-// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable")
+// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false")
+// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false")
 // 	   [sqlite]   Open("sqlite:///var/lib/test.db")
 // 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
 //
@@ -121,29 +128,37 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (st
 // expireSeconds cache data expire seconds, just for redis
 func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 
+	var slave bool
 	var err error
 	var adapterType AdapterType
 	var strDriverName, strDSN string
 	us := strings.Split(strUrl, URL_SCHEME_SEP)
 	if len(us) != 2 { //default mysql
 		adapterType = AdapterSqlx_MySQL
-		strDriverName, strDSN = e.parseMysqlDSN(adapterType, strUrl)
+		strDriverName, strDSN, slave = e.parseMysqlDSN(adapterType, strUrl)
 	} else {
 		adapterType = getAdapterType(us[0])
-		strDriverName, strDSN = e.getDriverNameAndDSN(adapterType, strUrl)
+		strDriverName, strDSN, slave = e.getDriverNameAndDSN(adapterType, strUrl)
 	}
 
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-		if e.db, err = sqlx.Open(strDriverName, strDSN); err != nil {
+
+		var db *sqlx.DB
+		if db, err = sqlx.Open(strDriverName, strDSN); err != nil {
 			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
 			return nil
 		}
-		if err = e.db.Ping(); err != nil {
+		if err = db.Ping(); err != nil {
 			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
 			return nil
 		}
 		e.adapterSqlx = adapterType
+		if slave {
+			e.appendSlave(db)
+		} else {
+			e.appendMaster(db)
+		}
 	case AdapterCache_Redis:
 		var err error
 		if e.cache, err = newCache(strDriverName, strDSN); err != nil {
@@ -165,14 +180,9 @@ func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 
 // attach from a exist sqlx db instance
 func (e *Engine) Attach(strDatabaseName string, db *sqlx.DB) *Engine {
-	e.db = db
+	e.appendMaster(db)
 	e.setDatabaseName(strDatabaseName)
 	return e
-}
-
-// get sqlx db instance
-func (e *Engine) DB() *sqlx.DB {
-	return e.db
 }
 
 // set log file
@@ -205,8 +215,6 @@ func (e *Engine) Debug(ok bool) {
 // notice: will clone a new engine object for orm operations(query/update/insert/upsert)
 func (e *Engine) Model(args ...interface{}) *Engine {
 	assert(args, "model is nil")
-	assert(e.db, "sqlx instance is nil, please call Open method first")
-
 	return e.clone(args...)
 }
 
@@ -370,9 +378,16 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 	return e
 }
 
+// group by [field1,field2...]
+func (e *Engine) Slave() *Engine {
+	e.slave = true
+	return e
+}
+
 // orm query
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
+// if slave == true, try query from a slave connection, if not exist query from master
 func (e *Engine) Query() (rowsAffected int64, err error) {
 	assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
@@ -391,7 +406,18 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	strSql := e.makeSqlxString()
 
 	var rows *sql.Rows
-	if rows, err = e.db.Query(strSql); err != nil {
+	var db *sqlx.DB
+
+	if !e.slave {
+		db = e.getMaster()
+	} else {
+		db = e.getSlave()
+		if db == nil {
+			db = e.getMaster()
+		}
+	}
+
+	if rows, err = db.Query(strSql); err != nil {
 		log.Errorf("query [%v] error [%v]", strSql, err.Error())
 		return
 	}
@@ -439,7 +465,15 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	default:
 		{
 			var r sql.Result
-			r, err = e.db.Exec(strSql)
+			var db *sqlx.DB
+
+			db = e.getMaster()
+			if db == nil {
+				err = fmt.Errorf("no db connection")
+				log.Errorf(err.Error())
+				return 0, err
+			}
+			r, err = db.Exec(strSql)
 			if err != nil {
 				log.Errorf("error %v model %+v", err, e.model)
 				return
@@ -469,6 +503,8 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	var strSql string
 	strSql = e.makeSqlxString()
 
+	db := e.getMaster()
+
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
 		{
@@ -481,7 +517,7 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	default:
 		{
 			var r sql.Result
-			r, err = e.db.Exec(strSql)
+			r, err = db.Exec(strSql)
 			if err != nil {
 				log.Errorf("error %v model %+v", err, e.model)
 				return
@@ -519,7 +555,9 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	strSql = e.makeSqlxString()
 
 	var r sql.Result
-	r, err = e.db.Exec(strSql)
+
+	db := e.getMaster()
+	r, err = db.Exec(strSql)
 	if err != nil {
 		log.Errorf("error %v model %+v", err, e.model)
 		return
@@ -544,7 +582,8 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	defer e.cleanWhereCondition()
 
 	var r sql.Result
-	r, err = e.db.Exec(strSql)
+	db := e.getMaster()
+	r, err = db.Exec(strSql)
 	if err != nil {
 		log.Errorf("error %v model %+v", err, e.model)
 		return
@@ -566,7 +605,7 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
-	assert(e.db, "sqlx db instance is nil")
+
 	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model method first")
 
@@ -575,8 +614,8 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	var rows *sqlx.Rows
 	strQuery = e.formatString(strQuery, args...)
 	log.Debugf("query [%v]", strQuery)
-
-	if rows, err = e.db.Queryx(strQuery); err != nil {
+	db := e.getMaster()
+	if rows, err = db.Queryx(strQuery); err != nil {
 		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
 		return
 	}
@@ -597,8 +636,8 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 
 	strQuery = e.formatString(strQuery, args...)
 	log.Debugf("query [%v]", strQuery)
-
-	if rows, err = e.db.Queryx(strQuery); err != nil {
+	db := e.getMaster()
+	if rows, err = db.Queryx(strQuery); err != nil {
 		log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
 		return
 	}
@@ -615,7 +654,7 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows affected and error, if err is not nil must be something wrong
 func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
-	assert(e.db, "sqlx db instance is nil")
+
 	assert(strQuery, "query sql string is nil")
 
 	e.setOperType(OperType_ExecRaw)
@@ -623,8 +662,8 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	var r sql.Result
 	strQuery = e.formatString(strQuery, args...)
 	log.Debugf("query [%v]", strQuery)
-
-	if r, err = e.db.Exec(strQuery); err != nil {
+	db := e.getMaster()
+	if r, err = db.Exec(strQuery); err != nil {
 		log.Errorf("error [%v] model [%+v]", err, e.model)
 		return
 	}
@@ -740,7 +779,21 @@ func (e *Engine) getCacheBefore() bool {
 
 // ping database
 func (e *Engine) Ping() (err error) {
-	return e.db.Ping()
+
+	for _, m := range e.dbMasters {
+		if err = m.Ping(); err != nil {
+			log.Errorf("ping master database error [%v]", err.Error())
+			return
+		}
+	}
+
+	for _, s := range e.dbSlaves {
+		if err = s.Ping(); err != nil {
+			log.Errorf("ping slave database error [%v]", err.Error())
+			return
+		}
+	}
+	return
 }
 
 // set read only columns

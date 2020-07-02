@@ -12,8 +12,6 @@ message ClassesDO {
 	int32 id = 1; //incr id
 	string class_no = 2; //class no
 	int32 user_id = 3; //student id
-	string created_at = 4; //create time
-	string updated_at = 5; //update time
 }
 
 message UsersDO {
@@ -24,7 +22,5 @@ message UsersDO {
 	string email = 5; //email
 	int32 disable = 6; //disabled(0=false 1=true)
 	double balance = 7; //balance of decimal
-	string created_at = 8; //create time
-	string updated_at = 9; //update time
 }
 

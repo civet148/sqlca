@@ -13,6 +13,7 @@ import (
 const (
 	URL_SCHEME_SEP  = "://"
 	URL_QUERY_SLAVE = "slave"
+	URL_QUERY_MAX   = "max"
 )
 
 type UrlInfo struct {
@@ -141,13 +142,28 @@ func getHostPort(strHost string) (ip, port string) {
 	return
 }
 
-func parseExtraQueries(ui *UrlInfo) (ok bool) {
-	var slave string
-	if slave, ok = ui.Queries[URL_QUERY_SLAVE]; ok {
-		if slave != "true" {
+func parseSlaveQueries(ui *UrlInfo) (ok bool) {
+	var val string
+	if val, ok = ui.Queries[URL_QUERY_SLAVE]; ok {
+		if val != "true" {
 			ok = false
 		}
 		delete(ui.Queries, URL_QUERY_SLAVE)
+	}
+	return
+}
+
+func parseMaxQueries(ui *UrlInfo) (max int) {
+
+	var ok bool
+	var val string
+	if val, ok = ui.Queries[URL_QUERY_MAX]; ok {
+		if val != "" {
+			max, _ = strconv.Atoi(val)
+		} else {
+			max = 100
+		}
+		delete(ui.Queries, URL_QUERY_MAX)
 	}
 	return
 }
@@ -160,7 +176,8 @@ func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 	parameter.strDSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
 	var queries []string
 
-	parameter.slave = parseExtraQueries(ui)
+	parameter.slave = parseSlaveQueries(ui)
+	parameter.maxConnections = parseMaxQueries(ui)
 	for k, v := range ui.Queries {
 		queries = append(queries, fmt.Sprintf("%v=%v", k, v))
 	}
@@ -182,8 +199,8 @@ func (e *Engine) parsePostgresUrl(strUrl string) (parameter dsnParameter) {
 	var ok bool
 	var strSSLMode string
 
-	parameter.slave = parseExtraQueries(ui)
-
+	parameter.slave = parseSlaveQueries(ui)
+	parameter.maxConnections = parseMaxQueries(ui)
 	if strSSLMode, ok = ui.Queries["sslmode"]; !ok {
 		strSSLMode = "disable"
 	}

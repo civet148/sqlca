@@ -28,6 +28,37 @@ type UrlInfo struct {
 	Queries    map[string]string
 }
 
+type dsnDriver struct {
+	strDriverName string
+	parameter     dsnParameter
+}
+
+type dsnParameter struct {
+	strDSN         string
+	slave          bool
+	maxConnections int
+}
+
+func (d *dsnParameter) parseQueries(ui *UrlInfo) {
+	var ok bool
+	var val string
+	if val, ok = ui.Queries[URL_QUERY_SLAVE]; ok {
+		if val == "true" {
+			d.slave = true
+		}
+		delete(ui.Queries, URL_QUERY_SLAVE)
+	}
+
+	if val, ok = ui.Queries[URL_QUERY_MAX]; ok {
+		if val != "" {
+			d.maxConnections, _ = strconv.Atoi(val)
+		} else {
+			d.maxConnections = 100
+		}
+		delete(ui.Queries, URL_QUERY_MAX)
+	}
+}
+
 //URL have some special characters in password(支持URL中密码包含特殊字符)
 func ParseUrl(strUrl string) (ui *UrlInfo) {
 
@@ -142,32 +173,6 @@ func getHostPort(strHost string) (ip, port string) {
 	return
 }
 
-func parseSlaveQueries(ui *UrlInfo) (ok bool) {
-	var val string
-	if val, ok = ui.Queries[URL_QUERY_SLAVE]; ok {
-		if val != "true" {
-			ok = false
-		}
-		delete(ui.Queries, URL_QUERY_SLAVE)
-	}
-	return
-}
-
-func parseMaxQueries(ui *UrlInfo) (max int) {
-
-	var ok bool
-	var val string
-	if val, ok = ui.Queries[URL_QUERY_MAX]; ok {
-		if val != "" {
-			max, _ = strconv.Atoi(val)
-		} else {
-			max = 100
-		}
-		delete(ui.Queries, URL_QUERY_MAX)
-	}
-	return
-}
-
 //DSN="root:123456@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4"
 func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 
@@ -176,8 +181,7 @@ func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 	parameter.strDSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
 	var queries []string
 
-	parameter.slave = parseSlaveQueries(ui)
-	parameter.maxConnections = parseMaxQueries(ui)
+	parameter.parseQueries(ui)
 	for k, v := range ui.Queries {
 		queries = append(queries, fmt.Sprintf("%v=%v", k, v))
 	}
@@ -199,8 +203,7 @@ func (e *Engine) parsePostgresUrl(strUrl string) (parameter dsnParameter) {
 	var ok bool
 	var strSSLMode string
 
-	parameter.slave = parseSlaveQueries(ui)
-	parameter.maxConnections = parseMaxQueries(ui)
+	parameter.parseQueries(ui)
 	if strSSLMode, ok = ui.Queries["sslmode"]; !ok {
 		strSSLMode = "disable"
 	}

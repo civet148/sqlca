@@ -14,7 +14,7 @@ import (
 )
 
 type Engine struct {
-	dsn             dsnDriver              //driver name and parameters
+	dsn             dsnDriver              // driver name and parameters
 	slave           bool                   // use slave to query ?
 	dbMasters       []*sqlx.DB             // DB instance masters
 	dbSlaves        []*sqlx.DB             // DB instance slaves
@@ -53,17 +53,6 @@ type Engine struct {
 	cacheIndexes    []tableIndex           // index read or write cache
 	dbTags          []string               // custom db tag names
 	readOnly        []string               // read only column names
-}
-
-type dsnDriver struct {
-	strDriverName string
-	parameter     dsnParameter
-}
-
-type dsnParameter struct {
-	strDSN         string
-	slave          bool
-	maxConnections int
 }
 
 func init() {

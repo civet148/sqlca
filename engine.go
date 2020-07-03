@@ -14,6 +14,7 @@ import (
 )
 
 type Engine struct {
+	dsn             dsnDriver              //driver name and parameters
 	slave           bool                   // use slave to query ?
 	dbMasters       []*sqlx.DB             // DB instance masters
 	dbSlaves        []*sqlx.DB             // DB instance slaves
@@ -54,6 +55,17 @@ type Engine struct {
 	readOnly        []string               // read only column names
 }
 
+type dsnDriver struct {
+	strDriverName string
+	parameter     dsnParameter
+}
+
+type dsnParameter struct {
+	strDSN         string
+	slave          bool
+	maxConnections int
+}
+
 func init() {
 	log.SetLevel(log.LEVEL_INFO)
 }
@@ -88,24 +100,24 @@ func NewEngine(strUrl ...interface{}) *Engine {
 }
 
 // get data base driver name and data source name
-func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (strDriverName, strDSN string, slave bool) {
+func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (driver dsnDriver) {
 
-	strDriverName = adapterType.DriverName()
+	driver.strDriverName = adapterType.DriverName()
 	switch adapterType {
 	case AdapterSqlx_MySQL:
-		strDSN, slave = e.parseMysqlUrl(strUrl)
+		driver.parameter = e.parseMysqlUrl(strUrl)
 		return
 	case AdapterSqlx_Postgres:
-		strDSN, slave = e.parsePostgresUrl(strUrl)
+		driver.parameter = e.parsePostgresUrl(strUrl)
 		return
 	case AdapterSqlx_Sqlite:
-		strDSN, slave = e.parseSqliteUrl(strUrl)
+		driver.parameter = e.parseSqliteUrl(strUrl)
 		return
 	case AdapterSqlx_Mssql:
-		strDSN, slave = e.parseMssqlUrl(strUrl)
+		driver.parameter = e.parseMssqlUrl(strUrl)
 		return
 	case AdapterCache_Redis:
-		strDSN, slave = e.parseRedisUrl(strUrl)
+		driver.parameter = e.parseRedisUrl(strUrl)
 		return
 	}
 	return
@@ -116,10 +128,10 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (st
 //
 //  1. data source name
 //
-// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false")
-// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false")
+// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false&max=100")
+// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false&max=100")
+// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false&max=100")
 // 	   [sqlite]   Open("sqlite:///var/lib/test.db")
-// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
 //
 //  2. cache config
 //     [redis-alone]    Open("redis://123456@127.0.0.1:6379/cluster?db=0")
@@ -128,41 +140,42 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (st
 // expireSeconds cache data expire seconds, just for redis
 func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 
-	var slave bool
 	var err error
 	var adapterType AdapterType
-	var strDriverName, strDSN string
+
+	//var strDriverName, strDSN string
 	us := strings.Split(strUrl, URL_SCHEME_SEP)
 	if len(us) != 2 { //default mysql
 		adapterType = AdapterSqlx_MySQL
-		strDriverName, strDSN, slave = e.parseMysqlDSN(adapterType, strUrl)
+		e.dsn = e.parseMysqlDSN(adapterType, strUrl)
 	} else {
 		adapterType = getAdapterType(us[0])
-		strDriverName, strDSN, slave = e.getDriverNameAndDSN(adapterType, strUrl)
+		e.dsn = e.getDriverNameAndDSN(adapterType, strUrl)
 	}
 
+	var dsn = e.dsn
 	switch adapterType {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
 
 		var db *sqlx.DB
-		if db, err = sqlx.Open(strDriverName, strDSN); err != nil {
-			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
+		if db, err = sqlx.Open(dsn.strDriverName, dsn.parameter.strDSN); err != nil {
+			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, dsn.parameter.strDSN, err.Error())
 			return nil
 		}
 		if err = db.Ping(); err != nil {
-			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, strDriverName, strDSN, err.Error())
+			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, dsn.parameter.strDSN, err.Error())
 			return nil
 		}
 		e.adapterSqlx = adapterType
-		if slave {
+		if dsn.parameter.slave {
 			e.appendSlave(db)
 		} else {
 			e.appendMaster(db)
 		}
 	case AdapterCache_Redis:
 		var err error
-		if e.cache, err = newCache(strDriverName, strDSN); err != nil {
-			log.Errorf("new cache by driver name [%v] DSN [%v] error [%v]", strDriverName, strDSN, err.Error())
+		if e.cache, err = newCache(dsn.strDriverName, dsn.parameter.strDSN); err != nil {
+			log.Errorf("new cache by driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, dsn.parameter.strDSN, err.Error())
 		}
 		e.adapterCache = adapterType
 		if len(expireSeconds) > 0 {

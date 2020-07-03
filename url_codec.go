@@ -141,7 +141,7 @@ func getHostPort(strHost string) (ip, port string) {
 	return
 }
 
-func parseSlaveFlagFromQueries(ui *UrlInfo) (ok bool) {
+func parseExtraQueries(ui *UrlInfo) (ok bool) {
 	var slave string
 	if slave, ok = ui.Queries[URL_QUERY_SLAVE]; ok {
 		if slave != "true" {
@@ -153,26 +153,26 @@ func parseSlaveFlagFromQueries(ui *UrlInfo) (ok bool) {
 }
 
 //DSN="root:123456@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4"
-func (e *Engine) parseMysqlUrl(strUrl string) (strDSN string, slave bool) {
+func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 
 	ui := ParseUrl(strUrl)
 	e.setDatabaseName(parseDatabaseName(ui.Path))
-	strDSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
+	parameter.strDSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
 	var queries []string
 
-	slave = parseSlaveFlagFromQueries(ui)
+	parameter.slave = parseExtraQueries(ui)
 	for k, v := range ui.Queries {
 		queries = append(queries, fmt.Sprintf("%v=%v", k, v))
 	}
 
 	if len(queries) > 0 {
-		strDSN += fmt.Sprintf("?%s", strings.Join(queries, "&"))
+		parameter.strDSN += fmt.Sprintf("?%s", strings.Join(queries, "&"))
 	}
 	return
 }
 
 //DSN="host=127.0.0.1 port=5432 user=root password=123456 dbname=mydb sslmode=disable"
-func (e *Engine) parsePostgresUrl(strUrl string) (strDSN string, slave bool) {
+func (e *Engine) parsePostgresUrl(strUrl string) (parameter dsnParameter) {
 
 	ui := ParseUrl(strUrl)
 	e.setDatabaseName(parseDatabaseName(ui.Path))
@@ -182,33 +182,32 @@ func (e *Engine) parsePostgresUrl(strUrl string) (strDSN string, slave bool) {
 	var ok bool
 	var strSSLMode string
 
-	slave = parseSlaveFlagFromQueries(ui)
+	parameter.slave = parseExtraQueries(ui)
 
 	if strSSLMode, ok = ui.Queries["sslmode"]; !ok {
 		strSSLMode = "disable"
 	}
-	strDSN = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", strIP, strPort, ui.User, ui.Password, strDatabase, strSSLMode)
+	parameter.strDSN = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", strIP, strPort, ui.User, ui.Password, strDatabase, strSSLMode)
 	return
 }
 
 //DSN: "/var/lib/my.db"
-func (e *Engine) parseSqliteUrl(strUrl string) (strDSN string, slave bool) {
+func (e *Engine) parseSqliteUrl(strUrl string) (parameter dsnParameter) {
 
 	s := strings.Split(strUrl, URL_SCHEME_SEP)
 	assert(len(s) == 2, "invalid url [%v] of sqlite, eg. 'sqlite:///var/lib/my.db'", strUrl)
-	strDSN = s[1]
+	parameter.strDSN = s[1]
 	return
 }
 
 //DSN no windows authentication: "Provider=SQLOLEDB;port=1433;Data Source=127.0.0.1;Initial Catalog=mydb;user id=sa;password=123456"
 //DSN with windows authentication: "Provider=SQLOLEDB;integrated security=SSPI;port=1433;Data Source=127.0.0.1;Initial Catalog=mydb;user id=sa;password=123456"
-func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string, slave bool) {
+func (e *Engine) parseMssqlUrl(strUrl string) (parameter dsnParameter) {
 
 	var isWindowsAuth bool
 	var dsnArgs []string
 
 	ui := ParseUrl(strUrl)
-	slave = parseSlaveFlagFromQueries(ui)
 	if strWindowsAuth, ok := ui.Queries["windows"]; ok {
 		if strWindowsAuth == "true" {
 			isWindowsAuth = true
@@ -252,12 +251,12 @@ func (e *Engine) parseMssqlUrl(strUrl string) (strDSN string, slave bool) {
 	dsnArgs = append(dsnArgs, fmt.Sprintf("database=%s", e.getDatabaseName())) //database name
 	dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", ui.User))
 	dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", ui.Password))
-	strDSN = strings.Join(dsnArgs, ";")
-	return strDSN, false
+	parameter.strDSN = strings.Join(dsnArgs, ";")
+	return
 }
 
 //DSN: `{"password":"123456","db_index":0,"master_host":"127.0.0.1:6379","replicate_hosts":["127.0.0.1:6380","127.0.0.1:6381"]}`
-func (e *Engine) parseRedisUrl(strUrl string) (strDSN string, slave bool) {
+func (e *Engine) parseRedisUrl(strUrl string) (parameter dsnParameter) {
 
 	ui := ParseUrl(strUrl)
 	cc := &redigogo.Config{
@@ -275,15 +274,17 @@ func (e *Engine) parseRedisUrl(strUrl string) (strDSN string, slave bool) {
 	if jsonData, err := json.Marshal(cc); err != nil {
 		log.Errorf("url [%v] illegal", strUrl)
 	} else {
-		strDSN = string(jsonData)
+		parameter.strDSN = string(jsonData)
 	}
 	return
 }
 
 //root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4
-func (e *Engine) parseMysqlDSN(adapterType AdapterType, strMySQLDSN string) (strDriverName, strDSN string, slave bool) {
+func (e *Engine) parseMysqlDSN(adapterType AdapterType, strMySQLDSN string) (dsn dsnDriver) {
 	e.strDatabaseName = trimBetween(strMySQLDSN, "/", "?")
-	return adapterType.DriverName(), strMySQLDSN, false
+	dsn.strDriverName = adapterType.DriverName()
+	dsn.parameter.strDSN = strMySQLDSN
+	return
 }
 
 func trimBetween(strIn, strLeftSep, strRightSep string) (strOut string) {

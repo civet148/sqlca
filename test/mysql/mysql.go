@@ -69,6 +69,7 @@ func Benchmark() {
 	MYSQL_CustomTag(e)
 	MYSQL_BaseTypesUpdate(e)
 	MYSQL_DuplicateUpdateGetId(e)
+	MYSQL_Count(e)
 }
 
 func MYSQL_OrmInsertByModel(e *sqlca.Engine) {
@@ -574,5 +575,19 @@ func MYSQL_DuplicateUpdateGetId(e *sqlca.Engine) {
 		log.Errorf(err.Error())
 	} else {
 		log.Infof("rows affected [%v] last insert id [%v] ", rowsAffected, lastInsertId)
+	}
+}
+
+func MYSQL_Count(e *sqlca.Engine) {
+
+	if count, err := e.Model(nil).
+		Table(TABLE_NAME_USERS).
+		Where("created_at > ?", "2020-06-01 02:03:04").
+		And("disable=0").
+		Count(); err != nil {
+
+		log.Errorf("error [%v]", err.Error())
+	} else {
+		log.Infof("count = %v", count)
 	}
 }

@@ -216,7 +216,7 @@ func (e *Engine) Debug(ok bool) {
 // use to get result set, support single struct object or slice [pointer type]
 // notice: will clone a new engine object for orm operations(query/update/insert/upsert)
 func (e *Engine) Model(args ...interface{}) *Engine {
-	assert(args, "model is nil")
+	//assert(args, "model is nil")
 	return e.clone(args...)
 }
 
@@ -384,6 +384,15 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 func (e *Engine) Slave() *Engine {
 	e.slave = true
 	return e
+}
+
+// orm count records
+// SELECT COUNT(*) FROM table WHERE ...
+func (e *Engine) Count() (count int64, err error) {
+	e.setModel(&count)
+	e.setSelectColumns("COUNT(*)")
+	_, err = e.Query()
+	return
 }
 
 // orm query

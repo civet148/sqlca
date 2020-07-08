@@ -257,6 +257,9 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 
 	for _, v := range models {
 
+		if v == nil {
+			continue
+		}
 		typ := reflect.TypeOf(v)
 		if typ.Kind() == reflect.Ptr {
 			typ = typ.Elem()

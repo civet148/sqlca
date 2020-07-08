@@ -257,6 +257,9 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 
 	for _, v := range models {
 
+		if v == nil {
+			continue
+		}
 		typ := reflect.TypeOf(v)
 		if typ.Kind() == reflect.Ptr {
 			typ = typ.Elem()
@@ -297,6 +300,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 func (e *Engine) clone(models ...interface{}) *Engine {
 
 	engine := &Engine{
+		dsn:             e.dsn,
 		dbMasters:       e.dbMasters,
 		dbSlaves:        e.dbSlaves,
 		cache:           e.cache,

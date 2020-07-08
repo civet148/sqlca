@@ -69,6 +69,10 @@ func makeProtoBody(cmd *schema.Commander, table *schema.TableSchema) (strContent
 	strTableName := schema.CamelCaseConvert(table.TableName)
 	strContent += fmt.Sprintf("message %vDO {\n", strTableName)
 	for i, v := range table.Columns {
+
+		if schema.IsInSlice(v.Name, cmd.Without) {
+			continue
+		}
 		no := i + 1
 		strColName := v.Name
 		strColType := getProtoColumnType(table.TableName, v.Name, v.DataType, v.Key, v.Extra, true)

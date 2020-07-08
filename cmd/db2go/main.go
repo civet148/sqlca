@@ -50,25 +50,6 @@ func main() {
 		return
 	}
 
-	if *argvProtobuf {
-		if *argvGogoOptions != "" {
-			cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ","))
-			if len(cmd.GogoOptions) == 0 {
-				cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ";"))
-			}
-		}
-	}
-
-	if *argvOneFile {
-		cmd.OneFile = true
-	}
-
-	if *argvTags != "" {
-		cmd.Tags = schema.TrimSpaceSlice(strings.Split(*argvTags, ","))
-	}
-	if *argvReadOnly != "" {
-		cmd.ReadOnly = schema.TrimSpaceSlice(strings.Split(*argvReadOnly, ","))
-	}
 	cmd.Prefix = *argvPackage
 	cmd.Prefix = *argvPrefix
 	cmd.Suffix = *argvSuffix
@@ -93,7 +74,27 @@ func main() {
 	}
 
 	if *argvWithout != "" {
-		cmd.Without = strings.Split(*argvWithout, ",")
+		cmd.Without = schema.TrimSpaceSlice(strings.Split(*argvWithout, ","))
+	}
+
+	if *argvProtobuf {
+		if *argvGogoOptions != "" {
+			cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ","))
+			if len(cmd.GogoOptions) == 0 {
+				cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ";"))
+			}
+		}
+	}
+
+	if *argvOneFile {
+		cmd.OneFile = true
+	}
+
+	if *argvTags != "" {
+		cmd.Tags = schema.TrimSpaceSlice(strings.Split(*argvTags, ","))
+	}
+	if *argvReadOnly != "" {
+		cmd.ReadOnly = schema.TrimSpaceSlice(strings.Split(*argvReadOnly, ","))
 	}
 
 	cmd.Scheme = ui.Scheme

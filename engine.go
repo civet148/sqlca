@@ -388,6 +388,7 @@ func (e *Engine) Slave() *Engine {
 
 // orm count records
 // SELECT COUNT(*) FROM table WHERE ...
+// count, err := e.Model(nil).Table("users").Where("delete=1").Count()
 func (e *Engine) Count() (count int64, err error) {
 	e.setModel(&count)
 	e.setSelectColumns("COUNT(*)")

@@ -30,6 +30,7 @@ type Engine struct {
 	bUseCache       bool                   // can update to cache or read from cache? (true=yes false=no)
 	bCacheFirst     bool                   // cache first or database first (true=cache first; false=db first)
 	bForce          bool                   // force update/insert read only column(s)
+	bAutoRollback   bool                   // auto rollback when tx error occurred
 	model           interface{}            // data model [struct object or struct slice]
 	dict            map[string]interface{} // data model db dictionary
 	strDatabaseName string                 // database name
@@ -686,6 +687,11 @@ func (e *Engine) Force() *Engine {
 	return e
 }
 
+func (e *Engine) AutoRollback() *Engine {
+	e.bAutoRollback = true
+	return e
+}
+
 func (e *Engine) TxBegin() (*Engine, error) {
 	return e.newTx()
 }
@@ -699,13 +705,15 @@ func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (
 
 	rows, err = e.tx.Query(strQuery)
 	if err != nil {
-		log.Errorf("TxGet sql [%v] args %v query error [%v]", strQuery, args, err.Error())
+		log.Errorf("TxGet sql [%v] args %v query error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		e.autoRollback()
 		return
 	}
 	e.setModel(dest)
 	defer rows.Close()
 	if count, err = e.fetchRows(rows); err != nil {
-		log.Errorf("TxGet sql [%v] args %v fetch row error [%v]", strQuery, args, err.Error())
+		log.Errorf("TxGet sql [%v] args %v fetch row error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		e.autoRollback()
 		return
 	}
 	return
@@ -721,7 +729,8 @@ func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, row
 	result, err = e.tx.Exec(strQuery)
 
 	if err != nil {
-		log.Errorf("TxExec exec query [%v] args %+v error [%+v]", strQuery, args, err.Error())
+		log.Errorf("TxExec exec query [%v] args %+v error [%+v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		e.autoRollback()
 		return
 	}
 	lastInsertId, _ = result.LastInsertId()

@@ -36,7 +36,7 @@ func Benchmark() {
 	e := sqlca.NewEngine()
 	e.Debug(true) //debug on
 
-	//e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
+	e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
 	//e.Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 
 	e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")            //MySQL master
@@ -411,6 +411,7 @@ func MYSQL_OrmGroupByHaving(e *sqlca.Engine) {
 		OrderBy().
 		Asc("name").
 		Desc("created_at").
+		Limit(10).
 		Query()
 	if err != nil {
 		log.Error(err.Error())

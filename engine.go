@@ -10,6 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"            //sqlx package
 	_ "github.com/lib/pq"                //postgres golang driver
 	_ "github.com/mattn/go-sqlite3"      //sqlite3 golang driver
+	"strconv"
 	"strings"
 )
 
@@ -126,8 +127,10 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 //     [redis-alone]    Open("redis://123456@127.0.0.1:6379/cluster?db=0")
 //     [redis-cluster]  Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
 //
-// expireSeconds cache data expire seconds, just for redis
-func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
+// options:
+//        1. specify master or slave, MySQL/Postgres (bool)
+//        2. cache data expire seconds, just for redis (integer)
+func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 
 	var err error
 	var adapterType AdapterType
@@ -167,8 +170,9 @@ func (e *Engine) Open(strUrl string, expireSeconds ...int) *Engine {
 			log.Errorf("new cache by driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, dsn.parameter.strDSN, err.Error())
 		}
 		e.adapterCache = adapterType
-		if len(expireSeconds) > 0 {
-			e.expireTime = expireSeconds[0]
+		if len(options) > 0 {
+			expSec := fmt.Sprintf("%v", options[0])
+			e.expireTime, _ = strconv.Atoi(expSec)
 		} else {
 			e.expireTime = 3600 //one hour expire
 		}

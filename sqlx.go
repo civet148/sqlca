@@ -311,6 +311,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		strDatabaseName: e.strDatabaseName,
 		dbTags:          e.dbTags,
 		bForce:          e.bForce,
+		bAutoRollback:   e.bAutoRollback,
 	}
 
 	engine.setModel(models...)
@@ -1136,4 +1137,11 @@ func (e *Engine) cleanWhereCondition() {
 	e.strWhere = ""
 	e.strPkValue = ""
 	e.cacheIndexes = nil
+}
+
+func (e *Engine) autoRollback() {
+	if e.bAutoRollback && e.operType == OperType_Tx && e.tx != nil {
+		_ = e.tx.Rollback()
+		log.Debugf("tx auto rollback successful")
+	}
 }

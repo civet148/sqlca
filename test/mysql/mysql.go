@@ -485,11 +485,10 @@ func MYSQL_TxRollback(e *sqlca.Engine) (err error) {
 		log.Errorf("TxBegin error [%v]", err.Error())
 		return
 	}
-
-	_, _, err = tx.TxExec("INSERT INTO users(id, name, phone, sex, email) VALUES(1, 'john3', '8618600000000', 2, 'john3@gmail.com')")
+	// tx auto rollback
+	_, _, err = tx.AutoRollback().TxExec("INSERT INTO users(id, name, phone, sex, email) VALUES(1, 'john3', '8618600000000', 2, 'john3@gmail.com')")
 	if err != nil {
 		log.Errorf("TxExec error %v, rollback", err.Error())
-		_ = tx.TxRollback()
 		return
 	}
 

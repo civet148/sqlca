@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca"
 	"time"
@@ -35,7 +36,7 @@ func Benchmark() {
 	e := sqlca.NewEngine()
 	e.Debug(true) //debug on
 
-	//e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
+	e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
 	//e.Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 
 	e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")            //MySQL master
@@ -90,6 +91,27 @@ func MYSQL_OrmInsertByModel(e *sqlca.Engine) {
 		log.Errorf("insert data model [%+v] error [%v]", user, err.Error())
 	} else {
 		log.Debugf("insert data model [%+v] ok, last insert id [%v]", user, lastInsertId)
+	}
+
+	//bulk insert
+	var users []UserDO
+	for i := 0; i < 3; i++ {
+		users = append(users, UserDO{
+			Id:        0,
+			Name:      fmt.Sprintf("bulk name %v", i),
+			Phone:     fmt.Sprintf("bulk phone %v", i),
+			Sex:       0,
+			Email:     "",
+			Disable:   0,
+			Balance:   sqlca.NewDecimal(i),
+			CreatedAt: "",
+			IgnoreMe:  "",
+		})
+	}
+	if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Insert(); err != nil {
+		log.Errorf("bulk insert data model [%+v] error [%v]", users, err.Error())
+	} else {
+		log.Debugf("bulk insert data model [%+v] ok, last insert id [%v]", users, lastInsertId)
 	}
 }
 
@@ -389,6 +411,7 @@ func MYSQL_OrmGroupByHaving(e *sqlca.Engine) {
 		OrderBy().
 		Asc("name").
 		Desc("created_at").
+		Limit(10).
 		Query()
 	if err != nil {
 		log.Error(err.Error())

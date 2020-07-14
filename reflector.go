@@ -258,6 +258,83 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err
 	return
 }
 
+func (e *Engine) getStructSliceKeyValues(excludeReadOnly bool) (keys []string, values [][]string) {
+
+	typ := reflect.TypeOf(e.model)
+	val := reflect.ValueOf(e.model)
+
+	if typ.Kind() == reflect.Ptr {
+
+		typ = typ.Elem()
+		val = val.Elem()
+	}
+
+	switch typ.Kind() {
+	case reflect.Slice:
+		{
+			elemTyp := val.Type().Elem()
+			for i := 0; i < val.Len(); i++ {
+				elemVal := val.Index(i)
+				if elemTyp.Kind() == reflect.Ptr {
+					elemTyp = elemTyp.Elem()
+				}
+				if elemVal.Kind() == reflect.Ptr {
+					elemVal = elemVal.Elem()
+				}
+
+				if elemTyp.Kind() == reflect.Struct {
+					var vs []string
+					keys, vs = e.getStructFieldValues(elemTyp, elemVal, excludeReadOnly)
+					values = append(values, vs)
+				}
+			}
+
+		}
+	default:
+		{
+			panic(fmt.Sprintf("expect struct got %v", typ.Name()))
+		}
+	}
+
+	return
+}
+
+func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, excludeReadOnly bool) (keys, values []string) {
+
+	if typ.Kind() == reflect.Struct {
+
+		NumField := val.NumField()
+		for i := 0; i < NumField; i++ {
+			typField := typ.Field(i)
+			valField := val.Field(i)
+
+			if typField.Type.Kind() == reflect.Ptr {
+				typField.Type = typField.Type.Elem()
+				valField = valField.Elem()
+			}
+			if !valField.IsValid() || !valField.CanInterface() {
+				//fmt.Printf("Filed [%s] tag(%s)  is not valid \n", typField.Type.Name(), e.getTagValue(typField))
+				return
+			}
+			strTagVal := e.getTagValue(typField)
+			strFieldVal := fmt.Sprintf("%v", valField)
+
+			if excludeReadOnly {
+				if typField.Tag.Get(TAG_NAME_SQLCA) == SQLCA_TAG_VALUE_READ_ONLY {
+					continue
+				}
+			}
+
+			if strTagVal != "" && strTagVal != SQLCA_TAG_VALUE_IGNORE {
+				keys = append(keys, strTagVal)
+				values = append(values, strFieldVal)
+				//log.Debugf("filed tag name [%v] value [%v]", strTagVal, strFieldVal)
+			}
+		}
+	}
+	return
+}
+
 //fetch cache data to struct or slice or map
 func (e *Engine) fetchCache(fetchers []*Fetcher, args ...interface{}) (count int64, err error) {
 
@@ -407,6 +484,9 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 func (e *Engine) fetchToDecimal(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
+	if strDbTagVal == SQLCA_TAG_VALUE_IGNORE {
+		return
+	}
 	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
 		vp := val.Addr()
 		d := vp.Interface().(*Decimal)
@@ -448,7 +528,7 @@ func (e *Engine) getTagValue(sf reflect.StructField) (strValue string) {
 
 	for _, v := range e.dbTags { //support multiple tag
 		strValue = handleTagValue(v, sf.Tag.Get(v))
-		if strValue != "" || strValue == SQLCA_TAG_VALUE_IGNORE {
+		if strValue != "" {
 			return
 		}
 	}
@@ -460,7 +540,9 @@ func (e *Engine) setValueByField(fetcher *Fetcher, field reflect.StructField, va
 
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
-
+	if strDbTagVal == SQLCA_TAG_VALUE_IGNORE {
+		return
+	}
 	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
 		e.setValue(field.Type, val, v)
 	}

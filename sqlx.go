@@ -905,23 +905,56 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues string) {
 	var cols, vals []string
 
-	for k, v := range e.dict {
+	typ := reflect.TypeOf(e.model)
+	kind := typ.Kind()
 
-		if e.isReadOnly(k) {
-			continue
-		}
-
-		c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
-
-		if k == e.GetPkName() && e.isPkValueNil() {
-			continue
-		}
-		vq := fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()) // column value format to :id,...
-		cols = append(cols, c)
-		vals = append(vals, vq)
+	if kind == reflect.Ptr {
+		typ = typ.Elem()
 	}
-	strQuoteColumns = strings.Join(cols, ",")
-	strColonValues = strings.Join(vals, ",")
+	//log.Debugf("reflect.TypeOf(e.model) = %v", typ.Kind())
+	if typ.Kind() == reflect.Slice {
+
+		var values [][]string
+		var keyQuote []string
+		var valueQuoteSlice []string
+		cols, values = e.getStructSliceKeyValues(true)
+		for _, v := range cols {
+			k := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // column name format to `id`,...
+			keyQuote = append(keyQuote, k)
+		}
+		for _, v := range values {
+			var valueQoute []string
+			for _, vv := range v {
+				vq := fmt.Sprintf("%v%v%v", e.getSingleQuote(), vv, e.getSingleQuote()) // column value format
+				valueQoute = append(valueQoute, vq)
+			}
+			valueQuoteSlice = append(valueQuoteSlice, fmt.Sprintf("(%v)", strings.Join(valueQoute, ",")))
+		}
+
+		if len(valueQuoteSlice) > 0 {
+			strColonValues = strings.Join(valueQuoteSlice, ",")
+		}
+	} else {
+		for k, v := range e.dict {
+
+			if e.isReadOnly(k) {
+				continue
+			}
+
+			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
+
+			if k == e.GetPkName() && e.isPkValueNil() {
+				continue
+			}
+			vq := fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()) // column value format
+			cols = append(cols, c)
+			vals = append(vals, vq)
+		}
+		strColonValues = fmt.Sprintf("(%v)", strings.Join(vals, ","))
+	}
+
+	strQuoteColumns = fmt.Sprintf("(%v)", strings.Join(cols, ","))
+	//log.Debugf("strQuoteColumns [%v] strColonValues [%v]", strQuoteColumns, strColonValues)
 	return
 }
 
@@ -1070,7 +1103,7 @@ func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 func (e *Engine) makeSqlxInsert() (strSqlx string) {
 
 	strColumns, strValues := e.getInsertColumnsAndValues()
-	strSqlx = fmt.Sprintf("%v %v (%v) %v (%v)", DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, DATABASE_KEY_NAME_VALUES, strValues)
+	strSqlx = fmt.Sprintf("%v %v %v %v %v", DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, DATABASE_KEY_NAME_VALUES, strValues)
 	return
 }
 
@@ -1078,7 +1111,7 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 
 	strColumns, strValues := e.getInsertColumnsAndValues()
 	strOnConflictUpdates := e.getOnConflictUpdates()
-	strSqlx = fmt.Sprintf("%v %v (%v) %v (%v) %v", DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, DATABASE_KEY_NAME_VALUES, strValues, strOnConflictUpdates)
+	strSqlx = fmt.Sprintf("%v %v %v %v %v %v", DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, DATABASE_KEY_NAME_VALUES, strValues, strOnConflictUpdates)
 	return
 }
 

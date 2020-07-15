@@ -14,6 +14,7 @@ const (
 	URL_SCHEME_SEP  = "://"
 	URL_QUERY_SLAVE = "slave"
 	URL_QUERY_MAX   = "max"
+	URL_QUERY_IDLE  = "idle"
 )
 
 type UrlInfo struct {
@@ -34,9 +35,10 @@ type dsnDriver struct {
 }
 
 type dsnParameter struct {
-	strDSN         string
-	slave          bool
-	maxConnections int
+	strDSN string
+	slave  bool
+	max    int
+	idle   int
 }
 
 func (d *dsnParameter) parseQueries(ui *UrlInfo) {
@@ -51,11 +53,20 @@ func (d *dsnParameter) parseQueries(ui *UrlInfo) {
 
 	if val, ok = ui.Queries[URL_QUERY_MAX]; ok {
 		if val != "" {
-			d.maxConnections, _ = strconv.Atoi(val)
+			d.max, _ = strconv.Atoi(val)
 		} else {
-			d.maxConnections = 100
+			d.max = 100
 		}
 		delete(ui.Queries, URL_QUERY_MAX)
+	}
+
+	if val, ok = ui.Queries[URL_QUERY_IDLE]; ok {
+		if val != "" {
+			d.idle, _ = strconv.Atoi(val)
+		} else {
+			d.idle = 1
+		}
+		delete(ui.Queries, URL_QUERY_IDLE)
 	}
 }
 

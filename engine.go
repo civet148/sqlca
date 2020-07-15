@@ -14,6 +14,11 @@ import (
 	"strings"
 )
 
+type Options struct {
+	Max  int //max active connections
+	Idle int //max idle connections
+}
+
 type Engine struct {
 	dsn             dsnDriver              // driver name and parameters
 	slave           bool                   // use slave to query ?
@@ -119,9 +124,9 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 //
 //  1. data source name
 //
-// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false&max=100")
-// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false&max=100")
-// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false&max=100")
+// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false&max=100&idle=1")
+// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false&max=100&idle=1")
+// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false&max=100&idle=1")
 // 	   [sqlite]   Open("sqlite:///var/lib/test.db")
 //
 //  2. cache config
@@ -129,8 +134,8 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 //     [redis-cluster]  Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
 //
 // options:
-//        1. specify master or slave, MySQL/Postgres (bool)
-//        2. cache data expire seconds, just for redis (integer)
+//        1. specify master or slave, MySQL/Postgres (Options)
+//        2. cache data expire seconds, just for redis (Integer)
 func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 
 	var err error
@@ -158,6 +163,24 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 		if err = db.Ping(); err != nil {
 			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, dsn.parameter.strDSN, err.Error())
 			return nil
+		}
+
+		if len(options) == 1 {
+			if opt, ok := options[0].(Options); ok {
+				dsn.parameter.max = opt.Max
+				dsn.parameter.idle = opt.Idle
+			}
+			if opt, ok := options[0].(*Options); ok {
+				dsn.parameter.max = opt.Max
+				dsn.parameter.idle = opt.Idle
+			}
+		}
+		log.Debugf("dsn parameter [%+v]", dsn.parameter)
+		if dsn.parameter.max != 0 {
+			db.SetMaxOpenConns(dsn.parameter.max)
+		}
+		if dsn.parameter.idle != 0 {
+			db.SetMaxIdleConns(dsn.parameter.idle)
 		}
 		e.adapterSqlx = adapterType
 		if dsn.parameter.slave {

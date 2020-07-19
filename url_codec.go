@@ -12,7 +12,7 @@ import (
 
 const (
 	URL_SCHEME_SEP  = "://"
-	URL_QUERY_SLAVE = "slave"
+	URL_QUERY_SLAVE = "subordinate"
 	URL_QUERY_MAX   = "max"
 	URL_QUERY_IDLE  = "idle"
 )
@@ -36,7 +36,7 @@ type dsnDriver struct {
 
 type dsnParameter struct {
 	strDSN string
-	slave  bool
+	subordinate  bool
 	max    int
 	idle   int
 }
@@ -46,7 +46,7 @@ func (d *dsnParameter) parseQueries(ui *UrlInfo) {
 	var val string
 	if val, ok = ui.Queries[URL_QUERY_SLAVE]; ok {
 		if val == "true" {
-			d.slave = true
+			d.subordinate = true
 		}
 		delete(ui.Queries, URL_QUERY_SLAVE)
 	}
@@ -286,13 +286,13 @@ func (e *Engine) parseMssqlUrl(strUrl string) (parameter dsnParameter) {
 	return
 }
 
-//DSN: `{"password":"123456","db_index":0,"master_host":"127.0.0.1:6379","replicate_hosts":["127.0.0.1:6380","127.0.0.1:6381"]}`
+//DSN: `{"password":"123456","db_index":0,"main_host":"127.0.0.1:6379","replicate_hosts":["127.0.0.1:6380","127.0.0.1:6381"]}`
 func (e *Engine) parseRedisUrl(strUrl string) (parameter dsnParameter) {
 
 	ui := ParseUrl(strUrl)
 	cc := &redigogo.Config{
 		Password:   ui.User, //redis have no user, just password
-		MasterHost: fmt.Sprintf("%v", ui.Host),
+		MainHost: fmt.Sprintf("%v", ui.Host),
 	}
 
 	if v, ok := ui.Queries[CACHE_DB_INDEX]; ok {

@@ -213,44 +213,44 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func (e *Engine) appendMaster(db *sqlx.DB) {
-	e.dbMasters = append(e.dbMasters, db)
-	log.Debugf("db masters [%v]", len(e.dbMasters))
+func (e *Engine) appendMain(db *sqlx.DB) {
+	e.dbMains = append(e.dbMains, db)
+	log.Debugf("db mains [%v]", len(e.dbMains))
 }
 
-func (e *Engine) appendSlave(db *sqlx.DB) {
-	e.dbSlaves = append(e.dbSlaves, db)
-	log.Debugf("db slaves [%v]", len(e.dbSlaves))
+func (e *Engine) appendSubordinate(db *sqlx.DB) {
+	e.dbSubordinates = append(e.dbSubordinates, db)
+	log.Debugf("db subordinates [%v]", len(e.dbSubordinates))
 }
 
-// get slave db instance if use Slave() method to query, if not exist return a master db instance
+// get subordinate db instance if use Subordinate() method to query, if not exist return a main db instance
 func (e *Engine) getQueryDB() (db *sqlx.DB) {
-	if e.slave {
-		db = e.getSlave()
+	if e.subordinate {
+		db = e.getSubordinate()
 		if db != nil {
 			return
 		}
 	}
-	return e.getMaster()
+	return e.getMain()
 }
 
-// get a master db instance
-func (e *Engine) getMaster() *sqlx.DB {
+// get a main db instance
+func (e *Engine) getMain() *sqlx.DB {
 
-	n := len(e.dbMasters)
+	n := len(e.dbMains)
 	if n > 0 {
-		return e.dbMasters[rand.Intn(n)]
+		return e.dbMains[rand.Intn(n)]
 	}
 	return nil
 }
 
-// get a slave db instance
-func (e *Engine) getSlave() *sqlx.DB {
-	n := len(e.dbSlaves)
+// get a subordinate db instance
+func (e *Engine) getSubordinate() *sqlx.DB {
+	n := len(e.dbSubordinates)
 	if n > 0 {
-		return e.dbSlaves[rand.Intn(n)]
+		return e.dbSubordinates[rand.Intn(n)]
 	}
-	return e.getMaster()
+	return e.getMain()
 }
 
 func (e *Engine) setModel(models ...interface{}) *Engine {
@@ -301,8 +301,8 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 
 	engine := &Engine{
 		dsn:             e.dsn,
-		dbMasters:       e.dbMasters,
-		dbSlaves:        e.dbSlaves,
+		dbMains:       e.dbMains,
+		dbSubordinates:        e.dbSubordinates,
 		cache:           e.cache,
 		adapterSqlx:     e.adapterSqlx,
 		adapterCache:    e.adapterCache,
@@ -321,7 +321,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 func (e *Engine) newTx() (txEngine *Engine, err error) {
 
 	txEngine = e.clone()
-	db := e.getMaster()
+	db := e.getMain()
 	if txEngine.tx, err = db.Begin(); err != nil {
 		log.Errorf("newTx error [%+v]", err.Error())
 		return nil, err
@@ -334,7 +334,7 @@ func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err err
 	var rows *sql.Rows
 	strSQL += fmt.Sprintf(" RETURNING \"%v\"", e.GetPkName())
 	log.Debugf("[%v]", strSQL)
-	db := e.getMaster()
+	db := e.getMain()
 	if rows, err = db.Query(strSQL); err != nil {
 		log.Errorf("tx.Query error [%v]", err.Error())
 		return
@@ -352,7 +352,7 @@ func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err err
 func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err error) {
 	var rows *sql.Rows
 	log.Debugf("[%v]", strSQL)
-	db := e.getMaster()
+	db := e.getMain()
 	if rows, err = db.Query(strSQL); err != nil {
 		log.Errorf("tx.Query error [%v]", err.Error())
 		return
@@ -371,7 +371,7 @@ func (e *Engine) mssqlQueryInsert(strSQL string) (lastInsertId int64, err error)
 	var rows *sql.Rows
 	strSQL += " SELECT SCOPE_IDENTITY() AS last_insert_id"
 	log.Debugf("[%v]", strSQL)
-	db := e.getMaster()
+	db := e.getMain()
 	if rows, err = db.Query(strSQL); err != nil {
 		log.Errorf("tx.Query error [%v]", err.Error())
 		return

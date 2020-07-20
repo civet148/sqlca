@@ -41,6 +41,12 @@ type dsnParameter struct {
 	idle   int
 }
 
+func (d *dsnDriver) SetParameters(max, idle int, slave bool) {
+	d.parameter.max = max
+	d.parameter.idle = idle
+	d.parameter.slave = slave
+}
+
 func (d *dsnParameter) parseQueries(ui *UrlInfo) {
 	var ok bool
 	var val string

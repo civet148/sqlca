@@ -15,8 +15,9 @@ import (
 )
 
 type Options struct {
-	Max  int //max active connections
-	Idle int //max idle connections
+	Max   int  //max active connections
+	Idle  int  //max idle connections
+	Slave bool //is a slave DSN ?
 }
 
 type Engine struct {
@@ -166,14 +167,13 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 		}
 
 		if len(options) == 1 {
-			if opt, ok := options[0].(Options); ok {
-				dsn.parameter.max = opt.Max
-				dsn.parameter.idle = opt.Idle
+			var opt Options
+			if v, ok := options[0].(*Options); ok {
+				opt = *v
+			} else {
+				opt = options[0].(Options)
 			}
-			if opt, ok := options[0].(*Options); ok {
-				dsn.parameter.max = opt.Max
-				dsn.parameter.idle = opt.Idle
-			}
+			dsn.SetParameters(opt.Max, opt.Idle, opt.Slave)
 		}
 		log.Debugf("dsn parameter [%+v]", dsn.parameter)
 		if dsn.parameter.max != 0 {

@@ -319,6 +319,10 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 			strTagVal := e.getTagValue(typField)
 			strFieldVal := fmt.Sprintf("%v", valField)
 
+			if e.isPkValueNil() && strTagVal == e.GetPkName() {
+				continue
+			}
+
 			if excludeReadOnly {
 				if typField.Tag.Get(TAG_NAME_SQLCA) == SQLCA_TAG_VALUE_READ_ONLY {
 					continue

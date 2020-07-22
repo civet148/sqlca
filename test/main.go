@@ -142,7 +142,11 @@ func OrmUpsertByModel(e *sqlca.Engine) {
 		Sex:   2,
 		Email: "lory@gmail.com",
 	}
-	if lastInsertId, err := e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "email", "sex").Upsert(); err != nil {
+	if lastInsertId, err := e.Model(&user).
+		Table(TABLE_NAME_USERS).
+		Select("name", "phone", "email", "sex").
+		OnConflict("id"). // only for postgres
+		Upsert(); err != nil {
 		log.Errorf("upsert data model [%+v] error [%v]", user, err.Error())
 	} else {
 		log.Debugf("upsert data model [%+v] ok, last insert id [%v]", user, lastInsertId)

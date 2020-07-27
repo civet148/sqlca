@@ -24,10 +24,50 @@
 
 --proto     generate .proto file [optional]
 
---gogo-options specify gogo proto options [optional]
+--gogo-options specify gogo proto generate options [optional]
 
 --one-file  all table schema integrate into one file named by database [optional]
 
-```shell script
-# db2go --url "mysql://root:123456@127.0.0.1:3306/test?charset=utf8" --db test --table users --package model --out $GOPATH/src/myproject
+
+## 1. 数据库表导出到go文件
+
+* Windows batch 脚本
+
+```batch
+@echo off
+set OUT_DIR=.
+set PACK_NAME=dataobject
+set SUFFIX_NAME=do
+set READ_ONLY="created_at, updated_at"
+set DB_NAME="test"
+set TABLE_NAME="users, classes"
+set WITH_OUT=""
+set DSN_URL="mysql://root:123456@127.0.0.1:3306/test?charset=utf8"
+
+db2go.exe --url %DSN_URL% --disable-decimal ^
+--out %OUT_DIR% --db %DB_NAME% --table %TABLE_NAME% --suffix %SUFFIX_NAME% --package %PACK_NAME% --readonly %READ_ONLY% --without %WITH_OUT%
+
+echo generate go file ok, formatting...
+gofmt -w %OUT_DIR%/%PACK_NAME%
+pause
+```
+
+
+## 2. 数据库表导出到proto文件
+
+```batch
+@echo off
+set OUT_DIR=.
+set PACK_NAME=proto
+set WITH_OUT="created_at, updated_at"
+set GOGO_OPTIONS="(gogoproto.marshaler_all)=true,(gogoproto.sizer_all)=true,(gogoproto.unmarshaler_all)=true,(gogoproto.gostring_all)=true"
+set DB_NAME="test"
+set TABLE_NAME="users, classes"
+set SUFFIX_NAME="do"
+
+db2go.exe --url "mysql://root:123456@127.0.0.1:3306/test?charset=utf8" --disable-decimal --proto --gogo-options %GOGO_OPTIONS% ^
+--out %OUT_DIR% --db %DB_NAME% --table %TABLE_NAME% --suffix %SUFFIX_NAME% --package %PACK_NAME% --one-file --without %WITH_OUT%
+
+echo generate protobuf file ok
+pause
 ```

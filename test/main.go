@@ -48,6 +48,7 @@ func main() {
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 
 	for _, v := range urls {
+		_ = v
 		e := sqlca.NewEngine(v)
 		e.Debug(true) //debug on
 		Benchmark(e)
@@ -582,7 +583,7 @@ func TxForUpdate(e *sqlca.Engine) {
 func CustomTag(e *sqlca.Engine) {
 	type CustomUser struct {
 		Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // protobuf tag
-		Name     string `json:"name"`                                                // json tag
+		Name     string `json:"name,omitempty"`                                      // json tag
 		Phone    string `db:"phone"`                                                 // db tag
 		IgnoreMe string `db:"-" json:"-"`
 	}

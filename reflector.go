@@ -2,9 +2,9 @@ package sqlca
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"github.com/civet148/gotools/log"
-	"github.com/shopspring/decimal"
 	"reflect"
 	"strconv"
 	"strings"
@@ -110,8 +110,8 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 			//log.Debugf("reflect.Struct field [%v] kind [%+v]", i, typField.Type.Kind())
 			if typField.Type.Kind() == reflect.Struct {
 
-				if d, ok := valField.Interface().(Decimal); ok {
-					s.parseDecimal(typField, valField, d, tagNames...) //decimal struct
+				if _, ok := valField.Interface().(driver.Valuer); ok {
+					s.parseValuer(typField, valField, tagNames...)
 				} else {
 					s.parseStructField(typField.Type, valField, tagNames...) //recurse every field that type is a struct
 				}
@@ -123,7 +123,7 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 }
 
 //parse decimal
-func (s *ModelReflector) parseDecimal(field reflect.StructField, val reflect.Value, d Decimal, tagNames ...string) {
+func (s *ModelReflector) parseValuer(field reflect.StructField, val reflect.Value, tagNames ...string) {
 
 	s.setValueByField(field, val, tagNames...)
 }
@@ -146,8 +146,8 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 		tagVal = handleTagValue(v, s.getTag(field, v))
 		if tagVal != "" {
 			//log.Debugf("ModelReflector.setValueByField tag [%v] value [%+v]", tagVal, val.Interface())
-			if d, ok := val.Interface().(Decimal); ok {
-				s.dict[tagVal] = d.dec.String()
+			if d, ok := val.Interface().(driver.Valuer); ok {
+				s.dict[tagVal], _ = d.Value()
 			} else {
 				s.dict[tagVal] = val.Interface()
 			}
@@ -454,6 +454,7 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 	if typ.Kind() == reflect.Struct {
 		NumField := val.NumField()
 		for i := 0; i < NumField; i++ {
+
 			typField := typ.Field(i)
 			valField := val.Field(i)
 
@@ -462,14 +463,14 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 				valField = valField.Elem()
 			}
 			if !valField.IsValid() || !valField.CanInterface() {
-				//fmt.Printf("Filed [%s] tag(%s)  is not valid \n", typField.Type.Name(), e.getTagValue(typField))
-				return
+				//log.Warnf("struct field type (%s) is not valid or can't interface{} \n", typField.Type.Name())
+				continue
 			}
 			switch typField.Type.Kind() {
 			case reflect.Struct:
 				{
-					if _, ok := valField.Interface().(Decimal); ok {
-						e.fetchToDecimal(fetcher, typField, valField)
+					if _, ok := valField.Addr().Interface().(sql.Scanner); ok {
+						e.fetchToScanner(fetcher, typField, valField)
 					} else {
 						e.fetchToStruct(fetcher, typField.Type, valField)
 					}
@@ -485,7 +486,7 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 	return
 }
 
-func (e *Engine) fetchToDecimal(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
+func (e *Engine) fetchToScanner(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
 	if strDbTagVal == SQLCA_TAG_VALUE_IGNORE {
@@ -493,9 +494,10 @@ func (e *Engine) fetchToDecimal(fetcher *Fetcher, field reflect.StructField, val
 	}
 	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
 		vp := val.Addr()
-		d := vp.Interface().(*Decimal)
-		d.dec, _ = decimal.NewFromString(v)
-		//log.Debugf("tag [%v] = %+v", strDbTagVal, d.dec.String())
+		d := vp.Interface().(sql.Scanner)
+		if err := d.Scan(v); err != nil {
+			log.Errorf("scan '%v' to scanner [%+v] error [%+v]", v, vp.Interface(), err.Error())
+		}
 	}
 }
 

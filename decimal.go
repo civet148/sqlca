@@ -286,8 +286,8 @@ func (d *Decimal) UnmarshalBinary(data []byte) error {
 }
 
 // Scan implements the sql.Scanner interface for database deserialization.
-func (d *Decimal) Scan(value interface{}) error {
-	return d.dec.Scan(value)
+func (d *Decimal) Scan(src interface{}) error {
+	return d.dec.Scan(src)
 }
 
 // Value implements the driver.Valuer interface for database serialization.

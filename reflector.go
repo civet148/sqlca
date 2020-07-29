@@ -509,7 +509,11 @@ func (e *Engine) fetchToBaseType(fetcher *Fetcher, typ reflect.Type, val reflect
 
 func handleTagValue(strTagName, strTagValue string) string {
 
-	if strTagName == TAG_NAME_PROTOBUF && strTagValue != "" {
+	if strTagName == TAG_NAME_JSON && strTagValue != "" {
+
+		vs := strings.Split(strTagValue, ",")
+		strTagValue = vs[0]
+	} else if strTagName == TAG_NAME_PROTOBUF && strTagValue != "" {
 		//parse protobuf tag value
 		vs := strings.Split(strTagValue, ",")
 		for _, vv := range vs {

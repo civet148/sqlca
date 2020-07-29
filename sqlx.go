@@ -647,7 +647,7 @@ func (e *Engine) getSingleQuote() (strQuote string) {
 	case AdapterSqlx_Mssql:
 		return "'"
 	}
-	return
+	return "'"
 }
 
 func (e *Engine) getForwardQuote() (strQuote string) {
@@ -659,7 +659,7 @@ func (e *Engine) getForwardQuote() (strQuote string) {
 	case AdapterSqlx_Mssql:
 		return "["
 	}
-	return
+	return "`"
 }
 
 func (e *Engine) getBackQuote() (strQuote string) {
@@ -671,7 +671,7 @@ func (e *Engine) getBackQuote() (strQuote string) {
 	case AdapterSqlx_Mssql:
 		return "]"
 	}
-	return
+	return "`"
 }
 
 func (e *Engine) getOnConflictForwardKey() (strKey string) {

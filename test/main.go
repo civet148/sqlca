@@ -68,6 +68,7 @@ func Benchmark(e *sqlca.Engine) {
 	OrmUpsertByModel(e)
 	OrmUpdateByModel(e)
 	OrmQueryIntoModel(e)
+	OrmQueryExcludeIntoModel(e)
 	OrmQueryIntoModelSlice(e)
 	OrmUpdateIndexToCache(e)
 	OrmSelectMultiTable(e)
@@ -187,6 +188,20 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 
 	// select * from users where id=1
 	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Query(); err != nil {
+		log.Errorf("query into data model [%+v] error [%v]", user, err.Error())
+	} else {
+		log.Debugf("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)
+	}
+}
+
+func OrmQueryExcludeIntoModel(e *sqlca.Engine) {
+	log.Enter()
+	defer log.Leave()
+
+	user := &UserDO{}
+
+	// select * from users where id=1 ..exclude email and disable
+	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Exclude("email", "disable").Query(); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", user, err.Error())
 	} else {
 		log.Debugf("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)

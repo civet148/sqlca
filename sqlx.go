@@ -540,6 +540,10 @@ func (e *Engine) setSelectColumns(strColumns ...string) {
 	e.selectColumns = strColumns
 }
 
+func (e *Engine) setExcludeColumns(strColumns ...string) {
+	e.excludeColumns = strColumns
+}
+
 func (e *Engine) getSelectColumns() (strColumns []string) {
 	return e.selectColumns
 }
@@ -792,6 +796,12 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 	if len(e.selectColumns) == 0 {
 		return true
 	}
+	for _, v := range e.excludeColumns {
+
+		if v == strCol {
+			return false
+		}
+	}
 
 	for _, v := range e.selectColumns {
 
@@ -825,11 +835,15 @@ func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 }
 
 func (e *Engine) getRawColumns() (strColumns string) {
-	selectCols := e.selectColumns
-	if len(selectCols) == 0 {
+	var selectCols []string
+	if len(e.selectColumns) == 0 {
 		return "*"
 	}
-
+	for _, v := range e.selectColumns {
+		if e.isColumnSelected(v) {
+			selectCols = append(selectCols, v)
+		}
+	}
 	if len(selectCols) > 0 {
 		strColumns = strings.Join(selectCols, ",")
 	}

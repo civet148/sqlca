@@ -20,6 +20,7 @@ type UserDO struct {
 	Disable   int8          `db:"disable"`
 	Balance   sqlca.Decimal `db:"balance"`
 	CreatedAt string        `db:"created_at" sqlca:"readonly"`
+	UpdatedAt string        `db:"updated_at" sqlca:"readonly"`
 	IgnoreMe  string        `db:"-"`
 }
 
@@ -28,6 +29,7 @@ type ClassDo struct {
 	UserId    int32  `db:"user_id"`
 	ClassNo   string `db:"class_no"`
 	CreatedAt string `db:"created_at" sqlca:"readonly"`
+	UpdatedAt string `db:"updated_at" sqlca:"readonly"`
 	IgnoreMe  string `db:"-"`
 }
 
@@ -98,17 +100,19 @@ func OrmInsertByModel(e *sqlca.Engine) {
 
 	user := UserDO{
 		//Id:    0,
-		Name:    "admin",
-		Phone:   "8618600000000",
-		Sex:     1,
-		Balance: sqlca.NewDecimal("123.45"),
-		Email:   "admin@golang.org",
+		Name:      "admin",
+		Phone:     "8618600000000",
+		Sex:       1,
+		Balance:   sqlca.NewDecimal("123.45"),
+		Email:     "admin@golang.org",
+		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
+		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
 	}
 	log.Debugf("user [%+v]", user)
-	if lastInsertId, err := e.Model(&user).Table(TABLE_NAME_USERS).Insert(); err != nil {
+	if lastInsertId, err := e.Model(&user).Table(TABLE_NAME_USERS).Exclude("created_at", "updated_at").Insert(); err != nil {
 		log.Errorf("insert data model [%+v] error [%v]", user, err.Error())
 	} else {
-		log.Debugf("insert data model [%+v] ok, last insert id [%v]", user, lastInsertId)
+		log.Infof("insert data model [%+v] exclude created_at and updated_at ok, last insert id [%v]", user, lastInsertId)
 	}
 
 	//bulk insert
@@ -116,20 +120,20 @@ func OrmInsertByModel(e *sqlca.Engine) {
 	for i := 0; i < 3; i++ {
 		users = append(users, UserDO{
 			Id:        0,
-			Name:      fmt.Sprintf("bulk name %v", i),
-			Phone:     fmt.Sprintf("bulk phone %v", i),
+			Name:      fmt.Sprintf("name(%v)", i),
+			Phone:     fmt.Sprintf("phone(%v)", i),
 			Sex:       0,
-			Email:     "",
+			Email:     "xxx@gmail.com",
 			Disable:   0,
 			Balance:   sqlca.NewDecimal(i),
-			CreatedAt: "",
-			IgnoreMe:  "",
+			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
+			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
 		})
 	}
-	if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Insert(); err != nil {
+	if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Exclude("email", "created_at", "updated_at").Insert(); err != nil {
 		log.Errorf("bulk insert data model [%+v] error [%v]", users, err.Error())
 	} else {
-		log.Debugf("bulk insert data model [%+v] ok, last insert id [%v]", users, lastInsertId)
+		log.Infof("bulk insert data model [%+v] exclude email, created_at and updated_at ok, last insert id [%v]", users, lastInsertId)
 	}
 }
 
@@ -146,12 +150,13 @@ func OrmUpsertByModel(e *sqlca.Engine) {
 	}
 	if lastInsertId, err := e.Model(&user).
 		Table(TABLE_NAME_USERS).
-		Select("name", "phone", "email", "sex").
+		Select("name", "phone", "sex").
 		OnConflict("id"). // only for postgres
+		Exclude("email", "created_at", "updated_at").
 		Upsert(); err != nil {
 		log.Errorf("upsert data model [%+v] error [%v]", user, err.Error())
 	} else {
-		log.Debugf("upsert data model [%+v] ok, last insert id [%v]", user, lastInsertId)
+		log.Infof("upsert data model [%+v] exclude email, created_at and updated_at ok, last insert id [%v]", user, lastInsertId)
 	}
 }
 
@@ -161,19 +166,21 @@ func OrmUpdateByModel(e *sqlca.Engine) {
 	defer log.Leave()
 
 	user := UserDO{
-		Id:      1,
-		Name:    "john",
-		Phone:   "8618699999999",
-		Sex:     1,
-		Email:   "john@gmail.com",
-		Disable: 1,
+		Id:        1,
+		Name:      "john",
+		Phone:     "8618699999999",
+		Sex:       1,
+		Email:     "john@gmail.com",
+		Disable:   1,
+		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
+		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
 	}
 
-	//SQL: update users set name='john', phone='8618699999999', sex='1', email='john@gmail.com' where id='1'
-	if rowsAffected, err := e.Model(&user).Table(TABLE_NAME_USERS).Id(1).Update(); err != nil {
+	//SQL: update users set name='john', phone='8618699999999', sex='1', email='john@gmail.com' where id='1'... exclude created_at and updated_at
+	if rowsAffected, err := e.Model(&user).Table(TABLE_NAME_USERS).Id(1).Exclude("created_at", "updated_at").Update(); err != nil {
 		log.Errorf("update data model [%+v] error [%v]", user, err.Error())
 	} else {
-		log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
+		log.Infof("update data model [%+v] exclude created_at and updated_at ok, rows affected [%v]", user, rowsAffected)
 	}
 }
 
@@ -190,7 +197,7 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Query(); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", user, err.Error())
 	} else {
-		log.Debugf("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)
+		log.Infof("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)
 	}
 }
 
@@ -204,7 +211,7 @@ func OrmQueryExcludeIntoModel(e *sqlca.Engine) {
 	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Exclude("email", "disable").Query(); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", user, err.Error())
 	} else {
-		log.Debugf("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)
+		log.Infof("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)
 	}
 }
 
@@ -226,7 +233,7 @@ func OrmQueryIntoModelSlice(e *sqlca.Engine) {
 			log.Errorf("query into model failed, rows affected [%v]", rowsAffected)
 		} else {
 			for i, v := range users {
-				log.Debugf("query into model slice of [%v]*User [%+v] ", i, v)
+				log.Infof("query into model slice of [%v]*User [%+v] ", i, v)
 			}
 		}
 	}
@@ -242,7 +249,7 @@ func RawQueryIntoModel(e *sqlca.Engine) {
 	if rowsAffected, err := e.Model(&user).QueryRaw("select * from users where id=?", 1); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", user, err.Error())
 	} else {
-		log.Debugf("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)
+		log.Infof("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)
 	}
 }
 
@@ -257,7 +264,7 @@ func RawQueryIntoModelSlice(e *sqlca.Engine) {
 	if rowsAffected, err := e.Model(&users).QueryRaw("select * from %v where id < %v", TABLE_NAME_USERS, 5); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", users, err.Error())
 	} else {
-		log.Debugf("query into model [%+v] ok, rows affected [%v]", users, rowsAffected)
+		log.Infof("query into model [%+v] ok, rows affected [%v]", users, rowsAffected)
 	}
 }
 
@@ -272,7 +279,7 @@ func RawQueryIntoMap(e *sqlca.Engine) {
 	if rowsAffected, err := e.Model(&users).QueryMap("select * from %v where id < %v", TABLE_NAME_USERS, 5); err != nil {
 		log.Errorf("query into map [%+v] error [%v]", users, err.Error())
 	} else {
-		log.Debugf("query into map [%+v] ok, rows affected [%v]", users, rowsAffected)
+		log.Infof("query into map [%+v] ok, rows affected [%v]", users, rowsAffected)
 	}
 }
 
@@ -283,7 +290,7 @@ func RawExec(e *sqlca.Engine) {
 	if err != nil {
 		log.Errorf("exec raw sql error [%v]", err.Error())
 	} else {
-		log.Debugf("exec raw sql ok, rows affected [%v] last insert id [%v]", rowsAffected, lasteInsertId)
+		log.Infof("exec raw sql ok, rows affected [%v] last insert id [%v]", rowsAffected, lasteInsertId)
 	}
 }
 
@@ -311,7 +318,7 @@ func OrmUpdateIndexToCache(e *sqlca.Engine) {
 		Update(); err != nil {
 		log.Errorf("update data model [%+v] error [%v]", user, err.Error())
 	} else {
-		log.Debugf("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
+		log.Infof("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
 	}
 }
 
@@ -338,7 +345,7 @@ func OrmSelectMultiTable(e *sqlca.Engine) {
 	if err != nil {
 		log.Errorf("query error [%v]", err.Error())
 	} else {
-		log.Debugf("user class info [%+v]", ucs)
+		log.Infof("user class info [%+v]", ucs)
 	}
 }
 
@@ -354,21 +361,21 @@ func OrmDeleteFromTable(e *sqlca.Engine) {
 	if rows, err := e.Model(&user).Table(TABLE_NAME_USERS).Delete(); err != nil {
 		log.Errorf("delete from table error [%v]", err.Error())
 	} else {
-		log.Debugf("delete from table ok, affected rows [%v]", rows)
+		log.Infof("delete from table ok, affected rows [%v]", rows)
 	}
 
 	//delete from where condition (without data model)
 	if rows, err := e.Table(TABLE_NAME_USERS).Where("id > 1001").Delete(); err != nil {
 		log.Errorf("delete from table error [%v]", err.Error())
 	} else {
-		log.Debugf("delete from table ok, affected rows [%v]", rows)
+		log.Infof("delete from table ok, affected rows [%v]", rows)
 	}
 
 	//delete from primary key 'id' and value (without data model)
 	if rows, err := e.Table(TABLE_NAME_USERS).Id(1002).Where("disable=1").Delete(); err != nil {
 		log.Errorf("delete from table error [%v]", err.Error())
 	} else {
-		log.Debugf("delete from table ok, affected rows [%v]", rows)
+		log.Infof("delete from table ok, affected rows [%v]", rows)
 	}
 }
 
@@ -388,7 +395,7 @@ func OrmInCondition(e *sqlca.Engine) {
 		Query(); err != nil {
 		log.Errorf("select from table by in condition error [%v]", err.Error())
 	} else {
-		log.Debugf("select from table by in condition ok, affected rows [%v]", rows)
+		log.Infof("select from table by in condition ok, affected rows [%v]", rows)
 	}
 }
 
@@ -406,7 +413,7 @@ func OrmFind(e *sqlca.Engine) {
 		}); err != nil {
 		log.Errorf("select from table by find condition error [%v]", err.Error())
 	} else {
-		log.Debugf("select from table by find condition ok, affected rows [%v] users %+v", rows, users)
+		log.Infof("select from table by find condition ok, affected rows [%v] users %+v", rows, users)
 	}
 }
 
@@ -431,11 +438,11 @@ func OrmToSQL(e *sqlca.Engine) {
 		Sex:   1,
 		Email: "john3@gmail.com",
 	}
-	log.Debugf("ToSQL insert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Insert))
-	log.Debugf("ToSQL upsert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Upsert))
-	log.Debugf("ToSQL query [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Query))
-	log.Debugf("ToSQL delete [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Delete))
-	log.Debugf("ToSQL for update [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_ForUpdate))
+	log.Infof("ToSQL insert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Insert))
+	log.Infof("ToSQL upsert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Upsert))
+	log.Infof("ToSQL query [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Query))
+	log.Infof("ToSQL delete [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Delete))
+	log.Infof("ToSQL for update [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_ForUpdate))
 }
 
 func OrmGroupByHaving(e *sqlca.Engine) {
@@ -489,7 +496,7 @@ func TxGetExec(e *sqlca.Engine) (err error) {
 		_ = tx.TxRollback()
 		return
 	}
-	log.Debugf("user id [%v] disabled, last insert id [%v] rows affected [%v]", UserId, lastInsertId, rowsAffected)
+	log.Infof("user id [%v] disabled, last insert id [%v] rows affected [%v]", UserId, lastInsertId, rowsAffected)
 
 	//query results into a struct object or slice
 	var dos []UserDO
@@ -500,7 +507,7 @@ func TxGetExec(e *sqlca.Engine) (err error) {
 		return
 	}
 	for _, do := range dos {
-		log.Debugf("struct user data object [%+v]", do)
+		log.Infof("struct user data object [%+v]", do)
 	}
 
 	if err = tx.TxCommit(); err != nil {
@@ -612,7 +619,7 @@ func CustomTag(e *sqlca.Engine) {
 		Query(); err != nil {
 		log.Errorf("custom tag query error [%v]", err.Error())
 	} else {
-		log.Debugf("custom tag query results %+v rows [%v]", users, count)
+		log.Infof("custom tag query results %+v rows [%v]", users, count)
 	}
 }
 

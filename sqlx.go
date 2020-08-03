@@ -785,29 +785,53 @@ func (e *Engine) isReadOnly(strIn string) bool {
 	return false
 }
 
-func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
+func (e *Engine) isExcluded(strCol string) bool {
 
-	for _, v := range strExcepts {
-		if v == strCol {
-			return false
-		}
-	}
-
-	if len(e.selectColumns) == 0 {
-		return true
-	}
 	for _, v := range e.excludeColumns {
-
 		if v == strCol {
-			return false
+			return true
 		}
 	}
+	return false
+}
+
+func (e *Engine) isSelected(strCol string) bool {
 
 	for _, v := range e.selectColumns {
 
 		if v == strCol {
 			return true
 		}
+	}
+	return false
+}
+
+func (e *Engine) isExcepted(strCol string, strExcepts ...string) bool {
+
+	for _, v := range strExcepts {
+		if v == strCol {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
+
+	if e.isExcepted(strCol, strExcepts...) {
+		return false
+	}
+
+	if len(e.selectColumns) == 0 {
+		return true
+	}
+
+	if e.isExcluded(strCol) {
+		return false
+	}
+
+	if e.isSelected(strCol) {
+		return true
 	}
 	return false
 }
@@ -917,6 +941,15 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	return
 }
 
+func (e *Engine) isContainInts(i int, values []int) bool {
+	for _, v := range values {
+		if v == i {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues string) {
 	var cols, vals []string
 
@@ -928,18 +961,28 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 	}
 	//log.Debugf("reflect.TypeOf(e.model) = %v", typ.Kind())
 	if typ.Kind() == reflect.Slice {
-
+		var cols2 []string
 		var values [][]string
-		var keyQuote []string
 		var valueQuoteSlice []string
-		cols, values = e.getStructSliceKeyValues(true)
-		for _, v := range cols {
+		var excludeIndexes []int
+		cols2, values = e.getStructSliceKeyValues(true)
+		for i, v := range cols2 {
+
+			if e.isReadOnly(v) || e.isExcluded(v) {
+				excludeIndexes = append(excludeIndexes, i) //index of exclude columns slice
+				continue
+			}
+
 			k := fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote()) // column name format to `id`,...
-			keyQuote = append(keyQuote, k)
+			cols = append(cols, k)
 		}
+
 		for _, v := range values {
 			var valueQoute []string
-			for _, vv := range v {
+			for ii, vv := range v {
+				if e.isContainInts(ii, excludeIndexes) {
+					continue
+				}
 				vq := fmt.Sprintf("%v%v%v", e.getSingleQuote(), vv, e.getSingleQuote()) // column value format
 				valueQoute = append(valueQoute, vq)
 			}
@@ -952,7 +995,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 	} else {
 		for k, v := range e.dict {
 
-			if e.isReadOnly(k) {
+			if e.isReadOnly(k) || e.isExcluded(k) {
 				continue
 			}
 

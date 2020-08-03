@@ -47,6 +47,7 @@ type Engine struct {
 	strLimit        string                 // limit
 	strOffset       string                 // offset (only for postgres)
 	strDistinct     string                 // distinct
+	excludeColumns  []string               // exclude columns for query: select xxx not contain exclude some columns
 	selectColumns   []string               // columns to query: select
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string               // order by columns
@@ -276,6 +277,12 @@ func (e *Engine) Id(value interface{}) *Engine {
 // orm select/update columns
 func (e *Engine) Select(strColumns ...string) *Engine {
 	e.setSelectColumns(strColumns...)
+	return e
+}
+
+// orm select/update columns
+func (e *Engine) Exclude(strColumns ...string) *Engine {
+	e.setExcludeColumns(strColumns...)
 	return e
 }
 

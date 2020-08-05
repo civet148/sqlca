@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca"
-	"github.com/civet148/sqlca/cmd/db2go/mysql"
+	_ "github.com/civet148/sqlca/cmd/db2go/mssql"
+	_ "github.com/civet148/sqlca/cmd/db2go/mysql"
+	_ "github.com/civet148/sqlca/cmd/db2go/postgres"
 	"github.com/civet148/sqlca/cmd/db2go/schema"
 	"strings"
 )
@@ -105,37 +107,27 @@ func main() {
 	e.Debug(true)
 	e.Open(cmd.ConnUrl)
 
-	switch cmd.Scheme {
-	case "mysql":
-		exportMysql(&cmd, e)
-	case "postgres":
-		exportPostgres(&cmd, e)
-	case "mssql":
-		exportMssql(&cmd, e)
-	}
+	export(&cmd, e)
 }
 
 func init() {
 	flag.Parse()
 }
 
-func exportMysql(cmd *schema.Commander, e *sqlca.Engine) {
+func export(cmd *schema.Commander, e *sqlca.Engine) {
 
+	exporter := schema.NewExporter(cmd, e)
+	if exporter == nil {
+		log.Errorf("new exporter error, nil object")
+		return
+	}
 	if cmd.Protobuf {
-		if err := mysql.ExportProtobuf(cmd, e); err != nil {
-			log.Errorf("export mysql schema protobuf error [%v]", err.Error())
+		if err := exporter.ExportProto(); err != nil {
+			log.Errorf("export [%v] to protobuf file error [%v]", cmd.Scheme, err.Error())
 		}
 	} else {
-		if err := mysql.ExportGoStruct(cmd, e); err != nil {
-			log.Errorf("export mysql schema structure error [%v]", err.Error())
+		if err := exporter.ExportGo(); err != nil {
+			log.Errorf("export [%v] to go file error [%v]", cmd.Scheme, err.Error())
 		}
 	}
-}
-
-func exportPostgres(cmd *schema.Commander, e *sqlca.Engine) {
-	log.Warnf("export postgres not implement yet")
-}
-
-func exportMssql(cmd *schema.Commander, e *sqlca.Engine) {
-	log.Warnf("export mssql not implement yet")
 }

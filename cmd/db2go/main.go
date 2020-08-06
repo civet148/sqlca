@@ -23,7 +23,7 @@ var argvPackage = flag.String("package", "", "export package name")
 var argvWithout = flag.String("without", "", "exclude columns")
 var argvReadOnly = flag.String("readonly", "", "read only columns")
 var argvProtobuf = flag.Bool("proto", false, "output proto buffer file")
-var argvDisableDecimal = flag.Bool("disable-decimal", false, "decimal as float type")
+var argvEnableDecimal = flag.Bool("enable-decimal", false, "decimal as sqlca.Decimal type")
 var argvGogoOptions = flag.String("gogo-options", "", "gogo proto options")
 var argvOneFile = flag.Bool("one-file", false, "output go/proto file into one file which named by database name")
 
@@ -59,7 +59,7 @@ func main() {
 	cmd.ConnUrl = *argvUrl
 	cmd.PackageName = *argvPackage
 	cmd.Protobuf = *argvProtobuf
-	cmd.DisableDecimal = *argvDisableDecimal
+	cmd.EnableDecimal = *argvEnableDecimal
 
 	ui := sqlca.ParseUrl(*argvUrl)
 

@@ -56,7 +56,7 @@ func ExportTableSchema(cmd *Commander, e *sqlca.Engine, tables []*TableSchema) (
 		}
 
 		v.FileName = fmt.Sprintf("%v/%v%v%v.go", v.SchemeDir, strPrefix, v.TableName, strSuffix)
-		if err = ExportTableColumns(cmd, e, v); err != nil {
+		if err = ExportTableColumns(cmd, v); err != nil {
 			return
 		}
 	}
@@ -64,7 +64,7 @@ func ExportTableSchema(cmd *Commander, e *sqlca.Engine, tables []*TableSchema) (
 	return
 }
 
-func ExportTableColumns(cmd *Commander, e *sqlca.Engine, table *TableSchema) (err error) {
+func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 
 	var File *os.File
 	File, err = os.OpenFile(table.FileName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0)
@@ -90,7 +90,7 @@ func ExportTableColumns(cmd *Commander, e *sqlca.Engine, table *TableSchema) (er
 	for i, v := range table.Columns {
 		table.Columns[i].Comment = ReplaceCRLF(v.Comment)
 	}
-	if haveDecimal(table, table.Columns) && !cmd.DisableDecimal {
+	if haveDecimal(table, table.Columns) && cmd.EnableDecimal {
 		strHead += IMPORT_SQLCA + "\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
 	}
 	strContent += MakeTableStructure(cmd, table)
@@ -118,7 +118,7 @@ func makeMethods(cmd *Commander, table *TableSchema) (strContent string) {
 			continue
 		}
 		strColName := CamelCaseConvert(v.Name)
-		strColType, _ := GetGoColumnType(table.TableName, v.Name, v.DataType, cmd.DisableDecimal)
+		strColType, _ := GetGoColumnType(table.TableName, v.Name, v.DataType, cmd.EnableDecimal)
 		strContent += MakeGetter(table.StructName, strColName, strColType)
 		if !IsInSlice(v.Name, cmd.ReadOnly) {
 			strContent += MakeSetter(table.StructName, strColName, strColType)
@@ -140,7 +140,7 @@ func MakeTableStructure(cmd *Commander, table *TableSchema) (strContent string) 
 		var tagValues []string
 		var strColType, strColName string
 		strColName = CamelCaseConvert(v.Name)
-		strColType, _ = GetGoColumnType(table.TableName, v.Name, v.DataType, cmd.DisableDecimal)
+		strColType, _ = GetGoColumnType(table.TableName, v.Name, v.DataType, cmd.EnableDecimal)
 
 		if IsInSlice(v.Name, cmd.ReadOnly) {
 			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", sqlca.TAG_NAME_SQLCA, sqlca.SQLCA_TAG_VALUE_READ_ONLY))

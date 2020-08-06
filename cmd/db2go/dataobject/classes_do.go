@@ -4,18 +4,18 @@ package dataobject
 var TableNameClasses = "classes" //
 
 type ClassesDO struct {
-	Id        int32  `json:"id" db:"id" `                                 //incr id
-	ClassNo   string `json:"class_no" db:"class_no" `                     //class no
-	UserId    int32  `json:"user_id" db:"user_id" `                       //student id
-	CreatedAt string `json:"created_at" db:"created_at" sqlca:"readonly"` //create time
-	UpdatedAt string `json:"updated_at" db:"updated_at" sqlca:"readonly"` //update time
+	Id        int32  `json:"id" db:"id" `                                 //
+	UserId    int32  `json:"user_id" db:"user_id" `                       //
+	ClassNo   string `json:"class_no" db:"class_no" `                     //
+	CreatedAt string `json:"created_at" db:"created_at" sqlca:"readonly"` //
+	UpdatedAt string `json:"updated_at" db:"updated_at" sqlca:"readonly"` //
 }
 
 func (do *ClassesDO) GetId() int32         { return do.Id }
 func (do *ClassesDO) SetId(v int32)        { do.Id = v }
-func (do *ClassesDO) GetClassNo() string   { return do.ClassNo }
-func (do *ClassesDO) SetClassNo(v string)  { do.ClassNo = v }
 func (do *ClassesDO) GetUserId() int32     { return do.UserId }
 func (do *ClassesDO) SetUserId(v int32)    { do.UserId = v }
+func (do *ClassesDO) GetClassNo() string   { return do.ClassNo }
+func (do *ClassesDO) SetClassNo(v string)  { do.ClassNo = v }
 func (do *ClassesDO) GetCreatedAt() string { return do.CreatedAt }
 func (do *ClassesDO) GetUpdatedAt() string { return do.UpdatedAt }

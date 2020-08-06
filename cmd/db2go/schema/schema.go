@@ -20,25 +20,25 @@ const (
 )
 
 type Commander struct {
-	ConnUrl        string
-	Database       string
-	Tables         []string
-	Without        []string
-	ReadOnly       []string
-	Tags           []string
-	Scheme         string
-	Host           string
-	User           string
-	Password       string
-	Charset        string
-	OutDir         string
-	Prefix         string
-	Suffix         string
-	PackageName    string
-	Protobuf       bool
-	DisableDecimal bool
-	OneFile        bool
-	GogoOptions    []string
+	ConnUrl       string
+	Database      string
+	Tables        []string
+	Without       []string
+	ReadOnly      []string
+	Tags          []string
+	Scheme        string
+	Host          string
+	User          string
+	Password      string
+	Charset       string
+	OutDir        string
+	Prefix        string
+	Suffix        string
+	PackageName   string
+	Protobuf      bool
+	EnableDecimal bool
+	OneFile       bool
+	GogoOptions   []string
 }
 
 type TableSchema struct {
@@ -234,7 +234,7 @@ func GetDatabaseName(strPath string) (strName string) {
 }
 
 //将数据库字段类型转为go语言对应的数据类型
-func GetGoColumnType(strTableName, strColName, strDataType string, disableDecimal bool) (strColType string, isDecimal bool) {
+func GetGoColumnType(strTableName, strColName, strDataType string, enableDecimal bool) (strColType string, isDecimal bool) {
 
 	switch strDataType {
 	case "bigint":
@@ -248,7 +248,7 @@ func GetGoColumnType(strTableName, strColName, strDataType string, disableDecima
 	case "bool", "boolean":
 		strColType = "bool"
 	case "decimal":
-		if disableDecimal {
+		if !enableDecimal {
 			strColType = "float64"
 		} else {
 			strColType = "sqlca.Decimal"
@@ -260,7 +260,7 @@ func GetGoColumnType(strTableName, strColName, strDataType string, disableDecima
 		strColType = "string"
 	case "enum", "set", "varchar", "char", "text", "tinytext", "mediumtext", "longtext":
 		strColType = "string"
-	case "blob", "tinyblob", "mediumblob", "longblob", "binary", "varbinary", "json":
+	case "blob", "tinyblob", "mediumblob", "longblob", "binary", "varbinary", "json", "jsonb":
 		strColType = "string"
 	default:
 		{
@@ -280,9 +280,9 @@ func GetProtoColumnType(strTableName, strColName, strDataType string) (strColTyp
 	case "int", "integer", "mediumint":
 		strColType = "int32"
 	case "smallint":
-		strColType = "int32"
+		strColType = "int16"
 	case "tinyint", "bit":
-		strColType = "int32"
+		strColType = "int8"
 	case "bool", "boolean":
 		strColType = "bool"
 	case "double", "decimal":
@@ -293,7 +293,7 @@ func GetProtoColumnType(strTableName, strColName, strDataType string) (strColTyp
 		strColType = "string"
 	case "enum", "set", "varchar", "char", "text", "tinytext", "mediumtext", "longtext":
 		strColType = "string"
-	case "blob", "tinyblob", "mediumblob", "longblob", "binary", "varbinary", "json":
+	case "blob", "tinyblob", "mediumblob", "longblob", "binary", "varbinary", "json", "jsonb":
 		strColType = "string"
 	default:
 		{

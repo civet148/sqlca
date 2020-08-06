@@ -236,36 +236,18 @@ func GetDatabaseName(strPath string) (strName string) {
 //将数据库字段类型转为go语言对应的数据类型
 func GetGoColumnType(strTableName, strColName, strDataType string, enableDecimal bool) (strColType string, isDecimal bool) {
 
+	var ok bool
+	if strColType, ok = db2goTypes[strDataType]; !ok {
+		strColType = "string"
+		log.Warnf("table [%v] column [%v] data type [%v] not support yet, set as string type", strTableName, strColName, strDataType)
+		return
+	}
 	switch strDataType {
-	case "bigint":
-		strColType = "int64"
-	case "int", "integer", "mediumint":
-		strColType = "int32"
-	case "smallint":
-		strColType = "int16"
-	case "tinyint", "bit":
-		strColType = "int8"
-	case "bool", "boolean":
-		strColType = "bool"
-	case "decimal":
+	case DB_COLUMN_TYPE_DECIMAL:
 		if !enableDecimal {
 			strColType = "float64"
 		} else {
 			strColType = "sqlca.Decimal"
-		}
-		isDecimal = true
-	case "real", "double", "float", "numeric":
-		strColType = "float64"
-	case "datetime", "year", "date", "time", "timestamp":
-		strColType = "string"
-	case "enum", "set", "varchar", "char", "text", "tinytext", "mediumtext", "longtext":
-		strColType = "string"
-	case "blob", "tinyblob", "mediumblob", "longblob", "binary", "varbinary", "json", "jsonb":
-		strColType = "string"
-	default:
-		{
-			strColType = "string"
-			log.Warnf("table [%v] column [%v] data type [%v] not support yet, set as string type", strTableName, strColName, strDataType)
 		}
 	}
 	return
@@ -274,32 +256,19 @@ func GetGoColumnType(strTableName, strColName, strDataType string, enableDecimal
 //将数据库字段类型转为protobuf对应的数据类型
 func GetProtoColumnType(strTableName, strColName, strDataType string) (strColType string) {
 
-	switch strDataType {
-	case "bigint":
-		strColType = "int64"
-	case "int", "integer", "mediumint":
-		strColType = "int32"
-	case "smallint":
-		strColType = "int16"
-	case "tinyint", "bit":
-		strColType = "int8"
-	case "bool", "boolean":
-		strColType = "bool"
-	case "double", "decimal":
-		strColType = "double"
-	case "real", "float", "numeric":
-		strColType = "float"
-	case "datetime", "year", "date", "time", "timestamp":
+	var ok bool
+	if strColType, ok = db2protoTypes[strDataType]; !ok {
 		strColType = "string"
-	case "enum", "set", "varchar", "char", "text", "tinytext", "mediumtext", "longtext":
-		strColType = "string"
-	case "blob", "tinyblob", "mediumblob", "longblob", "binary", "varbinary", "json", "jsonb":
-		strColType = "string"
-	default:
-		{
-			strColType = "string"
-			log.Warnf("table [%v] column [%v] data type [%v] not support yet, set as string type", strTableName, strColName, strDataType)
-		}
+		log.Warnf("table [%v] column [%v] data type [%v] not support yet, set as string type", strTableName, strColName, strDataType)
+		return
 	}
 	return
+}
+
+func HandleCommentCRLF(table *TableSchema) {
+	//write table name in camel case naming
+	table.TableComment = ReplaceCRLF(table.TableComment)
+	for i, v := range table.Columns {
+		table.Columns[i].Comment = ReplaceCRLF(v.Comment)
+	}
 }

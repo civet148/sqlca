@@ -66,6 +66,7 @@ const (
 	DB_COLUMN_TYPE_ENUM       = "enum"
 	DB_COLUMN_TYPE_SET        = "set"
 	DB_COLUMN_TYPE_VARCHAR    = "varchar"
+	DB_COLUMN_TYPE_NVARCHAR   = "nvarchar"
 	DB_COLUMN_TYPE_CHAR       = "char"
 	DB_COLUMN_TYPE_TEXT       = "text"
 	DB_COLUMN_TYPE_TINYTEXT   = "tinytext"
@@ -108,6 +109,7 @@ var db2goTypes = map[string]string{
 	DB_COLUMN_TYPE_ENUM:       "string",
 	DB_COLUMN_TYPE_SET:        "string",
 	DB_COLUMN_TYPE_VARCHAR:    "string",
+	DB_COLUMN_TYPE_NVARCHAR:   "string",
 	DB_COLUMN_TYPE_CHAR:       "string",
 	DB_COLUMN_TYPE_TEXT:       "string",
 	DB_COLUMN_TYPE_TINYTEXT:   "string",
@@ -132,9 +134,9 @@ var db2protoTypes = map[string]string{
 	DB_COLUMN_TYPE_INT:        "int32",
 	DB_COLUMN_TYPE_INTEGER:    "int32",
 	DB_COLUMN_TYPE_MEDIUMINT:  "int32",
-	DB_COLUMN_TYPE_SMALLINT:   "int16",
-	DB_COLUMN_TYPE_TINYINT:    "int8",
-	DB_COLUMN_TYPE_BIT:        "int8",
+	DB_COLUMN_TYPE_SMALLINT:   "int32",
+	DB_COLUMN_TYPE_TINYINT:    "int32",
+	DB_COLUMN_TYPE_BIT:        "int32",
 	DB_COLUMN_TYPE_BOOL:       "bool",
 	DB_COLUMN_TYPE_BOOLEAN:    "bool",
 	DB_COLUMN_TYPE_DECIMAL:    "double",
@@ -191,7 +193,7 @@ func getFamiliarType(strDataType string) (strType string) {
 
 	if strings.Contains(strDataType, POSTGRES_COLUMN_BIT_VARYING) || strings.Contains(strDataType, POSTGRES_COLUMN_BIT) {
 		return DB_COLUMN_TYPE_BIT
-	} else if strings.Contains(strDataType, POSTGRES_COLUMN_BOX) {
+	} else if strings.Contains(strDataType, POSTGRES_COLUMN_BOX) || strings.Contains(strDataType, POSTGRES_COLUMN_CIRCLE) {
 		return DB_COLUMN_TYPE_POLYGON
 	} else if strings.Contains(strDataType, POSTGRES_COLUMN_MONEY) || strings.Contains(strDataType, POSTGRES_COLUMN_NUMERIC) {
 		return DB_COLUMN_TYPE_DECIMAL

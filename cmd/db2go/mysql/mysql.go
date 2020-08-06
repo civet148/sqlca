@@ -113,12 +113,14 @@ func (m *ExporterMysql) queryTableSchemas(cmd *schema.Commander, e *sqlca.Engine
 	}
 
 	if len(tables) == 0 {
-		strQuery = fmt.Sprintf("select `table_schema` as table_schema, `table_name` as table_name, `engine` as engine, `table_comment` as table_comment from `information_schema`.`tables` "+
-			"where (`engine`='myisam' or `engine` = 'innodb' or `engine` = 'tokudb') and `table_schema` in (%v) order by table_schema",
+		strQuery = fmt.Sprintf("SELECT `TABLE_SCHEMA` as table_schema, `TABLE_NAME` as table_name, `ENGINE` as engine, `TABLE_COMMENT` as table_comment "+
+			"FROM `INFORMATION_SCHEMA`.`TABLES` "+
+			"where (`ENGINE`='myisam' OR `ENGINE` = 'innodb' OR `ENGINE` = 'tokudb') and `TABLE_SCHEMA` IN (%v) ORDER BY TABLE_SCHEMA",
 			strDatabaseName)
 	} else {
-		strQuery = fmt.Sprintf("select `table_schema` as table_schema, `table_name` as table_name, `engine` as engine, `table_comment` as table_comment from `information_schema`.`tables` "+
-			"where (`engine`='myisam' or `engine` = 'innodb' or `engine` = 'tokudb') and `table_schema` in (%v) and table_name in (%v) order by table_schema",
+		strQuery = fmt.Sprintf("SELECT `TABLE_SCHEMA` as table_schema, `TABLE_NAME` as table_name, `ENGINE` as engine, `table_comment` as table_comment "+
+			" FROM `INFORMATION_SCHEMA`.`TABLES` "+
+			" WHERE (`ENGINE`='myisam' or `ENGINE` = 'innodb' or `ENGINE` = 'tokudb') and `TABLE_SCHEMA` in (%v) AND TABLE_NAME in (%v) ORDER BY TABLE_SCHEMA",
 			strDatabaseName, strings.Join(tables, ","))
 	}
 
@@ -137,16 +139,13 @@ func (m *ExporterMysql) queryTableColumns(table *schema.TableSchema) (err error)
 	 WHERE `TABLE_SCHEMA` = 'accounts' AND `TABLE_NAME` = 'users' ORDER BY ORDINAL_POSITION ASC
 	*/
 	var e = m.Engine
-	_, err = e.Model(&table.Columns).QueryRaw("select `table_name` as table_name, `column_name` as column_name, `data_type` as data_type, `extra` as extra, `column_key` as column_key, `column_comment` as column_comment"+
-		" from `information_schema`.`columns` where `table_schema` = '%v' and `table_name` = '%v' order by ordinal_position asc", table.SchemeName, table.TableName)
+	_, err = e.Model(&table.Columns).QueryRaw("select `TABLE_NAME` as table_name, `COLUMN_NAME` as column_name, `DATA_TYPE` as data_type, `EXTRA` as extra,"+
+		" `COLUMN_KEY` as column_key, `COLUMN_COMMENT` as column_comment "+
+		" FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v' ORDER BY ORDINAL_POSITION ASC", table.SchemeName, table.TableName)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
-	//write table name in camel case naming
-	table.TableComment = schema.ReplaceCRLF(table.TableComment)
-	for i, v := range table.Columns {
-		table.Columns[i].Comment = schema.ReplaceCRLF(v.Comment)
-	}
+	schema.HandleCommentCRLF(table)
 	return
 }

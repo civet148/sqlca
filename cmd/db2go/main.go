@@ -27,6 +27,11 @@ var argvEnableDecimal = flag.Bool("enable-decimal", false, "decimal as sqlca.Dec
 var argvGogoOptions = flag.String("gogo-options", "", "gogo proto options")
 var argvOneFile = flag.Bool("one-file", false, "output go/proto file into one file which named by database name")
 
+func init() {
+	flag.Parse()
+	log.SetLevel("info")
+}
+
 func main() {
 
 	//var err error
@@ -104,14 +109,9 @@ func main() {
 	cmd.User = ui.User
 	cmd.Password = ui.Password
 	e := sqlca.NewEngine(false)
-	e.Debug(true)
 	e.Open(cmd.ConnUrl)
 
 	export(&cmd, e)
-}
-
-func init() {
-	flag.Parse()
 }
 
 func export(cmd *schema.Commander, e *sqlca.Engine) {

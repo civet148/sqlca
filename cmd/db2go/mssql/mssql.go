@@ -1,5 +1,6 @@
-package postgres
+package mssql
 
+import "C"
 import (
 	"fmt"
 	"github.com/civet148/gotools/log"
@@ -39,25 +40,25 @@ WHERE
 ORDER BY C.relname,A.attnum
 */
 
-type ExporterPostgres struct {
+type ExporterMssql struct {
 	Cmd     *schema.Commander
 	Engine  *sqlca.Engine
 	Schemas []*schema.TableSchema
 }
 
 func init() {
-	schema.Register(schema.SCHEME_POSTGRES, NewExporterPostgres)
+	schema.Register(schema.SCHEME_MSSQL, NewExporterMssql)
 }
 
-func NewExporterPostgres(cmd *schema.Commander, e *sqlca.Engine) schema.Exporter {
+func NewExporterMssql(cmd *schema.Commander, e *sqlca.Engine) schema.Exporter {
 
-	return &ExporterPostgres{
+	return &ExporterMssql{
 		Cmd:    cmd,
 		Engine: e,
 	}
 }
 
-func (m *ExporterPostgres) ExportGo() (err error) {
+func (m *ExporterMssql) ExportGo() (err error) {
 	var cmd = m.Cmd
 	var e = m.Engine
 	var schemas = m.Schemas
@@ -84,7 +85,7 @@ func (m *ExporterPostgres) ExportGo() (err error) {
 	return schema.ExportTableSchema(cmd, e, schemas)
 }
 
-func (m *ExporterPostgres) ExportProto() (err error) {
+func (m *ExporterMssql) ExportProto() (err error) {
 	var cmd = m.Cmd
 	var schemas = m.Schemas
 	if schemas, err = m.queryTableSchemas(); err != nil {
@@ -124,10 +125,10 @@ func (m *ExporterPostgres) ExportProto() (err error) {
 }
 
 //查询当前库下所有表名
-func (m *ExporterPostgres) queryTableNames() (rows int64, err error) {
+func (m *ExporterMssql) queryTableNames() (rows int64, err error) {
 	var e = m.Engine
 	var cmd = m.Cmd
-	strQuery := fmt.Sprintf(`SELECT relname AS table_name FROM pg_class C WHERE relkind = 'r' AND relname NOT LIKE'pg_%%' AND relname NOT LIKE'sql_%%' ORDER BY relname`)
+	strQuery := fmt.Sprintf(`SELECT table_name FROM INFORMATION_SCHEMA.TABLES`)
 	if rows, err = e.Model(&cmd.Tables).QueryRaw(strQuery); err != nil {
 		log.Errorf(err.Error())
 		return
@@ -136,7 +137,7 @@ func (m *ExporterPostgres) queryTableNames() (rows int64, err error) {
 }
 
 //查询表和注释、引擎等等基本信息
-func (m *ExporterPostgres) queryTableSchemas() (schemas []*schema.TableSchema, err error) {
+func (m *ExporterMssql) queryTableSchemas() (schemas []*schema.TableSchema, err error) {
 
 	var cmd = m.Cmd
 	var e = m.Engine
@@ -169,8 +170,9 @@ func (m *ExporterPostgres) queryTableSchemas() (schemas []*schema.TableSchema, e
 	log.Infof("ready to export tables %v", tables)
 
 	strQuery = fmt.Sprintf(
-		`SELECT '%v' as table_schema, relname AS table_name, CAST ( obj_description ( relfilenode, 'pg_class' ) AS VARCHAR ) AS table_comment
-                 FROM pg_class C WHERE relkind = 'r' AND relname in (%v) ORDER BY relname`, cmd.Database, strings.Join(tables, ","))
+		`SELECT '%v' as table_schema, A.name as table_name, C.value as table_comment FROM sys.tables A 
+                LEFT JOIN sys.extended_properties C ON C.major_id = A.object_id  and minor_id=0 WHERE A.name in (%v)`,
+		cmd.Database, strings.Join(tables, ","))
 	_, err = e.Model(&schemas).QueryRaw(strQuery)
 	if err != nil {
 		log.Errorf("%s", err)
@@ -179,17 +181,16 @@ func (m *ExporterPostgres) queryTableSchemas() (schemas []*schema.TableSchema, e
 	return
 }
 
-func (m *ExporterPostgres) queryTableColumns(table *schema.TableSchema) (err error) {
+func (m *ExporterMssql) queryTableColumns(table *schema.TableSchema) (err error) {
 
 	var e = m.Engine
-	_, err = e.Model(&table.Columns).QueryRaw(`SELECT C.relname as table_name, A.attname AS column_name, format_type(A.atttypid,A.atttypmod) AS data_type,
-	col_description ( A.attrelid, A.attnum ) AS column_comment FROM pg_class AS C, pg_attribute AS A WHERE	C.relname = '%v' AND A.attrelid = C.oid	AND A.attnum > 0
-    ORDER BY C.relname,A.attnum`, table.TableName)
+	_, err = e.Model(&table.Columns).QueryRaw(`SELECT table_name, column_name, data_type FROM INFORMATION_SCHEMA.COLUMNS 
+                                                        WHERE table_catalog='test' and table_name in ('%v') order by table_name,ordinal_position`, table.TableName)
 
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 	schema.HandleCommentCRLF(table)
-	return schema.ConvertPostgresColumnType(table) //转换postgres数据库字段类型为MYSQL映射的类型
+	return schema.ConvertMssqlColumnType(table) //转换Mssql数据库字段类型为MYSQL映射的类型
 }

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca"
-	"github.com/civet148/sqlca/cmd/db2go/mysql"
+	_ "github.com/civet148/sqlca/cmd/db2go/mssql"
+	_ "github.com/civet148/sqlca/cmd/db2go/mysql"
+	_ "github.com/civet148/sqlca/cmd/db2go/postgres"
 	"github.com/civet148/sqlca/cmd/db2go/schema"
 	"strings"
 )
@@ -21,9 +23,14 @@ var argvPackage = flag.String("package", "", "export package name")
 var argvWithout = flag.String("without", "", "exclude columns")
 var argvReadOnly = flag.String("readonly", "", "read only columns")
 var argvProtobuf = flag.Bool("proto", false, "output proto buffer file")
-var argvDisableDecimal = flag.Bool("disable-decimal", false, "decimal as float type")
+var argvEnableDecimal = flag.Bool("enable-decimal", false, "decimal as sqlca.Decimal type")
 var argvGogoOptions = flag.String("gogo-options", "", "gogo proto options")
 var argvOneFile = flag.Bool("one-file", false, "output go/proto file into one file which named by database name")
+
+func init() {
+	flag.Parse()
+	log.SetLevel("info")
+}
 
 func main() {
 
@@ -57,7 +64,7 @@ func main() {
 	cmd.ConnUrl = *argvUrl
 	cmd.PackageName = *argvPackage
 	cmd.Protobuf = *argvProtobuf
-	cmd.DisableDecimal = *argvDisableDecimal
+	cmd.EnableDecimal = *argvEnableDecimal
 
 	ui := sqlca.ParseUrl(*argvUrl)
 
@@ -102,40 +109,25 @@ func main() {
 	cmd.User = ui.User
 	cmd.Password = ui.Password
 	e := sqlca.NewEngine(false)
-	e.Debug(true)
 	e.Open(cmd.ConnUrl)
 
-	switch cmd.Scheme {
-	case "mysql":
-		exportMysql(&cmd, e)
-	case "postgres":
-		exportPostgres(&cmd, e)
-	case "mssql":
-		exportMssql(&cmd, e)
+	export(&cmd, e)
+}
+
+func export(cmd *schema.Commander, e *sqlca.Engine) {
+
+	exporter := schema.NewExporter(cmd, e)
+	if exporter == nil {
+		log.Errorf("new exporter error, nil object")
+		return
 	}
-}
-
-func init() {
-	flag.Parse()
-}
-
-func exportMysql(cmd *schema.Commander, e *sqlca.Engine) {
-
 	if cmd.Protobuf {
-		if err := mysql.ExportProtobuf(cmd, e); err != nil {
-			log.Errorf("export mysql schema protobuf error [%v]", err.Error())
+		if err := exporter.ExportProto(); err != nil {
+			log.Errorf("export [%v] to protobuf file error [%v]", cmd.Scheme, err.Error())
 		}
 	} else {
-		if err := mysql.ExportGoStruct(cmd, e); err != nil {
-			log.Errorf("export mysql schema structure error [%v]", err.Error())
+		if err := exporter.ExportGo(); err != nil {
+			log.Errorf("export [%v] to go file error [%v]", cmd.Scheme, err.Error())
 		}
 	}
-}
-
-func exportPostgres(cmd *schema.Commander, e *sqlca.Engine) {
-	log.Warnf("export postgres not implement yet")
-}
-
-func exportMssql(cmd *schema.Commander, e *sqlca.Engine) {
-	log.Warnf("export mssql not implement yet")
 }

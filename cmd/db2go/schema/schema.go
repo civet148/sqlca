@@ -3,8 +3,15 @@ package schema
 import (
 	"fmt"
 	"github.com/civet148/gotools/log"
+	"github.com/civet148/sqlca"
 	"os"
 	"strings"
+)
+
+const (
+	SCHEME_MYSQL    = "mysql"
+	SCHEME_POSTGRES = "postgres"
+	SCHEME_MSSQL    = "mssql"
 )
 
 const (
@@ -13,51 +20,74 @@ const (
 )
 
 type Commander struct {
-	ConnUrl        string
-	Database       string
-	Tables         []string
-	Without        []string
-	ReadOnly       []string
-	Tags           []string
-	Scheme         string
-	Host           string
-	User           string
-	Password       string
-	Charset        string
-	OutDir         string
-	Prefix         string
-	Suffix         string
-	PackageName    string
-	Protobuf       bool
-	DisableDecimal bool
-	OneFile        bool
-	GogoOptions    []string
+	ConnUrl       string
+	Database      string
+	Tables        []string
+	Without       []string
+	ReadOnly      []string
+	Tags          []string
+	Scheme        string
+	Host          string
+	User          string
+	Password      string
+	Charset       string
+	OutDir        string
+	Prefix        string
+	Suffix        string
+	PackageName   string
+	Protobuf      bool
+	EnableDecimal bool
+	OneFile       bool
+	GogoOptions   []string
 }
 
 type TableSchema struct {
-	SchemeName   string        `json:"TABLE_SCHEMA" db:"TABLE_SCHEMA"`   //database name
-	TableName    string        `json:"TABLE_NAME" db:"TABLE_NAME"`       //table name
-	TableEngine  string        `json:"ENGINE" db:"ENGINE"`               //database engine
-	TableComment string        `json:"TABLE_COMMENT" db:"TABLE_COMMENT"` //comment of table schema
-	SchemeDir    string        `json:"SCHEMA_DIR" db:"SCHEMA_DIR"`       //output path
-	PkName       string        `json:"PK_NAME" db:"PK_NAME"`             //primary key column name
-	StructName   string        `json:"STRUCT_NAME" db:"STRUCT_NAME"`     //struct name
-	OutDir       string        `json:"OUT_DIR" db:"OUT_DIR"`             //output directory
-	FileName     string        `json:"FILE_NAME" db:"FILE_NAME"`         //output directory
-	Columns      []TableColumn `json:"TABLE_COLUMNS" db:"TABLE_COLUMNS"` //columns with database and golang
+	SchemeName   string        `json:"table_schema" db:"table_schema"`   //database name
+	TableName    string        `json:"table_name" db:"table_name"`       //table name
+	TableEngine  string        `json:"engine" db:"engine"`               //database engine
+	TableComment string        `json:"table_comment" db:"table_comment"` //comment of table schema
+	SchemeDir    string        `json:"schema_dir" db:"schema_dir"`       //output path
+	PkName       string        `json:"pk_name" db:"pk_name"`             //primary key column name
+	StructName   string        `json:"struct_name" db:"struct_name"`     //struct name
+	OutDir       string        `json:"out_dir" db:"out_dir"`             //output directory
+	FileName     string        `json:"file_name" db:"file_name"`         //output directory
+	Columns      []TableColumn `json:"table_columns" db:"table_columns"` //columns with database and golang
 }
 
 type TableColumn struct {
-	Name         string `json:"COLUMN_NAME" db:"COLUMN_NAME"`
-	DataType     string `json:"DATA_TYPE" db:"DATA_TYPE"`
-	Key          string `json:"COLUMN_KEY" db:"COLUMN_KEY"`
-	Extra        string `json:"EXTRA" db:"EXTRA"`
-	Comment      string `json:"COLUMN_COMMENT" db:"COLUMN_COMMENT"`
+	Name         string `json:"column_name" db:"column_name"`
+	DataType     string `json:"data_type" db:"data_type"`
+	Key          string `json:"column_key" db:"column_key"`
+	Extra        string `json:"extra" db:"extra"`
+	Comment      string `json:"column_comment" db:"column_comment"`
 	IsPrimaryKey bool   // is primary key
 	IsDecimal    bool   // is decimal type
 	IsReadOnly   bool   // is read only
 	GoName       string //column name in golang
 	GoType       string //column type in golang
+}
+
+type Exporter interface {
+	ExportGo() (err error)
+	ExportProto() (err error)
+}
+
+type Instance func(cmd *Commander, e *sqlca.Engine) Exporter
+
+var instances = make(map[string]Instance, 1)
+
+func Register(strScheme string, inst Instance) {
+	instances[strScheme] = inst
+}
+
+func NewExporter(cmd *Commander, e *sqlca.Engine) Exporter {
+	var ok bool
+	var inst Instance
+	if inst, ok = instances[cmd.Scheme]; !ok {
+		log.Errorf("scheme [%v] instance not registered", cmd.Scheme)
+		return nil
+	}
+	return inst(cmd, e)
 }
 
 func IsInSlice(in string, s []string) bool {
@@ -201,4 +231,44 @@ func GetDatabaseName(strPath string) (strName string) {
 		return
 	}
 	return strPath[idx+1:]
+}
+
+//将数据库字段类型转为go语言对应的数据类型
+func GetGoColumnType(strTableName, strColName, strDataType string, enableDecimal bool) (strColType string, isDecimal bool) {
+
+	var ok bool
+	if strColType, ok = db2goTypes[strDataType]; !ok {
+		strColType = "string"
+		log.Warnf("table [%v] column [%v] data type [%v] not support yet, set as string type", strTableName, strColName, strDataType)
+		return
+	}
+	switch strDataType {
+	case DB_COLUMN_TYPE_DECIMAL:
+		if !enableDecimal {
+			strColType = "float64"
+		} else {
+			strColType = "sqlca.Decimal"
+		}
+	}
+	return
+}
+
+//将数据库字段类型转为protobuf对应的数据类型
+func GetProtoColumnType(strTableName, strColName, strDataType string) (strColType string) {
+
+	var ok bool
+	if strColType, ok = db2protoTypes[strDataType]; !ok {
+		strColType = "string"
+		log.Warnf("table [%v] column [%v] data type [%v] not support yet, set as string type", strTableName, strColName, strDataType)
+		return
+	}
+	return
+}
+
+func HandleCommentCRLF(table *TableSchema) {
+	//write table name in camel case naming
+	table.TableComment = ReplaceCRLF(table.TableComment)
+	for i, v := range table.Columns {
+		table.Columns[i].Comment = ReplaceCRLF(v.Comment)
+	}
 }

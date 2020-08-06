@@ -28,6 +28,7 @@
 
 --one-file  all table schema integrate into one file named by database [optional]
 
+--enable-decimal decimal as sqlca.Decimal type when exporting [optional]
 
 ## 1. 数据库表导出到go文件
 
@@ -44,7 +45,7 @@ set TABLE_NAME="users, classes"
 set WITH_OUT=""
 set DSN_URL="mysql://root:123456@127.0.0.1:3306/test?charset=utf8"
 
-db2go.exe --url %DSN_URL% --disable-decimal ^
+db2go.exe --url %DSN_URL%  ^
 --out %OUT_DIR% --db %DB_NAME% --table %TABLE_NAME% --suffix %SUFFIX_NAME% --package %PACK_NAME% --readonly %READ_ONLY% --without %WITH_OUT%
 
 echo generate go file ok, formatting...
@@ -65,7 +66,7 @@ set DB_NAME="test"
 set TABLE_NAME="users, classes"
 set SUFFIX_NAME="do"
 
-db2go.exe --url "mysql://root:123456@127.0.0.1:3306/test?charset=utf8" --disable-decimal --proto --gogo-options %GOGO_OPTIONS% ^
+db2go.exe --url "mysql://root:123456@127.0.0.1:3306/test?charset=utf8"  --proto --gogo-options %GOGO_OPTIONS% ^
 --out %OUT_DIR% --db %DB_NAME% --table %TABLE_NAME% --suffix %SUFFIX_NAME% --package %PACK_NAME% --one-file --without %WITH_OUT%
 
 echo generate protobuf file ok

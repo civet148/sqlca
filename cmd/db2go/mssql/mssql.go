@@ -12,32 +12,12 @@ import (
 
 /*
 -- 查询所有数据表和注释
-SELECT
-	relname AS table_name,
-	CAST ( obj_description ( relfilenode, 'pg_class' ) AS VARCHAR ) AS table_comment
-FROM
-	pg_class C
-WHERE
-	relkind = 'r'
-	AND relname NOT LIKE'pg_%'
-	AND relname NOT LIKE'sql_%'
-ORDER BY
-	relname
+SELECT table_name FROM INFORMATION_SCHEMA.TABLES
+SELECT A.name as table_name, C.value as table_comment FROM sys.tables A left JOIN sys.extended_properties C ON C.major_id = A.object_id  and minor_id=0 WHERE A.name = 'classes'
 
 -- 查询某些表字段名、类型和注释
-SELECT
-  C.relname as table_name,
-	A.attname AS column_name,
-	format_type ( A.atttypid, A.atttypmod ) AS data_type,
-	col_description ( A.attrelid, A.attnum ) AS column_comment
-FROM
-	pg_class AS C,
-	pg_attribute AS A
-WHERE
-	C.relname in ('users','classes')
-	AND A.attrelid = C.oid
-	AND A.attnum > 0
-ORDER BY C.relname,A.attnum
+SELECT A.name as table_name, C.value as table_comment FROM sys.tables A
+LEFT JOIN sys.extended_properties C ON C.major_id = A.object_id  and minor_id=0 WHERE A.name in ('users')
 */
 
 type ExporterMssql struct {

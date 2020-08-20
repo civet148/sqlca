@@ -81,21 +81,23 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 	strHead += fmt.Sprintf("package %v\n\n", cmd.PackageName)
 
 	//write table name in camel case naming
-	strTableName := CamelCaseConvert(table.TableName)
+	table.TableNameCamelCase = CamelCaseConvert(table.TableName)
 	table.TableComment = ReplaceCRLF(table.TableComment)
-	strContent += fmt.Sprintf("var TableName%v = \"%v\" //%v \n\n", strTableName, table.TableName, table.TableComment)
+	strContent += fmt.Sprintf("var TableName%v = \"%v\" //%v \n\n", table.TableNameCamelCase, table.TableName, table.TableComment)
 
-	table.StructName = fmt.Sprintf("%vDO", strTableName)
+	table.StructName = fmt.Sprintf("%vDO", table.TableNameCamelCase)
 
 	for i, v := range table.Columns {
 		table.Columns[i].Comment = ReplaceCRLF(v.Comment)
 	}
-	if haveDecimal(table, table.Columns) && cmd.EnableDecimal {
+	if cmd.Orm || (haveDecimal(table, table.Columns) && cmd.EnableDecimal) {
 		strHead += IMPORT_SQLCA + "\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
 	}
-	strContent += MakeTableStructure(cmd, table)
-	strContent += makeMethods(cmd, table)
 
+	strContent += MakeTableStructure(cmd, table)
+	strContent += makeNewMethod(cmd, table)
+	strContent += makeObjectMethods(cmd, table)
+	strContent += makeOrmMethods(cmd, table)
 	_, _ = File.WriteString(strHead + strContent)
 	return
 }
@@ -110,7 +112,21 @@ func haveDecimal(table *TableSchema, TableCols []TableColumn) (ok bool) {
 	return
 }
 
-func makeMethods(cmd *Commander, table *TableSchema) (strContent string) {
+func makeNewMethod(cmd *Commander, table *TableSchema) (strContent string) {
+	if cmd.Orm {
+		strContent += fmt.Sprintf(`
+func New%v(db *sqlca.Engine) *%v {
+	return &%v{
+		_db_: db,
+	}
+}
+
+`, table.StructName, table.StructName, table.StructName)
+	}
+	return
+}
+
+func makeObjectMethods(cmd *Commander, table *TableSchema) (strContent string) {
 
 	for _, v := range table.Columns { //添加结构体成员Get/Set方法
 
@@ -127,10 +143,69 @@ func makeMethods(cmd *Commander, table *TableSchema) (strContent string) {
 	return
 }
 
+func makeOrmMethods(cmd *Commander, table *TableSchema) (strContent string) {
+	if cmd.Orm {
+		strContent += makeOrmInsertMethod(cmd, table)
+		strContent += makeOrmUpsertMethod(cmd, table)
+		strContent += makeOrmUpdateMethod(cmd, table)
+		strContent += makeOrmQueryMethod(cmd, table)
+		strContent += makeOrmQueryExcludeMethod(cmd, table)
+	}
+	return
+}
+
+func makeOrmInsertMethod(cmd *Commander, table *TableSchema) (strContent string) {
+	return fmt.Sprintf(`
+//insert into table by data model
+func (do *%v) Insert_() (lastInsertId int64, err error) {
+	return do._db_.Model(do).Table(%v).Insert()
+}
+`, table.StructName, table.TableNameCamelCase)
+}
+
+func makeOrmUpsertMethod(cmd *Commander, table *TableSchema) (strContent string) {
+	return fmt.Sprintf(`
+//insert if not exist or update columns on duplicate key...
+func (do *%v) Upsert_() (lastInsertId int64, err error) {
+	return do._db_.Model(do).Table(%v).Select(columns...).Upsert()
+}
+`, table.StructName, table.TableNameCamelCase)
+}
+
+func makeOrmUpdateMethod(cmd *Commander, table *TableSchema) (strContent string) {
+	return fmt.Sprintf(`
+//update table set columns where id=xxx
+func (do *%v) Update_(columns...string) (rows int64, err error) {
+	return do._db_.Model(do).Table(%v).Select(columns...).Update()
+}
+`, table.StructName, table.TableNameCamelCase)
+}
+
+func makeOrmQueryMethod(cmd *Commander, table *TableSchema) (strContent string) {
+	return fmt.Sprintf(`
+//select columns from table where id=xxx
+func (do *%v) Query_(columns...string) (rows int64, err error) {
+	return do._db_.Model(do).Table(%v).Select(columns...).Query()
+}
+`, table.StructName, table.TableNameCamelCase)
+}
+
+func makeOrmQueryExcludeMethod(cmd *Commander, table *TableSchema) (strContent string) {
+	return fmt.Sprintf(`
+//select * from table where id=xxx exclude columns
+func (do *%v) Query_exclude(columns...string) (rows int64, err error) {
+	return do._db_.Model(do).Table(%v).Exclude(columns...).Query()
+}
+`, table.StructName, table.TableNameCamelCase)
+}
+
 func MakeTableStructure(cmd *Commander, table *TableSchema) (strContent string) {
 
 	strContent += fmt.Sprintf("type %v struct { \n", table.StructName)
 
+	if cmd.Orm {
+		strContent += "_db_      *sqlca.Engine \n"
+	}
 	for _, v := range table.Columns {
 
 		if IsInSlice(v.Name, cmd.Without) {

@@ -39,19 +39,21 @@ type Commander struct {
 	EnableDecimal bool
 	OneFile       bool
 	GogoOptions   []string
+	Orm           bool
 }
 
 type TableSchema struct {
-	SchemeName   string        `json:"table_schema" db:"table_schema"`   //database name
-	TableName    string        `json:"table_name" db:"table_name"`       //table name
-	TableEngine  string        `json:"engine" db:"engine"`               //database engine
-	TableComment string        `json:"table_comment" db:"table_comment"` //comment of table schema
-	SchemeDir    string        `json:"schema_dir" db:"schema_dir"`       //output path
-	PkName       string        `json:"pk_name" db:"pk_name"`             //primary key column name
-	StructName   string        `json:"struct_name" db:"struct_name"`     //struct name
-	OutDir       string        `json:"out_dir" db:"out_dir"`             //output directory
-	FileName     string        `json:"file_name" db:"file_name"`         //output directory
-	Columns      []TableColumn `json:"table_columns" db:"table_columns"` //columns with database and golang
+	SchemeName         string        `json:"table_schema" db:"table_schema"`   //database name
+	TableName          string        `json:"table_name" db:"table_name"`       //table name
+	TableEngine        string        `json:"engine" db:"engine"`               //database engine
+	TableComment       string        `json:"table_comment" db:"table_comment"` //comment of table schema
+	SchemeDir          string        `json:"schema_dir" db:"schema_dir"`       //output path
+	PkName             string        `json:"pk_name" db:"pk_name"`             //primary key column name
+	StructName         string        `json:"struct_name" db:"struct_name"`     //struct name
+	OutDir             string        `json:"out_dir" db:"out_dir"`             //output directory
+	FileName           string        `json:"file_name" db:"file_name"`         //output directory
+	Columns            []TableColumn `json:"table_columns" db:"table_columns"` //columns with database and golang
+	TableNameCamelCase string        //table name in camel case
 }
 
 type TableColumn struct {

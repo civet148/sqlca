@@ -863,3 +863,20 @@ func (e *Engine) TxHandle(handler TxHandler) (err error) {
 	}
 	return tx.TxCommit()
 }
+
+//execute transaction by customize function
+//auto rollback when function return error
+func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
+	var tx *Engine
+
+	if tx, err = e.TxBegin(); err != nil {
+		log.Errorf("transaction begin error [%v]", err.Error())
+		return
+	}
+	if err2 := fn(tx); err2 != nil {
+		_ = tx.TxRollback()
+		log.Warnf("transaction rollback by handler error [%v]", err2.Error())
+		return
+	}
+	return tx.TxCommit()
+}

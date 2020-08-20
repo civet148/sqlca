@@ -20,6 +20,10 @@ type Options struct {
 	Slave bool //is a slave DSN ?
 }
 
+type TxHandler interface {
+	OnTransaction(tx *Engine) error
+}
+
 type Engine struct {
 	dsn             dsnDriver              // driver name and parameters
 	slave           bool                   // use slave to query ?
@@ -841,4 +845,21 @@ func (e *Engine) Ping() (err error) {
 // set read only columns
 func (e *Engine) SetReadOnly(columns ...string) {
 	e.readOnly = columns
+}
+
+//execute transaction by customize handler
+//auto rollback when handler return error
+func (e *Engine) TxHandle(handler TxHandler) (err error) {
+	var tx *Engine
+
+	if tx, err = e.TxBegin(); err != nil {
+		log.Errorf("transaction begin error [%v]", err.Error())
+		return
+	}
+	if err2 := handler.OnTransaction(tx); err2 != nil {
+		_ = tx.TxRollback()
+		log.Warnf("transaction rollback by handler error [%v]", err2.Error())
+		return
+	}
+	return tx.TxCommit()
 }

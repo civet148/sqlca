@@ -27,6 +27,7 @@ var argvDisableDecimal = flag.Bool("disable-decimal", true, "compatible with leg
 var argvEnableDecimal = flag.Bool("enable-decimal", false, "decimal as sqlca.Decimal type")
 var argvGogoOptions = flag.String("gogo-options", "", "gogo proto options")
 var argvOneFile = flag.Bool("one-file", false, "output go/proto file into one file which named by database name")
+var argvOrm = flag.Bool("orm", false, "generate ORM code inner data object")
 
 func init() {
 	flag.Parse()
@@ -50,6 +51,7 @@ func main() {
 	log.Infof("argument: proto [%v]", *argvProtobuf)
 	log.Infof("argument: one-file [%v]", *argvOneFile)
 	log.Infof("argument: gogo-options [%v]", *argvGogoOptions)
+	log.Infof("argument: orm [%v]", *argvOrm)
 
 	if *argvUrl == "" {
 		log.Infof("")
@@ -66,6 +68,7 @@ func main() {
 	cmd.PackageName = *argvPackage
 	cmd.Protobuf = *argvProtobuf
 	cmd.EnableDecimal = *argvEnableDecimal
+	cmd.Orm = *argvOrm
 
 	ui := sqlca.ParseUrl(*argvUrl)
 

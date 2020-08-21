@@ -1,6 +1,7 @@
 package sqlca
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/civet148/gotools/log"
@@ -874,6 +875,23 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 		return
 	}
 	if err2 := fn(tx); err2 != nil {
+		_ = tx.TxRollback()
+		log.Warnf("transaction rollback by handler error [%v]", err2.Error())
+		return
+	}
+	return tx.TxCommit()
+}
+
+//execute transaction by customize function with context
+//auto rollback when function return error
+func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context, tx *Engine) error) (err error) {
+	var tx *Engine
+
+	if tx, err = e.TxBegin(); err != nil {
+		log.Errorf("transaction begin error [%v]", err.Error())
+		return
+	}
+	if err2 := fn(ctx, tx); err2 != nil {
 		_ = tx.TxRollback()
 		log.Warnf("transaction rollback by handler error [%v]", err2.Error())
 		return

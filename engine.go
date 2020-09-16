@@ -395,7 +395,7 @@ func (e *Engine) Desc(strColumns ...string) *Engine {
 // `field_name` IN ('1','2',...)
 func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
 	if len(args) == 0 {
-		e.panic("IN conditions can't be nil")
+		panic("IN conditions can't be nil")
 	}
 	v := condition{
 		ColumnName:   strColumn,
@@ -408,7 +408,7 @@ func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
 // `field_name` NOT IN ('1','2',...)
 func (e *Engine) Not(strColumn string, args ...interface{}) *Engine {
 	if len(args) == 0 {
-		e.panic("NOT IN conditions can't be nil")
+		panic("NOT IN conditions can't be nil")
 	}
 	v := condition{
 		ColumnName:   strColumn,

@@ -61,10 +61,11 @@ const (
 type AdapterType int
 
 const (
-	ORDER_BY_ASC                 = "asc"
-	ORDER_BY_DESC                = "desc"
-	DEFAULT_CAHCE_EXPIRE_SECONDS = 24 * 60 * 60
-	DEFAULT_PRIMARY_KEY_NAME     = "id"
+	ORDER_BY_ASC                  = "asc"
+	ORDER_BY_DESC                 = "desc"
+	DEFAULT_CAHCE_EXPIRE_SECONDS  = 24 * 60 * 60
+	DEFAULT_PRIMARY_KEY_NAME      = "id"
+	DEFAULT_SLOW_QUERY_ALERT_TIME = 500 //milliseconds
 )
 
 const (
@@ -312,6 +313,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		dbTags:          e.dbTags,
 		bForce:          e.bForce,
 		bAutoRollback:   e.bAutoRollback,
+		slowQueryTime:   e.slowQueryTime,
 	}
 
 	engine.setModel(models...)

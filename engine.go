@@ -71,6 +71,7 @@ type Engine struct {
 	readOnly        []string               // read only column names
 	slowQueryTime   int                    // slow query alert time (milliseconds)
 	slowQueryOn     bool                   // enable slow query alert (default off)
+	strCaseWhen     string                 // case..when...then...else...end
 }
 
 func init() {
@@ -937,4 +938,15 @@ func (e *Engine) SlowQuery(on bool, ms int) {
 	if on {
 		e.slowQueryTime = ms
 	}
+}
+
+func (e *Engine) Case(strThen string, strWhen string, args ...interface{}) *CaseWhen {
+	cw := &CaseWhen{
+		e: e,
+	}
+	cw.whens = append(cw.whens, &when{
+		strThen: strThen,
+		strWhen: e.formatString(strWhen, args...),
+	})
+	return cw
 }

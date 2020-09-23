@@ -56,6 +56,11 @@ const (
 	DATABASE_KEY_NAME_ASC        = "ASC"
 	DATABASE_KEY_NAME_DESC       = "DESC"
 	DATABASE_KEY_NAME_HAVING     = "HAVING"
+	DATABASE_KEY_NAME_CASE       = "CASE"
+	DATABASE_KEY_NAME_WHEN       = "WHEN"
+	DATABASE_KEY_NAME_THEN       = "THEN"
+	DATABASE_KEY_NAME_ELSE       = "ELSE"
+	DATABASE_KEY_NAME_END        = "END"
 )
 
 type AdapterType int
@@ -872,6 +877,9 @@ func (e *Engine) getRawColumns() (strColumns string) {
 		}
 	}
 	if len(selectCols) > 0 {
+		if e.strCaseWhen != "" {
+			selectCols = append(selectCols, e.strCaseWhen)
+		}
 		strColumns = strings.Join(selectCols, ",")
 	}
 	return

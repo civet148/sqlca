@@ -56,15 +56,21 @@ const (
 	DATABASE_KEY_NAME_ASC        = "ASC"
 	DATABASE_KEY_NAME_DESC       = "DESC"
 	DATABASE_KEY_NAME_HAVING     = "HAVING"
+	DATABASE_KEY_NAME_CASE       = "CASE"
+	DATABASE_KEY_NAME_WHEN       = "WHEN"
+	DATABASE_KEY_NAME_THEN       = "THEN"
+	DATABASE_KEY_NAME_ELSE       = "ELSE"
+	DATABASE_KEY_NAME_END        = "END"
 )
 
 type AdapterType int
 
 const (
-	ORDER_BY_ASC                 = "asc"
-	ORDER_BY_DESC                = "desc"
-	DEFAULT_CAHCE_EXPIRE_SECONDS = 24 * 60 * 60
-	DEFAULT_PRIMARY_KEY_NAME     = "id"
+	ORDER_BY_ASC                  = "asc"
+	ORDER_BY_DESC                 = "desc"
+	DEFAULT_CAHCE_EXPIRE_SECONDS  = 24 * 60 * 60
+	DEFAULT_PRIMARY_KEY_NAME      = "id"
+	DEFAULT_SLOW_QUERY_ALERT_TIME = 500 //milliseconds
 )
 
 const (
@@ -312,6 +318,8 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		dbTags:          e.dbTags,
 		bForce:          e.bForce,
 		bAutoRollback:   e.bAutoRollback,
+		slowQueryOn:     e.slowQueryOn,
+		slowQueryTime:   e.slowQueryTime,
 	}
 
 	engine.setModel(models...)
@@ -869,6 +877,9 @@ func (e *Engine) getRawColumns() (strColumns string) {
 		}
 	}
 	if len(selectCols) > 0 {
+		if e.strCaseWhen != "" {
+			selectCols = append(selectCols, e.strCaseWhen)
+		}
 		strColumns = strings.Join(selectCols, ",")
 	}
 	return

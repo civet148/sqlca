@@ -22,6 +22,7 @@ type UserDO struct {
 	CreatedAt string        `db:"created_at" sqlca:"readonly"`
 	UpdatedAt string        `db:"updated_at" sqlca:"readonly"`
 	IgnoreMe  string        `db:"-"`
+	SexName   string        `db:"sex_name" sqlca:"readonly"`
 }
 
 type ClassDo struct {
@@ -91,6 +92,7 @@ func Benchmark(e *sqlca.Engine) {
 	BaseTypesUpdate(e)
 	DuplicateUpdateGetId(e)
 	Count(e)
+	CaseWhen(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -545,7 +547,7 @@ func TxRollback(e *sqlca.Engine) (err error) {
 func TxForUpdate(e *sqlca.Engine) {
 
 	go func() {
-
+		e.SlowQuery(true, 0) //设置输出慢查询执行时间，超过规定则打印告警信息（毫秒）
 		if tx, err := e.TxBegin(); err != nil {
 			log.Errorf("[TX1] tx begin error [%v]", err.Error())
 			return
@@ -654,5 +656,26 @@ func Count(e *sqlca.Engine) {
 		log.Errorf("error [%v]", err.Error())
 	} else {
 		log.Infof("count = %v", count)
+	}
+}
+
+func CaseWhen(e *sqlca.Engine) {
+
+	var users []UserDO
+	if _, err := e.Model(&users).
+		Table(TABLE_NAME_USERS).
+		Select("name", "phone", "sex").
+		Case("male", "sex=1").
+		Case("female", "sex=2").
+		Else("unknown").
+		End("sex_name").
+		Where("created_at > ?", "2020-06-01 02:03:04").
+		And("disable=0").
+		Limit(5).
+		Query(); err != nil {
+
+		log.Errorf("error [%v]", err.Error())
+	} else {
+		log.Infof("users %+v", users)
 	}
 }

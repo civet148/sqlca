@@ -15,6 +15,8 @@ import (
 	"strings"
 )
 
+const ()
+
 type Options struct {
 	Max   int  //max active connections
 	Idle  int  //max idle connections
@@ -67,6 +69,9 @@ type Engine struct {
 	cacheIndexes    []tableIndex           // index read or write cache
 	dbTags          []string               // custom db tag names
 	readOnly        []string               // read only column names
+	slowQueryTime   int                    // slow query alert time (milliseconds)
+	slowQueryOn     bool                   // enable slow query alert (default off)
+	strCaseWhen     string                 // case..when...then...else...end
 }
 
 func init() {
@@ -78,8 +83,9 @@ func init() {
 func NewEngine(strUrl ...interface{}) *Engine {
 
 	e := &Engine{
-		strPkName:  DEFAULT_PRIMARY_KEY_NAME,
-		expireTime: DEFAULT_CAHCE_EXPIRE_SECONDS,
+		strPkName:     DEFAULT_PRIMARY_KEY_NAME,
+		expireTime:    DEFAULT_CAHCE_EXPIRE_SECONDS,
+		slowQueryTime: DEFAULT_SLOW_QUERY_ALERT_TIME,
 	}
 	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA, TAG_NAME_PROTOBUF, TAG_NAME_JSON)
 
@@ -240,8 +246,7 @@ func (e *Engine) Cache(indexes ...string) *Engine {
 	return e
 }
 
-// debug mode on or off
-// if debug on, some method will panic if your condition illegal
+// log debug mode on or off
 func (e *Engine) Debug(ok bool) {
 	e.setDebug(ok)
 }
@@ -460,6 +465,8 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	}
 
 	strSql := e.makeSqlxString()
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
 
 	var rows *sql.Rows
 
@@ -495,6 +502,8 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	e.setOperType(OperType_Insert)
 	var strSql string
 	strSql = e.makeSqlxString()
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("Insert [%s]", strSql))
 
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
@@ -544,7 +553,8 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	e.setOperType(OperType_Upsert)
 	var strSql string
 	strSql = e.makeSqlxString()
-
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("Upsert [%s]", strSql))
 	db := e.getMaster()
 
 	switch e.adapterSqlx {
@@ -593,10 +603,12 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	if e.getCacheBefore() {
 		e.updateCache() //update data to cache before database updated
 	}
+	var r sql.Result
 	var strSql string
 	strSql = e.makeSqlxString()
 
-	var r sql.Result
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("Update [%s]", strSql))
 
 	db := e.getMaster()
 	r, err = db.Exec(strSql)
@@ -622,6 +634,8 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	e.setOperType(OperType_Delete)
 	strSql := e.makeSqlxString()
 	defer e.cleanWhereCondition()
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("Delete [%s]", strSql))
 
 	var r sql.Result
 	db := e.getMaster()
@@ -650,7 +664,8 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 
 	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model method first")
-
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strQuery))
 	e.setOperType(OperType_QueryRaw)
 
 	var rows *sqlx.Rows
@@ -673,6 +688,8 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
 	assert(strQuery, "query sql string is nil")
 	assert(e.model, "model is nil, please call Model method first")
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strQuery))
 
 	e.setOperType(OperType_QueryMap)
 	var rows *sqlx.Rows
@@ -699,6 +716,8 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
 
 	assert(strQuery, "query sql string is nil")
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("ExecRaw [%s]", strQuery))
 
 	e.setOperType(OperType_ExecRaw)
 
@@ -738,9 +757,10 @@ func (e *Engine) TxBegin() (*Engine, error) {
 func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
 	assert(e.tx, "TxGet tx instance is nil, please call TxBegin to create a tx instance")
 	var rows *sql.Rows
-
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("TxGet [%s]", strQuery))
 	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
+	log.Debugf("TxGet query [%v]", strQuery)
 
 	rows, err = e.tx.Query(strQuery)
 	if err != nil {
@@ -748,20 +768,24 @@ func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (
 		e.autoRollback()
 		return
 	}
+	//log.Debugf("TxGet query [%v] rows ok", strQuery)
 	e.setModel(dest)
+
 	defer rows.Close()
 	if count, err = e.fetchRows(rows); err != nil {
 		log.Errorf("TxGet sql [%v] args %v fetch row error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
 		e.autoRollback()
 		return
 	}
+	//log.Debugf("TxGet query [%v] ok", strQuery)
 	return
 }
 
 func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
 	assert(e.tx, "TxExec tx instance is nil, please call TxBegin to create a tx instance")
 	var result sql.Result
-
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("TxExec [%s]", strQuery))
 	strQuery = e.formatString(strQuery, args...)
 	log.Debugf("query [%v]", strQuery)
 
@@ -856,7 +880,8 @@ func (e *Engine) SetReadOnly(columns ...string) {
 //auto rollback when handler return error
 func (e *Engine) TxHandle(handler TxHandler) (err error) {
 	var tx *Engine
-
+	c := e.Counter()
+	defer c.Stop("TxHandle")
 	if tx, err = e.TxBegin(); err != nil {
 		log.Errorf("transaction begin error [%v]", err.Error())
 		return
@@ -873,7 +898,8 @@ func (e *Engine) TxHandle(handler TxHandler) (err error) {
 //auto rollback when function return error
 func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	var tx *Engine
-
+	c := e.Counter()
+	defer c.Stop("TxFunc")
 	if tx, err = e.TxBegin(); err != nil {
 		log.Errorf("transaction begin error [%v]", err.Error())
 		return
@@ -890,7 +916,8 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 //auto rollback when function return error
 func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context, tx *Engine) error) (err error) {
 	var tx *Engine
-
+	c := e.Counter()
+	defer c.Stop("TxFuncContext")
 	if tx, err = e.TxBegin(); err != nil {
 		log.Errorf("transaction begin error [%v]", err.Error())
 		return
@@ -901,4 +928,25 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 		return
 	}
 	return tx.TxCommit()
+}
+
+//slow query alert on or off
+//on -> true/false
+//ms -> milliseconds (can be 0 if on is false)
+func (e *Engine) SlowQuery(on bool, ms int) {
+	e.slowQueryOn = on
+	if on {
+		e.slowQueryTime = ms
+	}
+}
+
+func (e *Engine) Case(strThen string, strWhen string, args ...interface{}) *CaseWhen {
+	cw := &CaseWhen{
+		e: e,
+	}
+	cw.whens = append(cw.whens, &when{
+		strThen: strThen,
+		strWhen: e.formatString(strWhen, args...),
+	})
+	return cw
 }

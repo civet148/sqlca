@@ -81,7 +81,11 @@ func (e *Engine) isCacheNil() bool {
 }
 
 func (e *Engine) setDebug(ok bool) {
-	log.SetLevel(log.LEVEL_DEBUG)
+	if ok {
+		log.SetLevel(log.LEVEL_DEBUG)
+	} else {
+		log.SetLevel(log.LEVEL_INFO)
+	}
 }
 
 func (e *Engine) panic(strFmt string, args ...interface{}) {

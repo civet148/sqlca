@@ -935,5 +935,7 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 //ms -> milliseconds (can be 0 if on is false)
 func (e *Engine) SlowQuery(on bool, ms int) {
 	e.slowQueryOn = on
-	e.slowQueryTime = ms
+	if on {
+		e.slowQueryTime = ms
+	}
 }

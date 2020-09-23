@@ -21,7 +21,11 @@ func (e *Engine) Counter() *counter {
 
 func (c *counter) Stop(strTip string) {
 	elapse := (time.Now().UnixNano() - c.startTime) / 1e6
-	if c.slowQueryOn && c.slowQueryTime > 0 && elapse > int64(c.slowQueryTime) {
-		log.Warnf("[%v] slow query, elapse %d ms", strTip, elapse)
+	if c.slowQueryOn {
+		if c.slowQueryTime == 0 {
+			log.Debugf("query elapse %d ms %s", elapse, strTip)
+		} else if elapse > int64(c.slowQueryTime) {
+			log.Warnf("slow query elapse %d ms %s", elapse, strTip)
+		}
 	}
 }

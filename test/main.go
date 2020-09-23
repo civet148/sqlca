@@ -545,7 +545,7 @@ func TxRollback(e *sqlca.Engine) (err error) {
 func TxForUpdate(e *sqlca.Engine) {
 
 	go func() {
-		e.SetSlowQueryAlertTime(2000) //设置输出慢查询执行时间，超过规定则打印告警信息（毫秒）
+		e.SlowQuery(true, 500) //设置输出慢查询执行时间，超过规定则打印告警信息（毫秒）
 		if tx, err := e.TxBegin(); err != nil {
 			log.Errorf("[TX1] tx begin error [%v]", err.Error())
 			return

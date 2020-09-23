@@ -70,6 +70,7 @@ type Engine struct {
 	dbTags          []string               // custom db tag names
 	readOnly        []string               // read only column names
 	slowQueryTime   int                    // slow query alert time (milliseconds)
+	slowQueryOn     bool                   // enable slow query alert (default off)
 }
 
 func init() {
@@ -929,6 +930,10 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 	return tx.TxCommit()
 }
 
-func (e *Engine) SetSlowQueryAlertTime(milliseconds int) {
-	e.slowQueryTime = milliseconds
+//slow query alert on or off
+//on -> true/false
+//ms -> milliseconds (can be 0 if on is false)
+func (e *Engine) SlowQuery(on bool, ms int) {
+	e.slowQueryOn = on
+	e.slowQueryTime = ms
 }

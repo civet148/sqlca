@@ -245,8 +245,7 @@ func (e *Engine) Cache(indexes ...string) *Engine {
 	return e
 }
 
-// debug mode on or off
-// if debug on, some method will panic if your condition illegal
+// log debug mode on or off
 func (e *Engine) Debug(ok bool) {
 	e.setDebug(ok)
 }

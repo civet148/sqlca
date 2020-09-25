@@ -93,6 +93,7 @@ func Benchmark(e *sqlca.Engine) {
 	DuplicateUpdateGetId(e)
 	Count(e)
 	CaseWhen(e)
+	UpdateByMap(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -677,5 +678,19 @@ func CaseWhen(e *sqlca.Engine) {
 		log.Errorf("error [%v]", err.Error())
 	} else {
 		log.Infof("users %+v", users)
+	}
+}
+
+func UpdateByMap(e *sqlca.Engine) {
+
+	//only map[string]interface{} and map[string]string
+	updates := map[string]interface{}{
+		"sex":  "4",
+		"name": "name 2",
+	}
+	//UPDATE users SET `name`='name 2',`sex`='4' WHERE `id`='2'
+	if _, err := e.Model(&updates).Table(TABLE_NAME_USERS).Id(2).Update(); err != nil {
+		log.Errorf("update by map [%+v] error [%s]", updates, err.Error())
+		return
 	}
 }

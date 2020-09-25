@@ -276,12 +276,11 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 		case reflect.Slice: //  slice
 			e.setModelType(ModelType_Slice)
 		case reflect.Map: // map
-			//e.setModelType(ModelType_Map)
-			log.Errorf("map type model not support yet")
+			e.setModelType(ModelType_Map)
 		default: //base type
 			e.setModelType(ModelType_BaseType)
 		}
-		if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice {
+		if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
 			e.model = models[0] //map, struct or slice
 		} else {
 			e.model = models //base type argument like int/string/float32...

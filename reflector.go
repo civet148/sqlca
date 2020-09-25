@@ -68,16 +68,49 @@ func (s *ModelReflector) ToMap(tagNames ...string) map[string]interface{} {
 		val = val.Elem()
 	}
 
-	if typ.Kind() == reflect.Struct { // struct data model
-		s.parseStructField(typ, val, tagNames...)
-	} else if typ.Kind() == reflect.Slice { // struct slice data model
-		typ = val.Type().Elem()
-		val = reflect.New(typ).Elem()
-		s.parseStructField(typ, val, tagNames...)
-	} else {
+	kind := typ.Kind()
+	switch kind {
+	case reflect.Struct:
+		{
+			s.parseStructField(typ, val, tagNames...)
+		}
+	case reflect.Slice:
+		{
+			typ = val.Type().Elem()
+			val = reflect.New(typ).Elem()
+			s.parseStructField(typ, val, tagNames...)
+		}
+	case reflect.Map:
+		{
+			if v, ok := s.value.(*map[string]interface{}); ok {
+				s.dict = *v
+				break
+			}
+			if v, ok := s.value.(map[string]interface{}); ok {
+				s.dict = v
+				break
+			}
+			if v, ok := s.value.(*map[string]string); ok {
+				s.dict = s.convertMapString(*v)
+				break
+			}
+			if v, ok := s.value.(map[string]string); ok {
+				s.dict = s.convertMapString(v)
+				break
+			}
+		}
+	default:
 		log.Warnf("kind [%v] not support yet", typ.Kind())
 	}
 	return s.dict
+}
+
+func (s *ModelReflector) convertMapString(ms map[string]string) (mi map[string]interface{}) {
+	mi = make(map[string]interface{}, 10)
+	for k, v := range ms {
+		mi[k] = v
+	}
+	return
 }
 
 // get struct field's tag value

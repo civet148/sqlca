@@ -26,11 +26,11 @@ func (c *CaseWhen) Else(strElse string) *CaseWhen {
 	return c
 }
 
-func (c *CaseWhen) End(strEnd string) *Engine {
+func (c *CaseWhen) End(strName string) *Engine {
 	var e *Engine
 
 	e = c.e
-	c.strEnd = strEnd
+	c.strEnd = strName
 
 	e.strCaseWhen = DATABASE_KEY_NAME_CASE
 	for _, v := range c.whens {
@@ -39,6 +39,6 @@ func (c *CaseWhen) End(strEnd string) *Engine {
 	if c.strElse != "" {
 		e.strCaseWhen += fmt.Sprintf(" %s %s ", DATABASE_KEY_NAME_ELSE, e.getQuoteColumnValue(c.strElse))
 	}
-	e.strCaseWhen += fmt.Sprintf(" %s %s ", DATABASE_KEY_NAME_END, e.getQuoteColumnValue(c.strEnd))
+	e.strCaseWhen += fmt.Sprintf(" %s %s ", DATABASE_KEY_NAME_END, c.strEnd)
 	return c.e
 }

@@ -175,6 +175,7 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 		}
 		if err = db.Ping(); err != nil {
 			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, dsn.parameter.strDSN, err.Error())
+			panic(err.Error())
 			return nil
 		}
 

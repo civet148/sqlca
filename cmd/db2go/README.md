@@ -30,6 +30,10 @@
 
 --enable-decimal decimal as sqlca.Decimal type when exporting [optional]
 
+--orm generate ORM code inner data object [optional]
+
+--omitempty omit empty for json tag [optional]
+
 ## 1. 数据库表导出到go文件
 
 * Windows batch 脚本

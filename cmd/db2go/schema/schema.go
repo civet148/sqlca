@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca"
@@ -20,27 +21,36 @@ const (
 )
 
 type Commander struct {
-	ConnUrl       string
-	Database      string
-	Tables        []string
-	Without       []string
-	ReadOnly      []string
-	Tags          []string
-	Scheme        string
-	Host          string
-	User          string
-	Password      string
-	Charset       string
-	OutDir        string
-	Prefix        string
-	Suffix        string
-	PackageName   string
-	Protobuf      bool
-	EnableDecimal bool
-	OneFile       bool
-	GogoOptions   []string
-	Orm           bool
-	OmitEmpty     bool
+	ConnUrl       string   `json:"ConnUrl,omitempty"`
+	Database      string   `json:"-"`
+	Tables        []string `json:"-"`
+	Without       []string `json:"Without,omitempty"`
+	ReadOnly      []string `json:"ReadOnly,omitempty"`
+	Tags          []string `json:"Tags,omitempty"`
+	Scheme        string   `json:"-"`
+	Host          string   `json:"-"`
+	User          string   `json:"-"`
+	Password      string   `json:"-"`
+	Charset       string   `json:"-"`
+	OutDir        string   `json:"OutDir,omitempty"`
+	Prefix        string   `json:"Prefix,omitempty"`
+	Suffix        string   `json:"Suffix,omitempty"`
+	PackageName   string   `json:"PackageName,omitempty"`
+	Protobuf      bool     `json:"Protobuf,omitempty"`
+	EnableDecimal bool     `json:"EnableDecimal,omitempty"`
+	OneFile       bool     `json:"OneFile,omitempty"`
+	GogoOptions   []string `json:"GogoOptions,omitempty"`
+	Orm           bool     `json:"Orm,omitempty"`
+	OmitEmpty     bool     `json:"OmitEmpty,omitempty"`
+}
+
+func (c *Commander) String() string {
+	data, _ := json.Marshal(c)
+	return string(data)
+}
+
+func (c *Commander) GoString() string {
+	return c.String()
 }
 
 type TableSchema struct {

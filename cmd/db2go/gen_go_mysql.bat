@@ -10,7 +10,7 @@ set TABLE_NAME="users, classes"
 set WITH_OUT=""
 set DSN_URL="mysql://root:123456@127.0.0.1:3306/test?charset=utf8"
 
-go run main.go --url %DSN_URL% --out %OUT_DIR% --db %DB_NAME% --table %TABLE_NAME% --omitempty ^
+db2go --url %DSN_URL% --out %OUT_DIR% --db %DB_NAME% --table %TABLE_NAME% --omitempty ^
 --suffix %SUFFIX_NAME% --package %PACK_NAME% --readonly %READ_ONLY% --without %WITH_OUT%
 
 echo generate go file ok, formatting...

@@ -28,6 +28,7 @@ var argvEnableDecimal = flag.Bool("enable-decimal", false, "decimal as sqlca.Dec
 var argvGogoOptions = flag.String("gogo-options", "", "gogo proto options")
 var argvOneFile = flag.Bool("one-file", false, "output go/proto file into one file which named by database name")
 var argvOrm = flag.Bool("orm", false, "generate ORM code inner data object")
+var argvOmitEmpty = flag.Bool("omitempty", false, "omit empty for json tag")
 
 func init() {
 	flag.Parse()
@@ -38,20 +39,6 @@ func main() {
 
 	//var err error
 	var cmd schema.Commander
-	log.Infof("argument: url [%v]", *argvUrl)
-	log.Infof("argument: databases [%v]", *argvDatabase)
-	log.Infof("argument: output [%v]", *argvOutput)
-	log.Infof("argument: tag [%v]", *argvTags)
-	log.Infof("argument: tables [%v]", *argvTables)
-	log.Infof("argument: prefix [%v]", *argvPrefix)
-	log.Infof("argument: suffix [%v]", *argvSuffix)
-	log.Infof("argument: package [%v]", *argvPackage)
-	log.Infof("argument: without [%v]", *argvWithout)
-	log.Infof("argument: readonly [%v]", *argvReadOnly)
-	log.Infof("argument: proto [%v]", *argvProtobuf)
-	log.Infof("argument: one-file [%v]", *argvOneFile)
-	log.Infof("argument: gogo-options [%v]", *argvGogoOptions)
-	log.Infof("argument: orm [%v]", *argvOrm)
 
 	if *argvUrl == "" {
 		log.Infof("")
@@ -69,9 +56,11 @@ func main() {
 	cmd.Protobuf = *argvProtobuf
 	cmd.EnableDecimal = *argvEnableDecimal
 	cmd.Orm = *argvOrm
+	cmd.OmitEmpty = *argvOmitEmpty
 
 	ui := sqlca.ParseUrl(*argvUrl)
 
+	log.Infof("cmd [%+v]", cmd)
 	if *argvDatabase == "" {
 		//use default database
 		cmd.Database = schema.GetDatabaseName(ui.Path)

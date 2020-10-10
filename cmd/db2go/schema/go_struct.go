@@ -136,9 +136,7 @@ func makeObjectMethods(cmd *Commander, table *TableSchema) (strContent string) {
 		strColName := CamelCaseConvert(v.Name)
 		strColType, _ := GetGoColumnType(table.TableName, v.Name, v.DataType, cmd.EnableDecimal)
 		strContent += MakeGetter(table.StructName, strColName, strColType)
-		if !IsInSlice(v.Name, cmd.ReadOnly) {
-			strContent += MakeSetter(table.StructName, strColName, strColType)
-		}
+		strContent += MakeSetter(table.StructName, strColName, strColType)
 	}
 	return
 }
@@ -224,7 +222,7 @@ func MakeTableStructure(cmd *Commander, table *TableSchema) (strContent string) 
 			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", t, v.Name))
 		}
 		//添加成员和标签
-		strContent += MakeTags(strColName, strColType, v.Name, v.Comment, strings.Join(tagValues, " "))
+		strContent += MakeTags(strColName, strColType, v.Name, v.Comment, strings.Join(tagValues, " "), cmd.OmitEmpty)
 
 		v.GoName = strColName
 		v.GoType = strColType

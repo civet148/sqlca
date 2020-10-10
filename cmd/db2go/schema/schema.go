@@ -40,6 +40,7 @@ type Commander struct {
 	OneFile       bool
 	GogoOptions   []string
 	Orm           bool
+	OmitEmpty     bool
 }
 
 type TableSchema struct {
@@ -101,10 +102,15 @@ func IsInSlice(in string, s []string) bool {
 	return false
 }
 
-func MakeTags(strColName, strColType, strTagValue, strComment string, strAppends string) string {
+func MakeTags(strColName, strColType, strTagValue, strComment string, strAppends string, omitEmpty bool) string {
 	strComment = ReplaceCRLF(strComment)
+	var strJsonValue string
+	strJsonValue = strTagValue
+	if omitEmpty {
+		strJsonValue += ",omitempty"
+	}
 	return fmt.Sprintf("	%v %v `json:\"%v\" db:\"%v\" %v` //%v \n",
-		strColName, strColType, strTagValue, strTagValue, strAppends, strComment)
+		strColName, strColType, strJsonValue, strTagValue, strAppends, strComment)
 }
 
 func MakeGetter(strStructName, strColName, strColType string) (strGetter string) {

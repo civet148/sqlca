@@ -7,15 +7,14 @@ import (
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/redigogo"
 	_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
-	_ "github.com/go-sql-driver/mysql"   //mysql golang driver
-	"github.com/jmoiron/sqlx"            //sqlx package
-	_ "github.com/lib/pq"                //postgres golang driver
-	_ "github.com/mattn/go-sqlite3"      //sqlite3 golang driver
+	"github.com/gansidui/geohash"
+	_ "github.com/go-sql-driver/mysql" //mysql golang driver
+	"github.com/jmoiron/sqlx"          //sqlx package
+	_ "github.com/lib/pq"              //postgres golang driver
+	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
 	"strconv"
 	"strings"
 )
-
-const ()
 
 type Options struct {
 	Max   int  //max active connections
@@ -989,4 +988,12 @@ func (e *Engine) NearBy(strLngCol, strLatCol, strAS string, lng, lat, distance f
 		distance:  distance,
 	}
 	return e
+}
+
+//encode geo hash string (precision 1~8)
+//returns geo hash and neighbors areas
+func (e *Engine) GeoHash(lng, lat float64, precision int) (strGeoHash string, strNeighbors []string) {
+	strGeoHash, _ = geohash.Encode(lat, lng, precision)
+	strNeighbors = geohash.GetNeighbors(lat, lng, precision)
+	return
 }

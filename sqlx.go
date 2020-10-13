@@ -26,6 +26,7 @@ const (
 
 const (
 	PROTOBUF_VALUE_NAME = "name"
+	SQLCA_CHAR_ASTERISK = "*"
 )
 
 const (
@@ -291,7 +292,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 			selectColumns = append(selectColumns, k)
 		}
 		if len(selectColumns) == 0 {
-			e.setSelectColumns("*")
+			e.setSelectColumns(SQLCA_CHAR_ASTERISK)
 		} else {
 			e.setSelectColumns(selectColumns...)
 		}
@@ -544,11 +545,11 @@ func (e *Engine) getPkValue() string {
 }
 
 func (e *Engine) setSelectColumns(strColumns ...string) {
-	e.selectColumns = strColumns
+	e.selectColumns = append(e.selectColumns, strColumns...)
 }
 
 func (e *Engine) setExcludeColumns(strColumns ...string) {
-	e.excludeColumns = strColumns
+	e.excludeColumns = append(e.excludeColumns, strColumns...)
 }
 
 func (e *Engine) getSelectColumns() (strColumns []string) {
@@ -867,19 +868,54 @@ func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 
 func (e *Engine) getRawColumns() (strColumns string) {
 	var selectCols []string
+
 	if len(e.selectColumns) == 0 {
-		return "*"
+		e.setSelectColumns(SQLCA_CHAR_ASTERISK)
 	}
+
 	for _, v := range e.selectColumns {
-		if e.isColumnSelected(v) {
+		if e.isColumnSelected(v) || v == SQLCA_CHAR_ASTERISK {
 			selectCols = append(selectCols, v)
 		}
 	}
+	selectCols = e.makeNearbyColumn(selectCols...)
 	if len(selectCols) > 0 {
 		if e.strCaseWhen != "" {
 			selectCols = append(selectCols, e.strCaseWhen)
 		}
 		strColumns = strings.Join(selectCols, ",")
+	}
+	return
+}
+
+func (e *Engine) trimNearbySameColumn(strAS string, strColumns ...string) (columns []string) {
+	for _, v := range strColumns {
+		if v != strAS {
+			columns = append(columns, v)
+		}
+	}
+	return
+}
+
+func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
+
+	columns = strColumns
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL:
+		{
+			//NEARBY additional column
+			if e.nearby != nil {
+				nb := e.nearby
+				strNearBy := fmt.Sprintf(`(6371 * ACOS(COS(RADIANS(%v)) * COS(RADIANS(%v)) * COS(RADIANS(%v) - RADIANS(%v)) + SIN(RADIANS(%v)) * SIN(RADIANS(%v)))) AS %s`,
+					nb.strLatCol, nb.lat, nb.lng, nb.strLngCol, nb.strLatCol, nb.lat, nb.strAS)
+				columns = e.trimNearbySameColumn(nb.strAS, columns...)
+				columns = append(columns, strNearBy)
+				e.setHaving(fmt.Sprintf("%s <= %v", nb.strAS, nb.distance))
+			}
+		}
+	case AdapterSqlx_Postgres:
+		{
+		}
 	}
 	return
 }
@@ -1121,15 +1157,19 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 		}
 	}
 
+	//AND conditions
 	for _, v := range e.andConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, v)
 	}
+	//IN conditions
 	for _, v := range e.inConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeInCondition(v))
 	}
+	//NOT IN conditions
 	for _, v := range e.notConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_AND, e.makeNotCondition(v))
 	}
+	//OR conditions
 	for _, v := range e.orConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_OR, v)
 	}

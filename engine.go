@@ -27,6 +27,15 @@ type TxHandler interface {
 	OnTransaction(tx *Engine) error
 }
 
+type nearby struct {
+	strLngCol string  //lng name of table column
+	strLatCol string  //lat name of table column
+	strAS     string  //select xxx as yyy (alias)
+	lng       float64 //marked lng
+	lat       float64 //marked lat
+	distance  float64 //distance of km
+}
+
 type Engine struct {
 	dsn             dsnDriver              // driver name and parameters
 	slave           bool                   // use slave to query ?
@@ -72,6 +81,7 @@ type Engine struct {
 	slowQueryTime   int                    // slow query alert time (milliseconds)
 	slowQueryOn     bool                   // enable slow query alert (default off)
 	strCaseWhen     string                 // case..when...then...else...end
+	nearby          *nearby                //nearby
 }
 
 func init() {
@@ -950,4 +960,33 @@ func (e *Engine) Case(strThen string, strWhen string, args ...interface{}) *Case
 		strWhen: e.formatString(strWhen, args...),
 	})
 	return cw
+}
+
+/* -- select geo point as distance where distance <= n km (float64)
+SELECT
+    a.*,
+    (
+    6371 * ACOS (
+    COS( RADIANS( a.lat ) ) * COS( RADIANS( 28.8039097230 ) ) * COS(
+      RADIANS( 121.5619236231 ) - RADIANS( a.lng )
+     ) + SIN( RADIANS( a.lat ) ) * SIN( RADIANS( 28.8039097230 ) )
+    )
+    ) AS distance
+FROM
+    t_address a
+HAVING distance <= 200 -- less than or equal 200km
+ORDER BY
+    distance
+    LIMIT 10
+*/
+func (e *Engine) NearBy(strLngCol, strLatCol, strAS string, lng, lat, distance float64) *Engine {
+	e.nearby = &nearby{
+		strLngCol: strLngCol,
+		strLatCol: strLatCol,
+		strAS:     strAS,
+		lng:       lng,
+		lat:       lat,
+		distance:  distance,
+	}
+	return e
 }

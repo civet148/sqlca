@@ -38,7 +38,7 @@ func init() {
 func main() {
 
 	//var err error
-	var cmd schema.Commander
+	var cmd = schema.Commander{}
 
 	if *argvUrl == "" {
 		log.Infof("")
@@ -60,7 +60,8 @@ func main() {
 
 	ui := sqlca.ParseUrl(*argvUrl)
 
-	log.Infof("cmd [%+v]", cmd)
+	log.Infof("%+v", cmd.String())
+
 	if *argvDatabase == "" {
 		//use default database
 		cmd.Database = schema.GetDatabaseName(ui.Path)

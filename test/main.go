@@ -94,6 +94,7 @@ func Benchmark(e *sqlca.Engine) {
 	Count(e)
 	CaseWhen(e)
 	UpdateByMap(e)
+	NearBy(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -692,5 +693,55 @@ func UpdateByMap(e *sqlca.Engine) {
 	if _, err := e.Model(&updates).Table(TABLE_NAME_USERS).Id(2).Update(); err != nil {
 		log.Errorf("update by map [%+v] error [%s]", updates, err.Error())
 		return
+	}
+}
+
+func NearBy(e *sqlca.Engine) {
+	/*
+			-- 创建表语句
+
+			CREATE TABLE `t_address` (
+			  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			  `lng` double(11,7) DEFAULT NULL,
+			  `lat` double(11,7) DEFAULT NULL,
+			  `name` char(80) CHARACTER SET utf8 COLLATE utf8_unicode_ci DEFAULT NULL,
+			  PRIMARY KEY (`id`)
+			) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+			-- SQL语句
+
+			SELECT
+			    *,
+			(6371 * ACOS(COS(RADIANS(lat)) * COS(RADIANS(28.8039097230)) * COS(RADIANS(121.5619236231) - RADIANS(lng)) + SIN(RADIANS(lat)) * SIN(RADIANS(28.8039097230)))) AS distance
+			FROM  t_address
+			WHERE 1=1
+			HAVING distance < 113.100
+			ORDER BY distance  LIMIT 10
+
+		    ---------------------------------------------------------------
+			    id     lng           lat      name          distance
+			------  -----------  ----------  ------    --------------------
+			     1  121.5619236  29.8079889  addr1    	111.64851043187684
+			     2  121.5719236  29.8179889  addr2  	112.76462800646821
+	*/
+
+	type NearByDO struct {
+		Id       int     `db:"id"`
+		Lng      float64 `db:"lng"`
+		Lat      float64 `db:"lat"`
+		Name     string  `db:"name"`
+		Distance float64 `db:"distance"`
+	}
+	var dos []NearByDO
+	rows, err := e.Model(&dos).
+		Table("t_address").
+		NearBy("lng", "lat", "distance", 121.5619236231, 28.8039097230, 113.100).
+		OrderBy("distance").
+		Limit(10).
+		Query()
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		log.Infof("nearby rows [%d] dos -> %+v ", rows, dos)
 	}
 }

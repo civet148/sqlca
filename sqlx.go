@@ -291,12 +291,9 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 		for k, _ := range e.dict {
 			selectColumns = append(selectColumns, k)
 		}
-		if len(selectColumns) == 0 {
-			e.setSelectColumns(SQLCA_CHAR_ASTERISK)
-		} else {
+		if len(selectColumns) > 0 {
 			e.setSelectColumns(selectColumns...)
 		}
-		//log.Debugf("dict [%+v] select columns %+v model type [%+v]", e.dict, selectColumns, e.modelType)
 		break //only check first argument
 	}
 	return e
@@ -870,11 +867,11 @@ func (e *Engine) getRawColumns() (strColumns string) {
 	var selectCols []string
 
 	if len(e.selectColumns) == 0 {
-		e.setSelectColumns(SQLCA_CHAR_ASTERISK)
+		return SQLCA_CHAR_ASTERISK
 	}
 
 	for _, v := range e.selectColumns {
-		if e.isColumnSelected(v) || v == SQLCA_CHAR_ASTERISK {
+		if e.isColumnSelected(v) {
 			selectCols = append(selectCols, v)
 		}
 	}

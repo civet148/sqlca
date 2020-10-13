@@ -900,6 +900,10 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL:
 		{
+			/* -- MySQL
+			SELECT  id,lng,lat,name,(6371 * ACOS(COS(RADIANS(lat)) * COS(RADIANS(28.803909723)) * COS(RADIANS(121.5619236231) - RADIANS(lng))
+			+ SIN(RADIANS(lat)) * SIN(RADIANS(28.803909723)))) AS distance FROM t_address WHERE 1=1 HAVING distance <= 113
+			*/
 			//NEARBY additional column
 			if e.nearby != nil {
 				nb := e.nearby
@@ -912,6 +916,14 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 		}
 	case AdapterSqlx_Postgres:
 		{
+			/* -- Postgres
+			SELECT  a.* FROM
+			 (
+			   SELECT id,lng,lat,name,(6371 * ACOS(COS(RADIANS(lat)) * COS(RADIANS(28.803909723)) * COS(RADIANS(121.5619236231) - RADIANS(lng))
+			   + SIN(RADIANS(lat)) * SIN(RADIANS(28.803909723)))) AS distance FROM t_address WHERE 1=1
+			) a
+			WHERE a.distance <= 113
+			*/
 		}
 	}
 	return

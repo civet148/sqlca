@@ -332,10 +332,9 @@ func OrmSelectMultiTable(e *sqlca.Engine) {
 	defer log.Leave()
 
 	type UserClass struct {
-		UserId   int32  `db:"user_id"`
-		UserName string `db:"user_name"`
-		Phone    string `db:"phone"`
-		ClassNo  string `db:"class_no"`
+		UserId  int32  `db:"user_id"`
+		Phone   string `db:"phone"`
+		ClassNo string `db:"class_no"`
 	}
 	var ucs []UserClass
 	//SQL: SELECT a.*, b.class_no FROM users a, classes b WHERE a.id=b.user_id AND a.id=3
@@ -391,7 +390,6 @@ func OrmInCondition(e *sqlca.Engine) {
 	//SQL: select * from users where id > 2 and id in (1,3,6,7) and disable in (0,1)
 	if rows, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
-		Select("*").
 		Where("id > 2").
 		In("id", 1, 3, 6, 7).
 		In("disable", 0, 1).

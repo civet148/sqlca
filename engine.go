@@ -366,6 +366,12 @@ func (e *Engine) Limit(args ...int) *Engine {
 	return e
 }
 
+//page query
+//SELECT ... FROM ... WHERE ... LIMIT (pageNo*pageSize), pageSize
+func (e *Engine) Page(pageNo, pageSize int) *Engine {
+	return e.Limit(pageNo*pageSize, pageSize)
+}
+
 // query offset (for mysql/postgres)
 func (e *Engine) Offset(offset int) *Engine {
 	e.setOffset(fmt.Sprintf("OFFSET %v", offset))

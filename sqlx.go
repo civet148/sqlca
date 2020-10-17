@@ -541,12 +541,31 @@ func (e *Engine) getPkValue() string {
 	return e.strPkValue
 }
 
+func (e *Engine) exist(src []string, s string) bool {
+	for _, v := range src {
+		if s == v {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *Engine) appendStrings(src []string, dest ...string) []string {
+	//check duplicated elements
+	for _, v := range dest {
+		if !e.exist(src, v) {
+			src = append(src, v)
+		}
+	}
+	return src
+}
+
 func (e *Engine) setSelectColumns(strColumns ...string) {
-	e.selectColumns = append(e.selectColumns, strColumns...)
+	e.selectColumns = e.appendStrings(e.selectColumns, strColumns...)
 }
 
 func (e *Engine) setExcludeColumns(strColumns ...string) {
-	e.excludeColumns = append(e.excludeColumns, strColumns...)
+	e.excludeColumns = e.appendStrings(e.excludeColumns, strColumns...)
 }
 
 func (e *Engine) getSelectColumns() (strColumns []string) {
@@ -554,11 +573,11 @@ func (e *Engine) getSelectColumns() (strColumns []string) {
 }
 
 func (e *Engine) setAscColumns(strColumns ...string) {
-	e.ascColumns = strColumns
+	e.ascColumns = e.appendStrings(e.ascColumns, strColumns...)
 }
 
 func (e *Engine) setDescColumns(strColumns ...string) {
-	e.descColumns = strColumns
+	e.descColumns = e.appendStrings(e.descColumns, strColumns...)
 }
 
 // SELECT ... FROM xxx ORDER BY c1, c2 ASC, c3 DESC
@@ -640,7 +659,7 @@ func (e *Engine) setOperType(operType OperType) {
 }
 
 func (e *Engine) setConflictColumns(strColumns ...string) {
-	e.conflictColumns = strColumns
+	e.conflictColumns = e.appendStrings(e.conflictColumns, strColumns...)
 }
 
 func (e *Engine) getConflictColumns() []string {
@@ -724,7 +743,7 @@ func (e *Engine) getOffset() string {
 }
 
 func (e *Engine) setOrderBy(strColumns ...string) {
-	e.orderByColumns = strColumns
+	e.orderByColumns = e.appendStrings(e.orderByColumns, strColumns...)
 }
 
 func (e *Engine) getOrderBy() (strOrderBy string) {
@@ -736,7 +755,7 @@ func (e *Engine) getOrderBy() (strOrderBy string) {
 }
 
 func (e *Engine) setGroupBy(strColumns ...string) {
-	e.groupByColumns = strColumns
+	e.groupByColumns = e.appendStrings(e.groupByColumns, strColumns...)
 }
 
 func (e *Engine) setHaving(havingCondition string) {
@@ -900,6 +919,10 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL:
 		{
+			/* -- MySQL
+			SELECT  id,lng,lat,name,(6371 * ACOS(COS(RADIANS(lat)) * COS(RADIANS(28.803909723)) * COS(RADIANS(121.5619236231) - RADIANS(lng))
+			+ SIN(RADIANS(lat)) * SIN(RADIANS(28.803909723)))) AS distance FROM t_address WHERE 1=1 HAVING distance <= 113
+			*/
 			//NEARBY additional column
 			if e.nearby != nil {
 				nb := e.nearby
@@ -912,6 +935,14 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 		}
 	case AdapterSqlx_Postgres:
 		{
+			/* -- Postgres
+			SELECT  a.* FROM
+			 (
+			   SELECT id,lng,lat,name,(6371 * ACOS(COS(RADIANS(lat)) * COS(RADIANS(28.803909723)) * COS(RADIANS(121.5619236231) - RADIANS(lng))
+			   + SIN(RADIANS(lat)) * SIN(RADIANS(28.803909723)))) AS distance FROM t_address WHERE 1=1
+			) a
+			WHERE a.distance <= 113
+			*/
 		}
 	}
 	return

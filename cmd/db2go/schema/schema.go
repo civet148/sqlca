@@ -264,7 +264,7 @@ func GetGoColumnType(strTableName string, col TableColumn, enableDecimal bool) (
 	if strings.Contains(strColumnType, "unsigned") { //判断字段是否为无符号类型
 		bUnsigned = true
 	}
-	log.Infof("TableColumn [%+v]", col)
+	//log.Infof("TableColumn [%+v]", col)
 	var ok bool
 	if strGoColType, ok = db2goTypes[strDataType]; !ok {
 		strGoColType = "string"

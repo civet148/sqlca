@@ -109,7 +109,7 @@ func main() {
 }
 
 func export(cmd *schema.Commander, e *sqlca.Engine) {
-
+	e.Debug(true)
 	exporter := schema.NewExporter(cmd, e)
 	if exporter == nil {
 		log.Errorf("new exporter error, nil object")

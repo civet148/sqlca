@@ -52,7 +52,7 @@ func (m *ExporterMysql) ExportGo() (err error) {
 		}
 	}
 
-	return schema.ExportTableSchema(cmd, e, schemas)
+	return schema.ExportTableSchema(cmd, schemas)
 }
 
 func (m *ExporterMysql) ExportProto() (err error) {
@@ -139,7 +139,7 @@ func (m *ExporterMysql) queryTableColumns(table *schema.TableSchema) (err error)
 	 WHERE `TABLE_SCHEMA` = 'accounts' AND `TABLE_NAME` = 'users' ORDER BY ORDINAL_POSITION ASC
 	*/
 	var e = m.Engine
-	_, err = e.Model(&table.Columns).QueryRaw("select `TABLE_NAME` as table_name, `COLUMN_NAME` as column_name, `DATA_TYPE` as data_type, `EXTRA` as extra,"+
+	_, err = e.Model(&table.Columns).QueryRaw("select `TABLE_NAME` as table_name, `COLUMN_NAME` as column_name, `DATA_TYPE` as data_type, `COLUMN_TYPE` as column_type, `EXTRA` as extra,"+
 		" `COLUMN_KEY` as column_key, `COLUMN_COMMENT` as column_comment "+
 		" FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v' ORDER BY ORDINAL_POSITION ASC", table.SchemeName, table.TableName)
 	if err != nil {

@@ -70,6 +70,7 @@ type TableSchema struct {
 type TableColumn struct {
 	Name         string `json:"column_name" db:"column_name"`
 	DataType     string `json:"data_type" db:"data_type"`
+	ColumnType   string `json:"column_type" db:"column_type"`
 	Key          string `json:"column_key" db:"column_key"`
 	Extra        string `json:"extra" db:"extra"`
 	Comment      string `json:"column_comment" db:"column_comment"`
@@ -252,20 +253,36 @@ func GetDatabaseName(strPath string) (strName string) {
 }
 
 //将数据库字段类型转为go语言对应的数据类型
-func GetGoColumnType(strTableName, strColName, strDataType string, enableDecimal bool) (strColType string, isDecimal bool) {
+func GetGoColumnType(strTableName string, col TableColumn, enableDecimal bool) (strGoColType string, isDecimal bool) {
 
+	var bUnsigned bool
+	var strColName, strDataType, strColumnType string
+	strColName = col.Name
+	strDataType = col.DataType
+	strColumnType = col.ColumnType
+
+	if strings.Contains(strColumnType, "unsigned") { //判断字段是否为无符号类型
+		bUnsigned = true
+	}
+	log.Infof("TableColumn [%+v]", col)
 	var ok bool
-	if strColType, ok = db2goTypes[strDataType]; !ok {
-		strColType = "string"
+	if strGoColType, ok = db2goTypes[strDataType]; !ok {
+		strGoColType = "string"
 		log.Warnf("table [%v] column [%v] data type [%v] not support yet, set as string type", strTableName, strColName, strDataType)
 		return
+	}
+	if bUnsigned {
+		strGoColType = db2goTypesUnsigned[strDataType]
+		if strGoColType == "" {
+			panic(fmt.Sprintf("data type [%s] column type [%s] have no unsigned type", strDataType, strColumnType))
+		}
 	}
 	switch strDataType {
 	case DB_COLUMN_TYPE_DECIMAL:
 		if !enableDecimal {
-			strColType = "float64"
+			strGoColType = "float64"
 		} else {
-			strColType = "sqlca.Decimal"
+			strGoColType = "sqlca.Decimal"
 		}
 	}
 	return

@@ -84,6 +84,15 @@ const (
 	DB_COLUMN_TYPE_POLYGON    = "polygon"
 )
 
+var db2goTypesUnsigned = map[string]string{
+	DB_COLUMN_TYPE_BIGINT:    "uint64",
+	DB_COLUMN_TYPE_INT:       "uint32",
+	DB_COLUMN_TYPE_INTEGER:   "uint32",
+	DB_COLUMN_TYPE_MEDIUMINT: "uint32",
+	DB_COLUMN_TYPE_SMALLINT:  "uint16",
+	DB_COLUMN_TYPE_TINYINT:   "uint8",
+}
+
 //数据库字段类型与go语言类型对照表
 var db2goTypes = map[string]string{
 

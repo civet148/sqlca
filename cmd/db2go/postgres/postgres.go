@@ -59,7 +59,6 @@ func NewExporterPostgres(cmd *schema.Commander, e *sqlca.Engine) schema.Exporter
 
 func (m *ExporterPostgres) ExportGo() (err error) {
 	var cmd = m.Cmd
-	var e = m.Engine
 	var schemas = m.Schemas
 	//var tableNames []string
 
@@ -81,7 +80,7 @@ func (m *ExporterPostgres) ExportGo() (err error) {
 			return
 		}
 	}
-	return schema.ExportTableSchema(cmd, e, schemas)
+	return schema.ExportTableSchema(cmd, schemas)
 }
 
 func (m *ExporterPostgres) ExportProto() (err error) {

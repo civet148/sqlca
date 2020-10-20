@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func ExportTableSchema(cmd *Commander, e *sqlca.Engine, tables []*TableSchema) (err error) {
+func ExportTableSchema(cmd *Commander, tables []*TableSchema) (err error) {
 
 	for _, v := range tables {
 
@@ -104,7 +104,7 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 
 func haveDecimal(table *TableSchema, TableCols []TableColumn) (ok bool) {
 	for _, v := range TableCols {
-		_, ok = GetGoColumnType(table.TableName, v.Name, v.DataType, false)
+		_, ok = GetGoColumnType(table.TableName, v, false)
 		if ok {
 			break
 		}
@@ -134,7 +134,7 @@ func makeObjectMethods(cmd *Commander, table *TableSchema) (strContent string) {
 			continue
 		}
 		strColName := CamelCaseConvert(v.Name)
-		strColType, _ := GetGoColumnType(table.TableName, v.Name, v.DataType, cmd.EnableDecimal)
+		strColType, _ := GetGoColumnType(table.TableName, v, cmd.EnableDecimal)
 		strContent += MakeGetter(table.StructName, strColName, strColType)
 		strContent += MakeSetter(table.StructName, strColName, strColType)
 	}
@@ -213,7 +213,7 @@ func MakeTableStructure(cmd *Commander, table *TableSchema) (strContent string) 
 		var tagValues []string
 		var strColType, strColName string
 		strColName = CamelCaseConvert(v.Name)
-		strColType, _ = GetGoColumnType(table.TableName, v.Name, v.DataType, cmd.EnableDecimal)
+		strColType, _ = GetGoColumnType(table.TableName, v, cmd.EnableDecimal)
 
 		if IsInSlice(v.Name, cmd.ReadOnly) {
 			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", sqlca.TAG_NAME_SQLCA, sqlca.SQLCA_TAG_VALUE_READ_ONLY))

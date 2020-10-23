@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+const (
+	METHOD_ARGS_NULL     = ""
+	METHOD_NAME_STRING   = "String"
+	METHOD_NAME_GOSTRING = "GoString"
+	METHOD_NAME_GET      = "Get"
+	METHOD_NAME_SET      = "Set"
+)
+
 func ExportTableSchema(cmd *Commander, tables []*TableSchema) (err error) {
 
 	for _, v := range tables {
@@ -230,5 +238,16 @@ func MakeTableStructure(cmd *Commander, table *TableSchema) (strContent string) 
 
 	strContent += "}\n\n"
 
+	return
+}
+
+func GenerateMethodDeclare(strShortName, strStructName, strMethodName, strArgs, strReturn, strLogic string) (strFunc string) {
+	if strReturn == "" {
+		strFunc = fmt.Sprintf("func (%s *%s) %s(%s) {\n", strShortName, strStructName, strMethodName, strArgs)
+	} else {
+		strFunc = fmt.Sprintf("func (%s *%s) %s(%s) %s {\n", strShortName, strStructName, strMethodName, strArgs, strReturn)
+	}
+	strFunc += strLogic
+	strFunc += fmt.Sprintf("}\n\n")
 	return
 }

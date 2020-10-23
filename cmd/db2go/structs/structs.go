@@ -10,15 +10,6 @@ import (
 const (
 	STRUCT_PROMPT    = "STRUCT> "
 	STRUCT_DELIMITER = '}'
-	STRUCT_SHORT     = "s"
-)
-
-const (
-	METHOD_ARGS_NULL     = ""
-	METHOD_NAME_STRING   = "String"
-	METHOD_NAME_GOSTRING = "GoString"
-	METHOD_NAME_GET      = "Get"
-	METHOD_NAME_SET      = "Set"
 )
 
 type GoMember struct {
@@ -32,15 +23,17 @@ type GoStruct struct {
 	Members  []GoMember
 	Contents []string
 	cmd      *schema.Commander
+	r        *cmder.CmdReader
 }
 
 func ExportStruct(cmd *schema.Commander) {
-	var strInputs []string
-	strInputs = cmder.Prompt(STRUCT_PROMPT, STRUCT_DELIMITER)
-	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+
+	var r = cmder.Prompt(STRUCT_PROMPT, STRUCT_DELIMITER)
+	fmt.Println("")
+	fmt.Println("//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	fmt.Println("")
 
-	if gs, err := NewGoStruct(cmd, strInputs); err != nil {
+	if gs, err := NewGoStruct(cmd, r); err != nil {
 		fmt.Printf("fmt.Sscanf error %s\n", err)
 		return
 	} else {
@@ -55,14 +48,14 @@ func ExportStruct(cmd *schema.Commander) {
 	}
 }
 
-func NewGoStruct(cmd *schema.Commander, strInputs []string) (gs *GoStruct, err error) {
+func NewGoStruct(cmd *schema.Commander, r *cmder.CmdReader) (gs *GoStruct, err error) {
 
-	if len(strInputs) == 0 {
+	if len(r.TrimInputs) == 0 {
 		fmt.Printf("nil input\n")
 		return nil, fmt.Errorf("nil input")
 	}
 
-	var strInput = strInputs[0]
+	var strInput = r.TrimInputs[0]
 	var strPrefix, strStructName, strSuffix string
 	if _, err = fmt.Sscanf(strInput, "%s %s %s", &strPrefix, &strStructName, &strSuffix); err != nil {
 		fmt.Printf("fmt.Sscanf error %s\n", err)
@@ -71,7 +64,7 @@ func NewGoStruct(cmd *schema.Commander, strInputs []string) (gs *GoStruct, err e
 	if strStructName == "" {
 		panic("struct syntax no illegal, go struct must begin with [type xxx struct {]")
 	}
-	contents := strInputs[1:]
+	contents := r.TrimInputs[1:]
 	if len(contents) == 0 {
 		panic("struct syntax no illegal, go struct have no any member")
 	}
@@ -79,8 +72,14 @@ func NewGoStruct(cmd *schema.Commander, strInputs []string) (gs *GoStruct, err e
 		Name:     strStructName,
 		Contents: contents,
 		cmd:      cmd,
+		r:        r,
 	}
 	return
+}
+
+func (g *GoStruct) getShortName() string {
+	var strLowerName = strings.ToLower(g.Name)
+	return strLowerName[:1]
 }
 
 func (g *GoStruct) parseMembers() (err error) {
@@ -101,60 +100,67 @@ func (g *GoStruct) parseMembers() (err error) {
 }
 
 func (g *GoStruct) generateMethods() (err error) {
-	var strMethods string
-	strMethods += g.generateString()
-	strMethods += g.generateGoString()
+	var strCode string
+	strCode += g.generatePackage()
+	strCode += g.generateImports()
+	strCode += g.generateStruct()
+	strCode += g.generateString()
+	strCode += g.generateGoString()
 	for _, v := range g.Members {
-		strMethods += g.generateGetter(v)
-		strMethods += g.generateSetter(v)
+		strCode += g.generateGetter(v)
+		strCode += g.generateSetter(v)
 	}
 
-	fmt.Println(strMethods)
+	fmt.Println(strCode)
 	return
 }
 
-func (g *GoStruct) generateMethodDeclare(strMethodName, strArgs, strReturn, strLogic string) (strFunc string) {
-	if strReturn == "" {
-		strFunc = fmt.Sprintf("func (%s *%s) %s(%s) {\n", STRUCT_SHORT, g.Name, strMethodName, strArgs)
-	} else {
-		strFunc = fmt.Sprintf("func (%s *%s) %s(%s) %s {\n", STRUCT_SHORT, g.Name, strMethodName, strArgs, strReturn)
+func (g *GoStruct) generatePackage() (strCode string) {
+	if g.cmd.PackageName != "" {
+		strCode = fmt.Sprintf("package %s\n\n", g.cmd.PackageName)
 	}
-	strFunc += strLogic
-	strFunc += fmt.Sprintf("}\n\n")
 	return
 }
 
-func (g *GoStruct) generateString() (strMethod string) {
+func (g *GoStruct) generateImports() (strCode string) {
+	return fmt.Sprintf("import \"encoding/json\"\n\n")
+}
+
+func (g *GoStruct) generateStruct() (strCode string) {
+	return fmt.Sprintf("%s\n\n", g.r.RawInput)
+}
+
+func (g *GoStruct) generateString() (strCode string) {
 	var strLogic string
 	strLogic = fmt.Sprintf(`    data, _ := json.Marshal(%s)
     return string(data)
-`, STRUCT_SHORT)
-	return g.generateMethodDeclare(METHOD_NAME_STRING, METHOD_ARGS_NULL, "string", strLogic)
+`, g.getShortName())
+	return schema.GenerateMethodDeclare(g.getShortName(), g.Name, schema.METHOD_NAME_STRING, schema.METHOD_ARGS_NULL, "string", strLogic)
 }
 
-func (g *GoStruct) generateGoString() (strMethod string) {
+func (g *GoStruct) generateGoString() (strCode string) {
 	var strLogic string
 	strLogic = fmt.Sprintf(`    return %s.String()
-`, STRUCT_SHORT)
-	return g.generateMethodDeclare(METHOD_NAME_GOSTRING, METHOD_ARGS_NULL, "string", strLogic)
+`, g.getShortName())
+	return schema.GenerateMethodDeclare(g.getShortName(), g.Name, schema.METHOD_NAME_GOSTRING, schema.METHOD_ARGS_NULL, "string", strLogic)
 }
 
-func (g *GoStruct) generateGetter(m GoMember) (strMethod string) {
+func (g *GoStruct) generateGetter(m GoMember) (strCode string) {
 
 	var strLogic string
 	strLogic = fmt.Sprintf(`    return %s.%v
-`, STRUCT_SHORT, m.Name)
+`, g.getShortName(), m.Name)
 
-	var strMethodName = METHOD_NAME_GET + schema.CamelCaseConvert(m.Name)
-	return g.generateMethodDeclare(strMethodName, METHOD_ARGS_NULL, m.Type, strLogic)
+	var strMethodName = schema.METHOD_NAME_GET + schema.CamelCaseConvert(m.Name)
+	return schema.GenerateMethodDeclare(g.getShortName(), g.Name, strMethodName, schema.METHOD_ARGS_NULL, m.Type, strLogic)
 }
 
-func (g *GoStruct) generateSetter(m GoMember) (strMethod string) {
+func (g *GoStruct) generateSetter(m GoMember) (strCode string) {
 
 	var strLogic string
 	strLogic = fmt.Sprintf(`    %s.%v = v
-`, STRUCT_SHORT, m.Name)
+`, g.getShortName(), m.Name)
 	var strArgs = fmt.Sprintf("v %s", m.Type)
-	var strMethodName = METHOD_NAME_SET + schema.CamelCaseConvert(m.Name)
-	return g.generateMethodDeclare(strMethodName, strArgs, METHOD_ARGS_NULL, strLogic)
+	var strMethodName = schema.METHOD_NAME_SET + schema.CamelCaseConvert(m.Name)
+	return schema.GenerateMethodDeclare(g.getShortName(), g.Name, strMethodName, strArgs, schema.METHOD_ARGS_NULL, strLogic)
 }

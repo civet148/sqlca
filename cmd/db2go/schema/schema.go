@@ -42,6 +42,8 @@ type Commander struct {
 	GogoOptions   []string `json:"GogoOptions,omitempty"`
 	Orm           bool     `json:"Orm,omitempty"`
 	OmitEmpty     bool     `json:"OmitEmpty,omitempty"`
+	Struct        bool     `json:"Struct"`
+	Const         bool     `json:"Const"`
 }
 
 func (c *Commander) String() string {

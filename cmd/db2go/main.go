@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca"
-	"github.com/civet148/sqlca/cmd/db2go/consts"
 	_ "github.com/civet148/sqlca/cmd/db2go/mssql"
 	_ "github.com/civet148/sqlca/cmd/db2go/mysql"
 	_ "github.com/civet148/sqlca/cmd/db2go/postgres"
@@ -53,11 +52,10 @@ func main() {
 	cmd.EnableDecimal = *argvEnableDecimal
 	cmd.Orm = *argvOrm
 	cmd.OmitEmpty = *argvOmitEmpty
-
-	if *argvStruct {
+	cmd.Struct = *argvStruct
+	cmd.Const = *argvConst
+	if cmd.Struct {
 		structs.ExportStruct(&cmd)
-	} else if *argvConst {
-		consts.ExportConst(&cmd)
 	} else {
 
 		if *argvUrl == "" {

@@ -227,7 +227,7 @@ func (e *Engine) fetchRows(r *sql.Rows) (count int64, err error) {
 //fetch row to struct or slice, must call rows.Next() before call this function
 func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err error) {
 
-	fetcher, _ := e.getFecther(rows)
+	fetcher, _ := e.getFetcher(rows)
 
 	for _, arg := range args {
 
@@ -252,7 +252,7 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err
 					val.Set(reflect.MakeSlice(val.Type(), 0, 0)) //make slice for storage
 				}
 				for {
-					fetcher, _ := e.getFecther(rows)
+					fetcher, _ := e.getFetcher(rows)
 					var elemVal reflect.Value
 					var elemTyp reflect.Type
 					elemTyp = val.Type().Elem()
@@ -434,7 +434,7 @@ func (e *Engine) fetchCache(fetchers []*Fetcher, args ...interface{}) (count int
 	return
 }
 
-func (e *Engine) getFecther(rows *sql.Rows) (fetcher *Fetcher, err error) {
+func (e *Engine) getFetcher(rows *sql.Rows) (fetcher *Fetcher, err error) {
 
 	fetcher = &Fetcher{}
 	fetcher.cols, _ = rows.Columns()

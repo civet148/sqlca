@@ -721,7 +721,7 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 	defer rows.Close()
 	for rows.Next() {
 		rowsAffected++
-		fetcher, _ := e.getFecther(rows.Rows)
+		fetcher, _ := e.getFetcher(rows.Rows)
 		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
 	}
 	return

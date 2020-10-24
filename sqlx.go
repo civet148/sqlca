@@ -561,7 +561,7 @@ func (e *Engine) appendStrings(src []string, dest ...string) []string {
 }
 
 func (e *Engine) setSelectColumns(strColumns ...string) {
-	e.selectColumns = e.appendStrings(e.selectColumns, strColumns...)
+	e.selectColumns = strColumns
 }
 
 func (e *Engine) setExcludeColumns(strColumns ...string) {

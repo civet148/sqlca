@@ -9,6 +9,7 @@ import (
 	_ "github.com/civet148/sqlca/cmd/db2go/mysql"
 	_ "github.com/civet148/sqlca/cmd/db2go/postgres"
 	"github.com/civet148/sqlca/cmd/db2go/schema"
+	"github.com/civet148/sqlca/cmd/db2go/structs"
 	"strings"
 )
 
@@ -29,6 +30,8 @@ var argvGogoOptions = flag.String("gogo-options", "", "gogo proto options")
 var argvOneFile = flag.Bool("one-file", false, "output go/proto file into one file which named by database name")
 var argvOrm = flag.Bool("orm", false, "generate ORM code inner data object")
 var argvOmitEmpty = flag.Bool("omitempty", false, "omit empty for json tag")
+var argvStruct = flag.Bool("struct", false, "generate struct getter and setter")
+var argvConst = flag.Bool("const", false, "generate const variants format methods")
 
 func init() {
 	flag.Parse()
@@ -39,14 +42,6 @@ func main() {
 
 	//var err error
 	var cmd = schema.Commander{}
-
-	if *argvUrl == "" {
-		log.Infof("")
-		fmt.Println("need --url parameter")
-		flag.Usage()
-		return
-	}
-
 	cmd.Prefix = *argvPackage
 	cmd.Prefix = *argvPrefix
 	cmd.Suffix = *argvSuffix
@@ -57,55 +52,67 @@ func main() {
 	cmd.EnableDecimal = *argvEnableDecimal
 	cmd.Orm = *argvOrm
 	cmd.OmitEmpty = *argvOmitEmpty
-
-	ui := sqlca.ParseUrl(*argvUrl)
-
-	log.Infof("%+v", cmd.String())
-
-	if *argvDatabase == "" {
-		//use default database
-		cmd.Database = schema.GetDatabaseName(ui.Path)
+	cmd.Struct = *argvStruct
+	cmd.Const = *argvConst
+	if cmd.Struct {
+		structs.ExportStruct(&cmd)
 	} else {
-		//use input database
-		cmd.Database = strings.TrimSpace(*argvDatabase)
-	}
 
-	if *argvTables != "" {
-		cmd.Tables = schema.TrimSpaceSlice(strings.Split(*argvTables, ","))
-	}
+		if *argvUrl == "" {
+			log.Infof("")
+			fmt.Println("need --url parameter")
+			flag.Usage()
+			return
+		}
 
-	if *argvWithout != "" {
-		cmd.Without = schema.TrimSpaceSlice(strings.Split(*argvWithout, ","))
-	}
+		ui := sqlca.ParseUrl(*argvUrl)
 
-	if *argvProtobuf {
-		if *argvGogoOptions != "" {
-			cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ","))
-			if len(cmd.GogoOptions) == 0 {
-				cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ";"))
+		log.Infof("%+v", cmd.String())
+
+		if *argvDatabase == "" {
+			//use default database
+			cmd.Database = schema.GetDatabaseName(ui.Path)
+		} else {
+			//use input database
+			cmd.Database = strings.TrimSpace(*argvDatabase)
+		}
+
+		if *argvTables != "" {
+			cmd.Tables = schema.TrimSpaceSlice(strings.Split(*argvTables, ","))
+		}
+
+		if *argvWithout != "" {
+			cmd.Without = schema.TrimSpaceSlice(strings.Split(*argvWithout, ","))
+		}
+
+		if *argvProtobuf {
+			if *argvGogoOptions != "" {
+				cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ","))
+				if len(cmd.GogoOptions) == 0 {
+					cmd.GogoOptions = schema.TrimSpaceSlice(strings.Split(*argvGogoOptions, ";"))
+				}
 			}
 		}
-	}
 
-	if *argvOneFile {
-		cmd.OneFile = true
-	}
+		if *argvOneFile {
+			cmd.OneFile = true
+		}
 
-	if *argvTags != "" {
-		cmd.Tags = schema.TrimSpaceSlice(strings.Split(*argvTags, ","))
-	}
-	if *argvReadOnly != "" {
-		cmd.ReadOnly = schema.TrimSpaceSlice(strings.Split(*argvReadOnly, ","))
-	}
+		if *argvTags != "" {
+			cmd.Tags = schema.TrimSpaceSlice(strings.Split(*argvTags, ","))
+		}
+		if *argvReadOnly != "" {
+			cmd.ReadOnly = schema.TrimSpaceSlice(strings.Split(*argvReadOnly, ","))
+		}
 
-	cmd.Scheme = ui.Scheme
-	cmd.Host = ui.Host
-	cmd.User = ui.User
-	cmd.Password = ui.Password
-	e := sqlca.NewEngine(false)
-	e.Open(cmd.ConnUrl)
-
-	export(&cmd, e)
+		cmd.Scheme = ui.Scheme
+		cmd.Host = ui.Host
+		cmd.User = ui.User
+		cmd.Password = ui.Password
+		e := sqlca.NewEngine(false)
+		e.Open(cmd.ConnUrl)
+		export(&cmd, e)
+	}
 }
 
 func export(cmd *schema.Commander, e *sqlca.Engine) {

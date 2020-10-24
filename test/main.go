@@ -95,6 +95,7 @@ func Benchmark(e *sqlca.Engine) {
 	CaseWhen(e)
 	UpdateByMap(e)
 	NearBy(e)
+	JsonQuery(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -742,4 +743,44 @@ func NearBy(e *sqlca.Engine) {
 	} else {
 		log.Infof("nearby rows [%d] dos -> %+v ", rows, dos)
 	}
+}
+
+type JsonsDo struct {
+	Id        int32  `json:"id" db:"id"`
+	Name      string `json:"name" db:"name"`
+	Sex       int32  `json:"sex" db:"sex"`
+	Height    int32  `json:"height" db:"height"`
+	Weight    int32  `json:"weight" db:"weight"`
+	CreatedAt string `json:"created_at" db:"created_at"`
+	UpdatedAt string `json:"updated_at" db:"updated_at"`
+}
+
+func JsonQuery(e *sqlca.Engine) {
+	//SELECT id, NAME, user_data->>'$.height' AS height, user_data->>'$.weight' AS weight FROM jsons LIMIT 5
+	var dos []JsonsDo
+
+	_, err := e.Model(&dos).
+		Table("jsons").
+		Select("id", "name", "user_data->>'$.height' AS height", "user_data->>'$.weight' AS weight").
+		Limit(5).
+		Query()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	log.Infof("%+v", dos)
+
+	//SELECT id, NAME, user_data->>'$.height' AS height, user_data->>'$.weight' AS weight FROM jsons WHERE user_data->>'$.auth_code'=2 AND user_data->>'$.height'=165 AND user_data->>'$.auth_no'="450232200910230012"
+	dos = nil
+	_, err = e.Model(&dos).
+		Table("jsons").
+		Select("id", "name", "user_data->>'$.height' AS height", "user_data->>'$.weight' AS weight").
+		Where("user_data->>'$.auth_code'=2 AND user_data->>'$.height'=165 AND user_data->>'$.auth_no'=\"450232200910230012\"").
+		//Limit(5).
+		Query()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	log.Infof("%+v", dos)
 }

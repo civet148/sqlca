@@ -3,6 +3,7 @@ package sqlca
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/redigogo"
@@ -1001,5 +1002,20 @@ func (e *Engine) NearBy(strLngCol, strLatCol, strAS string, lng, lat, distance f
 func (e *Engine) GeoHash(lng, lat float64, precision int) (strGeoHash string, strNeighbors []string) {
 	strGeoHash, _ = geohash.Encode(lat, lng, precision)
 	strNeighbors = geohash.GetNeighbors(lat, lng, precision)
+	return
+}
+
+func (e *Engine) JsonMarshal(v interface{}) (strJson string) {
+	if data, err := json.Marshal(v); err != nil {
+		log.Error(err.Error())
+		return
+	} else {
+		strJson = string(data)
+	}
+	return
+}
+
+func (e *Engine) JsonUnmarshal(strJson string, v interface{}) (err error) {
+	err = json.Unmarshal([]byte(strJson), v)
 	return
 }

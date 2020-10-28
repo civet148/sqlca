@@ -580,6 +580,14 @@ func (e *Engine) setDescColumns(strColumns ...string) {
 	e.descColumns = e.appendStrings(e.descColumns, strColumns...)
 }
 
+func (e *Engine) setCustomizeUpdates(strUpdates ...string) {
+	e.strUpdates = strUpdates
+}
+
+func (e *Engine) getCustomizeUpdates() []string {
+	return e.strUpdates
+}
+
 // SELECT ... FROM xxx ORDER BY c1, c2 ASC, c3 DESC
 func (e *Engine) getAscAndDesc() (strAscDesc string) {
 
@@ -989,9 +997,16 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 
 func (e *Engine) getOnConflictDo() (strDo string) {
 	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+	case AdapterSqlx_MySQL:
 		{
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
+			var strUpdates string
+			var strCustomizeUpdates = e.getCustomizeUpdates()
+			if len(strCustomizeUpdates) != 0 {
+				strUpdates = strings.Join(strCustomizeUpdates, ",")
+			} else {
+				strUpdates = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
+			}
+
 			if !isNilOrFalse(strUpdates) {
 				if e.isPkInteger() { // primary key type is a integer
 					strDo = fmt.Sprintf("%v", strUpdates)
@@ -1010,6 +1025,9 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 	case AdapterSqlx_Mssql:
 		{
 			strDo = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
+		}
+	case AdapterSqlx_Sqlite:
+		{
 		}
 	}
 	return

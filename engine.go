@@ -81,7 +81,8 @@ type Engine struct {
 	slowQueryTime   int                    // slow query alert time (milliseconds)
 	slowQueryOn     bool                   // enable slow query alert (default off)
 	strCaseWhen     string                 // case..when...then...else...end
-	nearby          *nearby                //nearby
+	nearby          *nearby                // nearby
+	strUpdates      []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
 }
 
 func init() {
@@ -560,11 +561,19 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 // orm insert or update if key(s) conflict
 // return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe id return 0
 // NOTE: Model function is must be called before call this function and call OnConflict function when you are on postgresql
-func (e *Engine) Upsert() (lastInsertId int64, err error) {
+// updates -> customize updates condition when key(s) conflict
+// [MySQL]
+// INSERT INTO messages(id, message_type, unread_count) VALUES('10000', '2', '1', '3')
+// ON DUPLICATE KEY UPDATE message_type=values(message_type), unread_count=unread_count+values(unread_count)
+// ---------------------------------------------------------------------------------------------------------------------------------------
+// e.Model(&do).Table("messages").Upsert("message_type=values(message_type)", "unread_count=unread_count+values(unread_count)")
+// ---------------------------------------------------------------------------------------------------------------------------------------
+func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err error) {
 
 	assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
-	assert(e.getSelectColumns(), "update columns is not set")
+	e.setCustomizeUpdates(strCustomizeUpdates...)
+
 	defer e.cleanWhereCondition()
 
 	e.setOperType(OperType_Upsert)

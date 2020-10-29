@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca"
@@ -67,36 +68,38 @@ func Benchmark(e *sqlca.Engine) {
 
 	e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
 
-	OrmInsertByModel(e)
-	OrmUpsertByModel(e)
-	OrmUpdateByModel(e)
-	OrmQueryIntoModel(e)
-	OrmQueryExcludeIntoModel(e)
-	OrmQueryIntoModelSlice(e)
-	OrmUpdateIndexToCache(e)
-	OrmSelectMultiTable(e)
-	OrmDeleteFromTable(e)
-	OrmInCondition(e)
-	OrmFind(e)
-	OrmWhereRequire(e)
-	OrmToSQL(e)
-	OrmGroupByHaving(e)
-	RawQueryIntoModel(e)
-	RawQueryIntoModelSlice(e)
-	RawQueryIntoMap(e)
-	RawExec(e)
-	TxGetExec(e)
-	TxRollback(e)
-	TxForUpdate(e)
-	CustomTag(e)
-	BaseTypesUpdate(e)
-	DuplicateUpdateGetId(e)
-	Count(e)
-	CaseWhen(e)
-	UpdateByMap(e)
-	NearBy(e)
-	JsonQuery(e)
-	CustomizeUpsert(e)
+	//OrmInsertByModel(e)
+	//OrmUpsertByModel(e)
+	//OrmUpdateByModel(e)
+	//OrmQueryIntoModel(e)
+	//OrmQueryExcludeIntoModel(e)
+	//OrmQueryIntoModelSlice(e)
+	//OrmUpdateIndexToCache(e)
+	//OrmSelectMultiTable(e)
+	//OrmDeleteFromTable(e)
+	//OrmInCondition(e)
+	//OrmFind(e)
+	//OrmWhereRequire(e)
+	//OrmToSQL(e)
+	//OrmGroupByHaving(e)
+	//RawQueryIntoModel(e)
+	//RawQueryIntoModelSlice(e)
+	//RawQueryIntoMap(e)
+	//RawExec(e)
+	//TxGetExec(e)
+	//TxRollback(e)
+	//TxForUpdate(e)
+	TxFunc(e)
+	TxFuncContext(e)
+	//CustomTag(e)
+	//BaseTypesUpdate(e)
+	//DuplicateUpdateGetId(e)
+	//Count(e)
+	//CaseWhen(e)
+	//UpdateByMap(e)
+	//NearBy(e)
+	//JsonQuery(e)
+	//CustomizeUpsert(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -544,6 +547,51 @@ func TxRollback(e *sqlca.Engine) (err error) {
 		return
 	}
 	return
+}
+
+func TxFunc(e *sqlca.Engine) {
+	var errTx error
+	errTx = e.TxFunc(func(tx *sqlca.Engine) (err error) {
+		var strPhone string
+		if _, err = tx.TxGet(&strPhone, "SELECT phone FROM users WHERE id=1"); err != nil {
+			log.Errorf("[TX1] tx get error [%v]", err.Error())
+			tx.TxRollback()
+			return nil
+		}
+		log.Debugf("TxGet phone = %s", strPhone)
+		if _, _, err = tx.TxExec("UPDATE users SET name='i am tx 1' WHERE id=1"); err != nil {
+			log.Errorf("[TX1] tx exec error [%v]", err.Error())
+			return err
+		}
+		return nil
+	})
+
+	if errTx != nil {
+		log.Errorf(errTx.Error())
+	}
+}
+
+func TxFuncContext(e *sqlca.Engine) {
+	var errTx error
+	var ctx = context.Background()
+	errTx = e.TxFuncContext(ctx, func(ctx context.Context, tx *sqlca.Engine) (err error) {
+		var strPhone string
+		if _, err = tx.TxGet(&strPhone, "SELECT phone FROM users WHERE id=1"); err != nil {
+			log.Errorf("[TX1] tx get error [%v]", err.Error())
+			tx.TxRollback()
+			return nil
+		}
+		log.Debugf("TxGet phone = %s", strPhone)
+		if _, _, err = tx.TxExec("UPDATE users SET name='i am tx 1' WHERE id=1"); err != nil {
+			log.Errorf("[TX1] tx exec error [%v]", err.Error())
+			return err
+		}
+		return nil
+	})
+
+	if errTx != nil {
+		log.Errorf(errTx.Error())
+	}
 }
 
 func TxForUpdate(e *sqlca.Engine) {

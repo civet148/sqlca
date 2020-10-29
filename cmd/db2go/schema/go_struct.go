@@ -93,7 +93,7 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 	table.TableComment = ReplaceCRLF(table.TableComment)
 	strContent += fmt.Sprintf("var TableName%v = \"%v\" //%v \n\n", table.TableNameCamelCase, table.TableName, table.TableComment)
 
-	table.StructName = fmt.Sprintf("%vDO", table.TableNameCamelCase)
+	table.StructName = fmt.Sprintf("%s%s", table.TableNameCamelCase, strings.ToUpper(cmd.Suffix))
 
 	for i, v := range table.Columns {
 		table.Columns[i].Comment = ReplaceCRLF(v.Comment)
@@ -106,6 +106,7 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 	strContent += makeNewMethod(cmd, table)
 	strContent += makeObjectMethods(cmd, table)
 	strContent += makeOrmMethods(cmd, table)
+	strContent += makeTableCreateSQL(cmd, table)
 	_, _ = File.WriteString(strHead + strContent)
 	return
 }
@@ -146,6 +147,19 @@ func makeObjectMethods(cmd *Commander, table *TableSchema) (strContent string) {
 		strContent += MakeGetter(table.StructName, strColName, strColType)
 		strContent += MakeSetter(table.StructName, strColName, strColType)
 	}
+	return
+}
+
+func makeTableCreateSQL(cmd *Commander, table *TableSchema) (strContent string) {
+	var strTableCreateSQL string
+	var strTableName = table.TableName
+	if _, err := cmd.Engine.Model(&strTableName, &strTableCreateSQL).QueryRaw("SHOW CREATE TABLE %s", strTableName); err != nil {
+		log.Error(err.Error())
+		return
+	}
+	strContent += "/*\n"
+	strContent += strTableCreateSQL + ";\n"
+	strContent += "*/\n"
 	return
 }
 

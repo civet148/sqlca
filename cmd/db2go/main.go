@@ -109,9 +109,8 @@ func main() {
 		cmd.Host = ui.Host
 		cmd.User = ui.User
 		cmd.Password = ui.Password
-		e := sqlca.NewEngine(false)
-		e.Open(cmd.ConnUrl)
-		export(&cmd, e)
+		cmd.Engine = sqlca.NewEngine(cmd.ConnUrl)
+		export(&cmd, cmd.Engine)
 	}
 }
 

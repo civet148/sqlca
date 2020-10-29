@@ -36,3 +36,20 @@ func (do *UsersDO) GetCreatedAt() string  { return do.CreatedAt }
 func (do *UsersDO) SetCreatedAt(v string) { do.CreatedAt = v }
 func (do *UsersDO) GetUpdatedAt() string  { return do.UpdatedAt }
 func (do *UsersDO) SetUpdatedAt(v string) { do.UpdatedAt = v }
+
+/*
+CREATE TABLE `users` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT 'auto inc id',
+  `name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'user name',
+  `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'phone number',
+  `sex` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT 'user sex',
+  `email` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'email',
+  `disable` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'disabled(0=false 1=true)',
+  `balance` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'balance of decimal',
+  `sex_name` varchar(16) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'sex name',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `phone` (`phone`)
+) ENGINE=InnoDB AUTO_INCREMENT=228 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+*/

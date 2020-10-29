@@ -21,29 +21,30 @@ const (
 )
 
 type Commander struct {
-	ConnUrl       string   `json:"ConnUrl,omitempty"`
-	Database      string   `json:"-"`
-	Tables        []string `json:"-"`
-	Without       []string `json:"Without,omitempty"`
-	ReadOnly      []string `json:"ReadOnly,omitempty"`
-	Tags          []string `json:"Tags,omitempty"`
-	Scheme        string   `json:"-"`
-	Host          string   `json:"-"`
-	User          string   `json:"-"`
-	Password      string   `json:"-"`
-	Charset       string   `json:"-"`
-	OutDir        string   `json:"OutDir,omitempty"`
-	Prefix        string   `json:"Prefix,omitempty"`
-	Suffix        string   `json:"Suffix,omitempty"`
-	PackageName   string   `json:"PackageName,omitempty"`
-	Protobuf      bool     `json:"Protobuf,omitempty"`
-	EnableDecimal bool     `json:"EnableDecimal,omitempty"`
-	OneFile       bool     `json:"OneFile,omitempty"`
-	GogoOptions   []string `json:"GogoOptions,omitempty"`
-	Orm           bool     `json:"Orm,omitempty"`
-	OmitEmpty     bool     `json:"OmitEmpty,omitempty"`
-	Struct        bool     `json:"Struct"`
-	Const         bool     `json:"Const"`
+	ConnUrl       string        `json:"ConnUrl,omitempty"`
+	Database      string        `json:"-"`
+	Tables        []string      `json:"-"`
+	Without       []string      `json:"Without,omitempty"`
+	ReadOnly      []string      `json:"ReadOnly,omitempty"`
+	Tags          []string      `json:"Tags,omitempty"`
+	Scheme        string        `json:"-"`
+	Host          string        `json:"-"`
+	User          string        `json:"-"`
+	Password      string        `json:"-"`
+	Charset       string        `json:"-"`
+	OutDir        string        `json:"OutDir,omitempty"`
+	Prefix        string        `json:"Prefix,omitempty"`
+	Suffix        string        `json:"Suffix,omitempty"`
+	PackageName   string        `json:"PackageName,omitempty"`
+	Protobuf      bool          `json:"Protobuf,omitempty"`
+	EnableDecimal bool          `json:"EnableDecimal,omitempty"`
+	OneFile       bool          `json:"OneFile,omitempty"`
+	GogoOptions   []string      `json:"GogoOptions,omitempty"`
+	Orm           bool          `json:"Orm,omitempty"`
+	OmitEmpty     bool          `json:"OmitEmpty,omitempty"`
+	Struct        bool          `json:"Struct"`
+	Const         bool          `json:"Const"`
+	Engine        *sqlca.Engine `json:"-"`
 }
 
 func (c *Commander) String() string {

@@ -67,7 +67,8 @@ type TableSchema struct {
 	OutDir             string        `json:"out_dir" db:"out_dir"`             //output directory
 	FileName           string        `json:"file_name" db:"file_name"`         //output directory
 	Columns            []TableColumn `json:"table_columns" db:"table_columns"` //columns with database and golang
-	TableNameCamelCase string        //table name in camel case
+	TableNameCamelCase string        `json:"-"`                                //table name in camel case
+	TableCreateSQL     string        `json:"-"`                                //table create SQL
 }
 
 type TableColumn struct {

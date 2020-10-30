@@ -151,14 +151,8 @@ func makeObjectMethods(cmd *Commander, table *TableSchema) (strContent string) {
 }
 
 func makeTableCreateSQL(cmd *Commander, table *TableSchema) (strContent string) {
-	var strTableCreateSQL string
-	var strTableName = table.TableName
-	if _, err := cmd.Engine.Model(&strTableName, &strTableCreateSQL).QueryRaw("SHOW CREATE TABLE %s", strTableName); err != nil {
-		log.Error(err.Error())
-		return
-	}
 	strContent += "/*\n"
-	strContent += strTableCreateSQL + ";\n"
+	strContent += table.TableCreateSQL + ";\n"
 	strContent += "*/\n"
 	return
 }

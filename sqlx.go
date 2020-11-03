@@ -62,6 +62,11 @@ const (
 	DATABASE_KEY_NAME_THEN       = "THEN"
 	DATABASE_KEY_NAME_ELSE       = "ELSE"
 	DATABASE_KEY_NAME_END        = "END"
+	DATABASE_KEY_NAME_ON         = "ON"
+	DATABASE_KEY_NAME_INNER_JOIN = "INNER JOIN"
+	DATABASE_KEY_NAME_LEFT_JOIN  = "LEFT JOIN"
+	DATABASE_KEY_NAME_RIGHT_JOIN = "RIGHT JOIN"
+	DATABASE_KEY_NAME_FULL_JOIN  = "FULL OUTER JOIN" //MSSQL-SERVER
 )
 
 type AdapterType int
@@ -506,6 +511,13 @@ func (e *Engine) getTableName() string {
 
 func (e *Engine) setTableName(strNames ...string) {
 	e.strTableName = strings.Join(strNames, ",")
+}
+
+func (e *Engine) getJoins() (strJoins string) {
+	for _, v := range e.joins {
+		strJoins += fmt.Sprintf(" %s %s %s %s ", v.jt.ToKeyWord(), v.strTableName, DATABASE_KEY_NAME_ON, v.strOn)
+	}
+	return
 }
 
 func (e *Engine) setPkValue(value interface{}) {
@@ -1193,10 +1205,8 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 		strCustomer := e.getCustomWhere()
 		if strCustomer == "" {
 			//where condition required when update or delete
-			if e.operType != OperType_Update && e.operType != OperType_Delete {
+			if e.operType != OperType_Update && e.operType != OperType_Delete && len(e.joins) == 0 {
 				strWhere += "1=1"
-			} else {
-				log.Warnf("where condition required when use orm update or delete")
 			}
 		} else {
 			strWhere += strCustomer
@@ -1219,7 +1229,12 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 	for _, v := range e.orConditions {
 		strWhere += fmt.Sprintf(" %v %v ", DATABASE_KEY_NAME_OR, v)
 	}
-	strWhere = DATABASE_KEY_NAME_WHERE + " " + strWhere
+
+	if strWhere != "" {
+		strWhere = DATABASE_KEY_NAME_WHERE + " " + strWhere
+	} else {
+		strWhere = DATABASE_KEY_NAME_WHERE
+	}
 	return
 }
 
@@ -1228,12 +1243,12 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
-		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
-			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
 	default:
-		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
-			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(),
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v",
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), e.getLimit(), e.getOffset())
 	}
 
@@ -1272,7 +1287,7 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 func (e *Engine) makeSqlxDelete() (strSqlx string) {
 	strWhere := e.makeWhereCondition()
 	if strWhere == "" {
-		panic("no condition to delete records")
+		panic("no condition to delete records") //删除必须加条件,WHERE条件可设置为1=1(确保不是人为疏忽)
 	}
 	strSqlx = fmt.Sprintf("%v %v %v %v", DATABASE_KEY_NAME_DELETE, DATABASE_KEY_NAME_FROM, e.getTableName(), strWhere)
 	return

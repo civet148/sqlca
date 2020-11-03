@@ -83,6 +83,7 @@ type Engine struct {
 	strCaseWhen     string                 // case..when...then...else...end
 	nearby          *nearby                // nearby
 	strUpdates      []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
+	joins           []*Join                //inner/left/right/full-outer join(s)
 }
 
 func init() {
@@ -1021,4 +1022,28 @@ func (e *Engine) JsonMarshal(v interface{}) (strJson string) {
 func (e *Engine) JsonUnmarshal(strJson string, v interface{}) (err error) {
 	err = json.Unmarshal([]byte(strJson), v)
 	return
+}
+
+func (e *Engine) InnerJoin(strTableName string) *Join {
+	return &Join{
+		e:            e,
+		jt:           JoinType_Inner,
+		strTableName: strTableName,
+	}
+}
+
+func (e *Engine) LeftJoin(strTableName string) *Join {
+	return &Join{
+		e:            e,
+		jt:           JoinType_Left,
+		strTableName: strTableName,
+	}
+}
+
+func (e *Engine) RightJoin(strTableName string) *Join {
+	return &Join{
+		e:            e,
+		jt:           JoinType_Right,
+		strTableName: strTableName,
+	}
 }

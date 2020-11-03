@@ -97,6 +97,7 @@ func Benchmark(e *sqlca.Engine) {
 	NearBy(e)
 	JsonQuery(e)
 	CustomizeUpsert(e)
+	JoinQuery(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -392,7 +393,7 @@ func OrmInCondition(e *sqlca.Engine) {
 	//SQL: select * from users where id > 2 and id in (1,3,6,7) and disable in (0,1)
 	if rows, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
-		Where("id > 2").
+		//Where("id > 2").
 		In("id", 1, 3, 6, 7).
 		In("disable", 0, 1).
 		Or("created_at > ?", "2020-06-01 00:00:00").
@@ -801,4 +802,27 @@ func CustomizeUpsert(e *sqlca.Engine) {
 	//VALUES('1', "customize upsert", "8617923930921", '1', "civet148@gmail.com", '0', '6.66')
 	//ON DUPLICATE KEY UPDATE balance=balance+VALUES(balance)
 	e.Model(&do).Table(TABLE_NAME_USERS).Upsert("balance=balance+VALUES(balance)")
+}
+
+func JoinQuery(e *sqlca.Engine) {
+
+	type UserClass struct {
+		User  UserDO
+		Class ClassDo
+	}
+
+	var ucs []UserClass
+	c, err := e.Model(&ucs).Select("a.*, b.*").
+		Table("users a").
+		InnerJoin("classes b").
+		//LeftJoin("classes b").
+		//RightJoin("classes b").
+		On("a.id=b.user_id").
+		Where("a.id <= 9").
+		Query()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	log.Infof("count [%d] UserClass data [%+v]", c, ucs)
 }

@@ -5,7 +5,7 @@ package dataobject
 
 var TableNameClasses = "classes" //
 
-var (
+const (
 	CLASSES_COLUMN_ID         = "id"
 	CLASSES_COLUMN_CLASS_NO   = "class_no"
 	CLASSES_COLUMN_USER_ID    = "user_id"

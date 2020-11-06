@@ -221,7 +221,7 @@ func makeColumnConsts(cmd *Commander, table *TableSchema) (strContent string) {
 	var strUpperColumnName string
 	strUpperTableName = strings.ToUpper(table.TableName)
 
-	strContent += fmt.Sprintf("var (\n")
+	strContent += fmt.Sprintf("const (\n")
 	for _, v := range table.Columns {
 		strUpperColumnName = strings.ToUpper(v.Name)
 		strContent += fmt.Sprintf("%s_%s_%s = \"%s\"\n", strUpperTableName, "COLUMN", strUpperColumnName, v.Name)

@@ -5,7 +5,7 @@ package dataobject
 
 var TableNameUsers = "users" //
 
-var (
+const (
 	USERS_COLUMN_ID         = "id"
 	USERS_COLUMN_NAME       = "name"
 	USERS_COLUMN_PHONE      = "phone"

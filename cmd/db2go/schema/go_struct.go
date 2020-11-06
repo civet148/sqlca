@@ -254,7 +254,7 @@ func makeTableStructure(cmd *Commander, table *TableSchema) (strContent string) 
 			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", t, v.Name))
 		}
 		//添加成员和标签
-		strContent += MakeTags(strColName, strColType, v.Name, v.Comment, strings.Join(tagValues, " "), cmd.OmitEmpty)
+		strContent += MakeTags(cmd, strColName, strColType, v.Name, v.Comment, strings.Join(tagValues, " "))
 
 		v.GoName = strColName
 		v.GoType = strColType

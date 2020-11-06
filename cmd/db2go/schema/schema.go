@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	SCHEME_MYSQL    = "mysql"
-	SCHEME_POSTGRES = "postgres"
-	SCHEME_MSSQL    = "mssql"
+	SCHEME_MYSQL             = "mysql"
+	SCHEME_POSTGRES          = "postgres"
+	SCHEME_MSSQL             = "mssql"
+	JSON_PROPERTY_OMIT_EMTPY = "omitempty"
 )
 
 const (
@@ -21,30 +22,31 @@ const (
 )
 
 type Commander struct {
-	ConnUrl       string        `json:"ConnUrl,omitempty"`
-	Database      string        `json:"-"`
-	Tables        []string      `json:"-"`
-	Without       []string      `json:"Without,omitempty"`
-	ReadOnly      []string      `json:"ReadOnly,omitempty"`
-	Tags          []string      `json:"Tags,omitempty"`
-	Scheme        string        `json:"-"`
-	Host          string        `json:"-"`
-	User          string        `json:"-"`
-	Password      string        `json:"-"`
-	Charset       string        `json:"-"`
-	OutDir        string        `json:"OutDir,omitempty"`
-	Prefix        string        `json:"Prefix,omitempty"`
-	Suffix        string        `json:"Suffix,omitempty"`
-	PackageName   string        `json:"PackageName,omitempty"`
-	Protobuf      bool          `json:"Protobuf,omitempty"`
-	EnableDecimal bool          `json:"EnableDecimal,omitempty"`
-	OneFile       bool          `json:"OneFile,omitempty"`
-	GogoOptions   []string      `json:"GogoOptions,omitempty"`
-	Orm           bool          `json:"Orm,omitempty"`
-	OmitEmpty     bool          `json:"OmitEmpty,omitempty"`
-	Struct        bool          `json:"Struct"`
-	Const         bool          `json:"Const"`
-	Engine        *sqlca.Engine `json:"-"`
+	ConnUrl        string        `json:"ConnUrl,omitempty"`
+	Database       string        `json:"-"`
+	Tables         []string      `json:"-"`
+	Without        []string      `json:"Without,omitempty"`
+	ReadOnly       []string      `json:"ReadOnly,omitempty"`
+	Tags           []string      `json:"Tags,omitempty"`
+	Scheme         string        `json:"-"`
+	Host           string        `json:"-"`
+	User           string        `json:"-"`
+	Password       string        `json:"-"`
+	Charset        string        `json:"-"`
+	OutDir         string        `json:"OutDir,omitempty"`
+	Prefix         string        `json:"Prefix,omitempty"`
+	Suffix         string        `json:"Suffix,omitempty"`
+	PackageName    string        `json:"PackageName,omitempty"`
+	Protobuf       bool          `json:"Protobuf,omitempty"`
+	EnableDecimal  bool          `json:"EnableDecimal,omitempty"`
+	OneFile        bool          `json:"OneFile,omitempty"`
+	GogoOptions    []string      `json:"GogoOptions,omitempty"`
+	Orm            bool          `json:"Orm,omitempty"`
+	OmitEmpty      bool          `json:"OmitEmpty,omitempty"`
+	Struct         bool          `json:"Struct"`
+	Const          bool          `json:"Const"`
+	Engine         *sqlca.Engine `json:"-"`
+	JsonProperties string        `json:"-"`
 }
 
 func (c *Commander) String() string {
@@ -54,6 +56,28 @@ func (c *Commander) String() string {
 
 func (c *Commander) GoString() string {
 	return c.String()
+}
+
+func (c *Commander) GetJsonPropertiesSlice() (jsonProps []string) {
+	var dup bool
+
+	if c.JsonProperties != "" {
+		jsonProps = strings.Split(c.JsonProperties, ",")
+	}
+
+	if c.OmitEmpty {
+		for _, v := range jsonProps {
+			if v == JSON_PROPERTY_OMIT_EMTPY {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			jsonProps = append(jsonProps, JSON_PROPERTY_OMIT_EMTPY)
+		}
+	}
+	//log.Debugf("jsonProps [%+v]", jsonProps)
+	return
 }
 
 type TableSchema struct {
@@ -117,12 +141,13 @@ func IsInSlice(in string, s []string) bool {
 	return false
 }
 
-func MakeTags(strColName, strColType, strTagValue, strComment string, strAppends string, omitEmpty bool) string {
+func MakeTags(cmd *Commander, strColName, strColType, strTagValue, strComment string, strAppends string) string {
 	strComment = ReplaceCRLF(strComment)
 	var strJsonValue string
+	var strJsonProperties = cmd.GetJsonPropertiesSlice()
 	strJsonValue = strTagValue
-	if omitEmpty {
-		strJsonValue += ",omitempty"
+	if len(strJsonProperties) > 0 {
+		strJsonValue += fmt.Sprintf(",%s", strings.Join(strJsonProperties, ","))
 	}
 	return fmt.Sprintf("	%v %v `json:\"%v\" db:\"%v\" %v` //%v \n",
 		strColName, strColType, strJsonValue, strTagValue, strAppends, strComment)

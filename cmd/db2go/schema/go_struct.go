@@ -104,7 +104,8 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 		strHead += IMPORT_SQLCA + "\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
 	}
 
-	strContent += MakeTableStructure(cmd, table)
+	strContent += makeColumnConsts(cmd, table)
+	strContent += makeTableStructure(cmd, table)
 	strContent += makeNewMethod(cmd, table)
 	strContent += makeObjectMethods(cmd, table)
 	strContent += makeOrmMethods(cmd, table)
@@ -215,7 +216,20 @@ func (do *%v) Query_exclude(columns...string) (rows int64, err error) {
 `, table.StructName, table.TableNameCamelCase)
 }
 
-func MakeTableStructure(cmd *Commander, table *TableSchema) (strContent string) {
+func makeColumnConsts(cmd *Commander, table *TableSchema) (strContent string) {
+	var strUpperTableName string
+	var strUpperColumnName string
+	strUpperTableName = strings.ToUpper(table.TableName)
+
+	strContent += fmt.Sprintf("var (\n")
+	for _, v := range table.Columns {
+		strUpperColumnName = strings.ToUpper(v.Name)
+		strContent += fmt.Sprintf("%s_%s_%s = \"%s\"\n", strUpperTableName, "COLUMN", strUpperColumnName, v.Name)
+	}
+	strContent += fmt.Sprintf(")\n\n")
+	return
+}
+func makeTableStructure(cmd *Commander, table *TableSchema) (strContent string) {
 
 	strContent += fmt.Sprintf("type %v struct { \n", table.StructName)
 

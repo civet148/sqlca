@@ -303,7 +303,7 @@ func GetGoColumnType(strTableName string, col TableColumn, enableDecimal bool) (
 	if bUnsigned {
 		strGoColType = db2goTypesUnsigned[strDataType]
 		if strGoColType == "" {
-			panic(fmt.Sprintf("data type [%s] column type [%s] have no unsigned type", strDataType, strColumnType))
+			log.Warnf("data type [%s] column type [%s] have no unsigned type", strDataType, strColumnType)
 		}
 	}
 	switch strDataType {

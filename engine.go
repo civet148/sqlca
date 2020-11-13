@@ -463,7 +463,7 @@ func (e *Engine) Count() (count int64, err error) {
 // NOTE: Model function is must be called before call this function
 // if slave == true, try query from a slave connection, if not exist query from master
 func (e *Engine) Query() (rowsAffected int64, err error) {
-	assert(e.model, "model is nil, please call Model method first")
+	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	defer e.cleanWhereCondition()
 
@@ -508,7 +508,7 @@ func (e *Engine) Find(conditions map[string]interface{}) (rowsAffected int64, er
 // return last insert id and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Insert() (lastInsertId int64, err error) {
-	assert(e.model, "model is nil, please call Model method first")
+	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	defer e.cleanWhereCondition()
 
@@ -565,7 +565,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 // ---------------------------------------------------------------------------------------------------------------------------------------
 func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err error) {
 
-	assert(e.model, "model is nil, please call Model method first")
+	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	e.setCustomizeUpdates(strCustomizeUpdates...)
 
@@ -614,7 +614,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Update() (rowsAffected int64, err error) {
-	assert(e.model, "model is nil, please call Model method first")
+	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	assert(e.getSelectColumns(), "update columns is not set, please call Select method")
 
@@ -684,7 +684,7 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
 
 	assert(strQuery, "query sql string is nil")
-	assert(e.model, "model is nil, please call Model method first")
+	//assert(e.model, "model is nil, please call Model method first")
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strQuery))
 	e.setOperType(OperType_QueryRaw)
@@ -708,7 +708,7 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 // NOTE: Model function is must be called before call this function
 func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
 	assert(strQuery, "query sql string is nil")
-	assert(e.model, "model is nil, please call Model method first")
+	//assert(e.model, "model is nil, please call Model method first")
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strQuery))
 

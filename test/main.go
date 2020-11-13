@@ -98,6 +98,7 @@ func Benchmark(e *sqlca.Engine) {
 	JsonQuery(e)
 	CustomizeUpsert(e)
 	JoinQuery(e)
+	NestedQuery(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -809,6 +810,28 @@ func JoinQuery(e *sqlca.Engine) {
 	type UserClass struct {
 		User  UserDO
 		Class ClassDo
+	}
+
+	var ucs []UserClass
+	c, err := e.Model(&ucs).Select("a.*, b.*").
+		Table("users a").
+		InnerJoin("classes b").
+		//LeftJoin("classes b").
+		//RightJoin("classes b").
+		On("a.id=b.user_id").
+		Where("a.id <= 9").
+		Query()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	log.Infof("count [%d] UserClass data [%+v]", c, ucs)
+}
+
+func NestedQuery(e *sqlca.Engine) {
+	type UserClass struct {
+		User    UserDO
+		Classes []*ClassDo //slice in structure will be ignored...
 	}
 
 	var ucs []UserClass

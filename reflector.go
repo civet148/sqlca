@@ -505,12 +505,16 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 					if _, ok := valField.Addr().Interface().(sql.Scanner); ok {
 						e.fetchToScanner(fetcher, typField, valField)
 					} else {
-						e.fetchToStruct(fetcher, typField.Type, valField)
+						_ = e.fetchToStruct(fetcher, typField.Type, valField)
 					}
+				}
+			case reflect.Slice, reflect.Map, reflect.Ptr:
+				{
+					//log.Warnf("structure contain slice/map/pointer member, ignore it...")
 				}
 			default:
 				{
-					e.setValueByField(fetcher, typField, valField) //assign value to struct field
+					_ = e.setValueByField(fetcher, typField, valField) //assign value to struct field
 				}
 			}
 		}

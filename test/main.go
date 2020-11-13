@@ -99,6 +99,7 @@ func Benchmark(e *sqlca.Engine) {
 	CustomizeUpsert(e)
 	JoinQuery(e)
 	NestedQuery(e)
+	NilPointerQuery(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -668,7 +669,7 @@ func CaseWhen(e *sqlca.Engine) {
 	var users []UserDO
 	if _, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
-		Select("name", "phone", "sex").
+		Select("id", "name", "phone", "sex").
 		Case("male", "sex=1").
 		Case("female", "sex=2").
 		Else("unknown").
@@ -848,4 +849,17 @@ func NestedQuery(e *sqlca.Engine) {
 		return
 	}
 	log.Infof("count [%d] UserClass data [%+v]", c, ucs)
+}
+
+func NilPointerQuery(e *sqlca.Engine) {
+	var user *UserDO //nil pointer of UserDO （pass pointer address to query)
+	c, err := e.Model(&user).Select("a.*").
+		Table("users a").
+		Where("a.id <= 9").
+		Query()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	log.Infof("count [%d] UserClass data [%+v]", c, user)
 }

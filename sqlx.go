@@ -272,25 +272,50 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 		if v == nil {
 			continue
 		}
+		var isStructPtrPtr bool
 		typ := reflect.TypeOf(v)
+		val := reflect.ValueOf(v)
 		if typ.Kind() == reflect.Ptr {
+
 			typ = typ.Elem()
+			val = val.Elem()
+			switch typ.Kind() {
+			case reflect.Ptr:
+				{
+					if typ.Elem().Kind() == reflect.Struct { //struct pointer address (&*StructType)
+						if val.IsNil() {
+							//log.Warnf("[%+v] -> pointer is nil", typ.Elem().Name())
+							var typNew = typ.Elem()
+							var valNew = reflect.New(typNew)
+							val.Set(valNew)
+						}
+						isStructPtrPtr = true
+					}
+				}
+			}
 		}
-		switch typ.Kind() {
-		case reflect.Struct: // struct
+
+		if isStructPtrPtr {
+			e.model = val.Interface()
 			e.setModelType(ModelType_Struct)
-		case reflect.Slice: //  slice
-			e.setModelType(ModelType_Slice)
-		case reflect.Map: // map
-			e.setModelType(ModelType_Map)
-		default: //base type
-			e.setModelType(ModelType_BaseType)
-		}
-		if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
-			e.model = models[0] //map, struct or slice
 		} else {
-			e.model = models //base type argument like int/string/float32...
+			switch typ.Kind() {
+			case reflect.Struct: // struct
+				e.setModelType(ModelType_Struct)
+			case reflect.Slice: //  slice
+				e.setModelType(ModelType_Slice)
+			case reflect.Map: // map
+				e.setModelType(ModelType_Map)
+			default: //base type
+				e.setModelType(ModelType_BaseType)
+			}
+			if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
+				e.model = models[0] //map, struct or slice
+			} else {
+				e.model = models //base type argument like int/string/float32...
+			}
 		}
+
 		var selectColumns []string
 		e.dict = newReflector(e, e.model).ToMap(e.dbTags...)
 		for k, _ := range e.dict {

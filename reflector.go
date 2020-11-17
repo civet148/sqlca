@@ -3,6 +3,7 @@ package sqlca
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"github.com/civet148/gotools/log"
 	"reflect"
@@ -475,7 +476,7 @@ func (e *Engine) fetchToMap(fetcher *Fetcher, arg interface{}) (err error) {
 	return
 }
 
-//fetch row data to struct/slice
+//fetch row data to struct
 func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {
 
 	if typ.Kind() == reflect.Ptr {
@@ -491,12 +492,8 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 			typField := typ.Field(i)
 			valField := val.Field(i)
 
-			if typField.Type.Kind() == reflect.Ptr {
-				typField.Type = typField.Type.Elem()
-				valField = valField.Elem()
-			}
-			if !valField.IsValid() || !valField.CanInterface() {
-				//log.Warnf("struct field type (%s) is not valid or can't interface{} \n", typField.Type.Name())
+			if !valField.IsValid() {
+				log.Warnf("struct field type (%s) is not valid or can't interface{} \n", typField.Type.Name())
 				continue
 			}
 			switch typField.Type.Kind() {
@@ -505,12 +502,32 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 					if _, ok := valField.Addr().Interface().(sql.Scanner); ok {
 						e.fetchToScanner(fetcher, typField, valField)
 					} else {
-						_ = e.fetchToStruct(fetcher, typField.Type, valField)
+						if e.getTagValue(typField) != "" {
+							_ = e.fetchToJsonObject(fetcher, typField, valField)
+						} else {
+							_ = e.fetchToStruct(fetcher, typField.Type, valField)
+						}
 					}
 				}
-			case reflect.Slice, reflect.Map, reflect.Ptr:
+			case reflect.Slice:
+				if e.getTagValue(typField) != "" {
+					_ = e.fetchToJsonObject(fetcher, typField, valField)
+				}
+			case reflect.Map: //ignore...
+			case reflect.Ptr:
 				{
-					//log.Warnf("structure contain slice/map/pointer member, ignore it...")
+					typElem := typField.Type.Elem()
+					if typElem.Kind() == reflect.Struct {
+						if valField.IsNil() {
+							valNew := reflect.New(typElem)
+							valField.Set(valNew)
+						}
+						if e.getTagValue(typField) != "" {
+							_ = e.fetchToJsonObject(fetcher, typField, valField)
+						} else {
+							_ = e.fetchToStruct(fetcher, typField.Type, valField)
+						}
+					}
 				}
 			default:
 				{
@@ -523,6 +540,25 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 	return
 }
 
+//json string unmarshal to struct/slice
+func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, val reflect.Value) (err error) {
+	//优先给有db标签的成员变量赋值
+	strDbTagVal := e.getTagValue(field)
+	if strDbTagVal == SQLCA_TAG_VALUE_IGNORE {
+		return
+	}
+
+	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
+		vp := val.Addr()
+		if err = json.Unmarshal([]byte(v), vp.Interface()); err != nil {
+			log.Errorf("json.Unmarshal error [%s]", err)
+			return
+		}
+	}
+	return
+}
+
+//fetch to struct object by customize scanner
 func (e *Engine) fetchToScanner(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)

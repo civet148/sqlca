@@ -100,6 +100,7 @@ func Benchmark(e *sqlca.Engine) {
 	JoinQuery(e)
 	NestedQuery(e)
 	NilPointerQuery(e)
+	JsonStructQuery(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -832,7 +833,7 @@ func JoinQuery(e *sqlca.Engine) {
 func NestedQuery(e *sqlca.Engine) {
 	type UserClass struct {
 		User    UserDO
-		Classes []*ClassDo //slice in structure will be ignored...
+		Classes ClassDo //slice in structure will be ignored...
 	}
 
 	var ucs []UserClass
@@ -862,4 +863,37 @@ func NilPointerQuery(e *sqlca.Engine) {
 		return
 	}
 	log.Infof("count [%d] UserClass data [%+v]", c, user)
+}
+
+func JsonStructQuery(e *sqlca.Engine) {
+
+	type UserData struct {
+		Age    int32 `db:"age" json:"age"`
+		Height int32 `db:"height" json:"height"`
+		Female bool  `db:"female" json:"female"`
+	}
+
+	type JsonsDO struct {
+		Id       int32     `db:"id"`
+		Name     string    `db:"name"`
+		UserData *UserData `db:"user_data"` //column 'user_data' is a json string in table, eg. {"age": 18, "female": false, "height": 178}
+		//UserData []*UserData  `db:"user_data"` //column 'user_data' is a json string in table, eg. [{"age":18, "female":false, "height":178},{"age":28, "female":true, "height": 162}]
+	}
+	var do *JsonsDO
+	/* -- SELECT  id, name, user_data FROM jsons  WHERE id='1' --
+
+	    id  name       sex   user_data                                                                                     created_at           updated_at
+	------  ------  ------  ----------------------------------------------------------------------------------------  -------------------  ---------------------
+	     1  jhon         1  {"age": 18, "female": false, "height": 178}                                               2020-10-24 11:35:11    2020-11-17 14:35:16
+	*/
+	_, err := e.Model(&do).
+		Select("id", "name", "user_data").
+		Table("jsons").
+		Where("id=?", 1).
+		Query()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	log.Infof("JsonsDO [%+v] UserData [%+v]", do, do.UserData)
 }

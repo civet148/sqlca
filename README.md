@@ -7,6 +7,9 @@ civet148@126.com
 # sqlca
 a enhancement database and cache tool based on sqlx and redigogo which based on redigo and go-redis-cluster
 
+# 中文
+[中文文档](README_CN.md)
+
 # database schema
 ```mysql
 /*

@@ -552,7 +552,7 @@ func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, 
 		vp := val.Addr()
 		if v != "" {
 			if err = json.Unmarshal([]byte(v), vp.Interface()); err != nil {
-				log.Errorf("json.Unmarshal error [%s]", err)
+				log.Errorf("json.Unmarshal [%s] error [%s]", v, err)
 				return
 			}
 		}

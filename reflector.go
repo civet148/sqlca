@@ -499,15 +499,7 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 			switch typField.Type.Kind() {
 			case reflect.Struct:
 				{
-					if _, ok := valField.Addr().Interface().(sql.Scanner); ok {
-						e.fetchToScanner(fetcher, typField, valField)
-					} else {
-						if e.getTagValue(typField) != "" {
-							_ = e.fetchToJsonObject(fetcher, typField, valField)
-						} else {
-							_ = e.fetchToStruct(fetcher, typField.Type, valField)
-						}
-					}
+					e.fetchToStructAny(fetcher, typField, valField)
 				}
 			case reflect.Slice:
 				if e.getTagValue(typField) != "" {
@@ -522,11 +514,7 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 							valNew := reflect.New(typElem)
 							valField.Set(valNew)
 						}
-						if e.getTagValue(typField) != "" {
-							_ = e.fetchToJsonObject(fetcher, typField, valField)
-						} else {
-							_ = e.fetchToStruct(fetcher, typField.Type, valField)
-						}
+						e.fetchToStructAny(fetcher, typField, valField.Elem())
 					}
 				}
 			default:
@@ -538,6 +526,18 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 	}
 
 	return
+}
+
+func (e *Engine) fetchToStructAny(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
+	if _, ok := val.Addr().Interface().(sql.Scanner); ok {
+		e.fetchToScanner(fetcher, field, val)
+	} else {
+		if e.getTagValue(field) != "" {
+			_ = e.fetchToJsonObject(fetcher, field, val)
+		} else {
+			_ = e.fetchToStruct(fetcher, field.Type, val)
+		}
+	}
 }
 
 //json string unmarshal to struct/slice

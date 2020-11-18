@@ -11,6 +11,12 @@ const (
 	TABLE_NAME_USERS = "users"
 )
 
+type UserData struct {
+	Age    int32 `db:"age" json:"age"`
+	Height int32 `db:"height" json:"height"`
+	Female bool  `db:"female" json:"female"`
+}
+
 type UserDO struct {
 	Id        int32         `db:"id"`
 	Name      string        `db:"name"`
@@ -39,6 +45,15 @@ var urls = []string{
 	//"mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false",
 	//"postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable",
 }
+
+//func (u *UserData) Scan(src interface{}) (err error) {
+//	//log.Debugf("UserData -> scan from string...[%+v]", src)
+//	if err =  json.Unmarshal(src.(string), u); err != nil {
+//		log.Errorf(err.Error())
+//		return
+//	}
+//	return
+//}
 
 func main() {
 
@@ -88,6 +103,7 @@ func Benchmark(e *sqlca.Engine) {
 	TxGetExec(e)
 	TxRollback(e)
 	TxForUpdate(e)
+	TxWrapper(e)
 	CustomTag(e)
 	BaseTypesUpdate(e)
 	DuplicateUpdateGetId(e)
@@ -550,6 +566,30 @@ func TxRollback(e *sqlca.Engine) (err error) {
 	return
 }
 
+func TxWrapper(e *sqlca.Engine) {
+
+	//transaction wrapper (auto rollback + auto commit)
+	_ = e.TxFunc(func(tx *sqlca.Engine) error {
+		//query results into a struct object or slice
+		var err error
+		var dos []UserDO
+		_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1 LIMIT 1")
+		if err != nil {
+			log.Errorf("TxGet error %v", err.Error())
+			return err
+		}
+		for _, do := range dos {
+			log.Infof("struct user data object [%+v]", do)
+		}
+		_, _, err = tx.TxExec("UPDATE users SET disable=0 LIMIT 1")
+		if err != nil {
+			log.Errorf("TxExec error %v", err.Error())
+			return err
+		}
+		return nil
+	})
+}
+
 func TxForUpdate(e *sqlca.Engine) {
 
 	go func() {
@@ -866,12 +906,6 @@ func NilPointerQuery(e *sqlca.Engine) {
 }
 
 func JsonStructQuery(e *sqlca.Engine) {
-
-	type UserData struct {
-		Age    int32 `db:"age" json:"age"`
-		Height int32 `db:"height" json:"height"`
-		Female bool  `db:"female" json:"female"`
-	}
 
 	type JsonsDO struct {
 		Id       int32     `db:"id"`

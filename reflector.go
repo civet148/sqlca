@@ -488,44 +488,41 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 	if typ.Kind() == reflect.Struct {
 		NumField := val.NumField()
 		for i := 0; i < NumField; i++ {
-
 			typField := typ.Field(i)
 			valField := val.Field(i)
-
-			if !valField.IsValid() {
-				log.Warnf("struct field type (%s) is not valid or can't interface{} \n", typField.Type.Name())
-				continue
-			}
-			switch typField.Type.Kind() {
-			case reflect.Struct:
-				{
-					e.fetchToStructAny(fetcher, typField, valField)
-				}
-			case reflect.Slice:
-				if e.getTagValue(typField) != "" {
-					_ = e.fetchToJsonObject(fetcher, typField, valField)
-				}
-			case reflect.Map: //ignore...
-			case reflect.Ptr:
-				{
-					typElem := typField.Type.Elem()
-					if typElem.Kind() == reflect.Struct {
-						if valField.IsNil() {
-							valNew := reflect.New(typElem)
-							valField.Set(valNew)
-						}
-						e.fetchToStructAny(fetcher, typField, valField.Elem())
-					}
-				}
-			default:
-				{
-					_ = e.setValueByField(fetcher, typField, valField) //assign value to struct field
-				}
-			}
+			e.fetchToStructField(fetcher, typField.Type, typField, valField)
 		}
 	}
-
 	return
+}
+
+func (e *Engine) fetchToStructField(fetcher *Fetcher, typ reflect.Type, field reflect.StructField, val reflect.Value) {
+
+	//	log.Debugf("typField name [%s] type [%s] valField can addr [%v]", field.Name, field.Type.Kind(), val.CanAddr())
+	switch typ.Kind() {
+	case reflect.Struct:
+		{
+			e.fetchToStructAny(fetcher, field, val)
+		}
+	case reflect.Slice:
+		if e.getTagValue(field) != "" {
+			_ = e.fetchToJsonObject(fetcher, field, val)
+		}
+	case reflect.Map: //ignore...
+	case reflect.Ptr:
+		{
+			typElem := field.Type.Elem()
+			if val.IsNil() {
+				valNew := reflect.New(typElem)
+				val.Set(valNew)
+			}
+			e.fetchToStructField(fetcher, typElem, field, val.Elem())
+		}
+	default:
+		{
+			_ = e.setValueByField(fetcher, field, val) //assign value to struct field
+		}
+	}
 }
 
 func (e *Engine) fetchToStructAny(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
@@ -655,6 +652,10 @@ func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) {
 		if i == 0 {
 			val.SetBool(false)
 		}
+	case reflect.Ptr:
+		typ = typ.Elem()
+		//val = val.Elem()
+		e.setValue(typ, val, v)
 	default:
 		panic(fmt.Sprintf("can't assign value [%v] to variant type [%v]\n", v, typ.Kind()))
 		return

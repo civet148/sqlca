@@ -925,9 +925,9 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 		log.Errorf("transaction begin error [%v]", err.Error())
 		return
 	}
-	if err2 := fn(tx); err2 != nil {
+	if err = fn(tx); err != nil {
 		_ = tx.TxRollback()
-		log.Warnf("transaction rollback by handler error [%v]", err2.Error())
+		log.Errorf("transaction rollback by handler error [%v]", err.Error())
 		return
 	}
 	return tx.TxCommit()

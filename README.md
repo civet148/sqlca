@@ -17,10 +17,10 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 - Multiple model type `struct, slice, built-in type, map` 
 - Batch insert
 - Query/Insert/Update
-- Upsert by customization
+- Upsert by customization [only MySQL]
 - Transactions wrapper (auto rollback or commit)
-- Slow query warn
-- Json column query and unmarshal to sub struct nested in data model object
+- Slow query warning
+- Json column query and unmarshal to sub struct nested in data model
 - GEO HASH 
 - Nearby query by lng+lat+distance
 - Built-in `db, protobuf, json` tag fetching  
@@ -29,6 +29,7 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 - Decimal, `sqlca.Decimal` instead of float64 for high precision calculation
 - Force specified where condition when UPDATE/DELETE 
 - db2go commander line tool generate table schema output to .go or .proto file
+- Custom sql.Scanner implement fetching 
 - Simply and developer friendly more than other ORM
 
 

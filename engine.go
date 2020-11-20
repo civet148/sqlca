@@ -907,9 +907,9 @@ func (e *Engine) TxHandle(handler TxHandler) (err error) {
 		log.Errorf("transaction begin error [%v]", err.Error())
 		return
 	}
-	if err2 := handler.OnTransaction(tx); err2 != nil {
+	if err = handler.OnTransaction(tx); err != nil {
 		_ = tx.TxRollback()
-		log.Warnf("transaction rollback by handler error [%v]", err2.Error())
+		log.Warnf("transaction rollback by handler error [%v]", err.Error())
 		return
 	}
 	return tx.TxCommit()

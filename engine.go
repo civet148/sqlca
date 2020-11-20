@@ -442,7 +442,7 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 	return e
 }
 
-// group by [field1,field2...]
+// orm query from a slave db
 func (e *Engine) Slave() *Engine {
 	e.slave = true
 	return e

@@ -23,6 +23,7 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 * 支持'附近'经纬度查询
 * 支持数据对象模型切片进行批量插入
 * 支持自定义sql.Scanner实现(赋值)
+* 支持Case...When语法
 
 # database schema
 ```mysql

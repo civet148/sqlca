@@ -23,6 +23,7 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 - Nearby query by lng+lat+distance
 - Multiple databases (MySQL/Postgres/MS-SQLSERVER), read/write splitting  
 - Read only column specified by `sqlca:"readonly"` tag 
+- Case...when syntax 
 - Simply and developer friendly more than other ORM
 
 

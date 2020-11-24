@@ -105,18 +105,19 @@ func Benchmark(e *sqlca.Engine) {
 	TxForUpdate(e)
 	TxWrapper(e)
 	CustomTag(e)
-	BaseTypesUpdate(e)
+	BuiltInTypesUpdate(e)
 	DuplicateUpdateGetId(e)
 	Count(e)
 	CaseWhen(e)
 	UpdateByMap(e)
 	NearBy(e)
-	JsonQuery(e)
+	MySqlJsonQuery(e)
 	CustomizeUpsert(e)
 	JoinQuery(e)
 	NestedQuery(e)
 	NilPointerQuery(e)
 	JsonStructQuery(e)
+	BuiltInSliceQuery(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -487,7 +488,8 @@ func OrmGroupByHaving(e *sqlca.Engine) {
 	}
 }
 
-func TxGetExec(e *sqlca.Engine) (err error) {
+func TxGetExec(e *sqlca.Engine) {
+	var err error
 	log.Enter()
 	defer log.Leave()
 
@@ -538,11 +540,10 @@ func TxGetExec(e *sqlca.Engine) (err error) {
 		log.Errorf("TxCommit error [%v]", err.Error())
 		return
 	}
-	return
 }
 
-func TxRollback(e *sqlca.Engine) (err error) {
-
+func TxRollback(e *sqlca.Engine) {
+	var err error
 	log.Enter()
 	defer log.Leave()
 
@@ -671,14 +672,14 @@ func CustomTag(e *sqlca.Engine) {
 	}
 }
 
-func BaseTypesUpdate(e *sqlca.Engine) {
+func BuiltInTypesUpdate(e *sqlca.Engine) {
 
 	var sex = 3
 	//var disable=4
 	if rows, err := e.Model(&sex).Table(TABLE_NAME_USERS).Id(2).Select("sex", "disable").Update(); err != nil {
 		log.Error(err.Error())
 	} else {
-		log.Debugf("base type update ok, affected rows [%v]", rows)
+		log.Debugf("built-in type update ok, affected rows [%v]", rows)
 	}
 }
 
@@ -800,7 +801,7 @@ type JsonsDo struct {
 	UpdatedAt string `json:"updated_at" db:"updated_at"`
 }
 
-func JsonQuery(e *sqlca.Engine) {
+func MySqlJsonQuery(e *sqlca.Engine) {
 	//SELECT id, NAME, user_data->>'$.height' AS height, user_data->>'$.weight' AS weight FROM jsons LIMIT 5
 	var dos []JsonsDo
 
@@ -930,4 +931,15 @@ func JsonStructQuery(e *sqlca.Engine) {
 		return
 	}
 	log.Infof("JsonsDO [%+v] UserData [%+v]", do, do.UserData)
+}
+
+func BuiltInSliceQuery(e *sqlca.Engine) {
+	var err error
+	var idList []int32
+	//SELECT id FROM users WHERE id < 10  [fetch to a int32 slice]
+	if _, err = e.Model(&idList).Table(TABLE_NAME_USERS).Select("id").Where("id < 10").Query(); err != nil {
+		log.Error(err.Error())
+		return
+	}
+	log.Infof("id list %+v", idList)
 }

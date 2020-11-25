@@ -93,7 +93,7 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 	//write table name in camel case naming
 	table.TableNameCamelCase = CamelCaseConvert(table.TableName)
 	table.TableComment = ReplaceCRLF(table.TableComment)
-	strContent += fmt.Sprintf("var TableName%v = \"%v\" //%v \n\n", table.TableNameCamelCase, table.TableName, table.TableComment)
+	strContent += fmt.Sprintf("const TableName%v = \"%v\" //%v \n\n", table.TableNameCamelCase, table.TableName, table.TableComment)
 
 	table.StructName = fmt.Sprintf("%s%s", table.TableNameCamelCase, strings.ToUpper(cmd.Suffix))
 

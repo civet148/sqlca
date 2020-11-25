@@ -30,7 +30,7 @@ var argvGogoOptions = flag.String("gogo-options", "", "gogo proto options")
 var argvOneFile = flag.Bool("one-file", false, "output go/proto file into one file which named by database name")
 var argvOrm = flag.Bool("orm", false, "generate ORM code inner data object")
 var argvOmitEmpty = flag.Bool("omitempty", false, "omit empty for json tag")
-var argvJsonProperties = flag.String("json-properties", "", "omit empty for json tag")
+var argvJsonProperties = flag.String("json-properties", "", "custom properties for json tag")
 var argvStruct = flag.Bool("struct", false, "generate struct getter and setter")
 var argvConst = flag.Bool("const", false, "generate const variants format methods")
 

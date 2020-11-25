@@ -34,6 +34,8 @@
 
 --omitempty omit empty for json tag [optional]
 
+--json-properties custom properties for json [optional]
+
 ## 1. 数据库表导出到go文件
 
 * Windows batch 脚本

@@ -185,22 +185,22 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 
 	var err error
-
+	var adapter AdapterType
 	//var strDriverName, strDSN string
 	us := strings.Split(strUrl, URL_SCHEME_SEP)
 	if len(us) != 2 { //default mysql
-		e.dsn = e.parseMysqlDSN(e.adapterSqlx, strUrl)
+		adapter = AdapterSqlx_MySQL
+		e.dsn = e.parseMysqlDSN(adapter, strUrl)
 	} else {
-		e.adapterSqlx = getAdapterType(us[0])
-		e.dsn = e.getDriverNameAndDSN(e.adapterSqlx, strUrl)
+		adapter = getAdapterType(us[0])
+		e.dsn = e.getDriverNameAndDSN(adapter, strUrl)
 	}
-
 	var dsn = &e.dsn
 	var opt *Options
 	var parameter = &dsn.parameter
-	switch e.adapterSqlx {
+	switch adapter {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-
+		e.adapterSqlx = adapter
 		var db *sqlx.DB
 		if len(options) != 0 {
 
@@ -238,7 +238,7 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 		if parameter.idle != 0 {
 			db.SetMaxIdleConns(parameter.idle)
 		}
-		e.adapterSqlx = e.adapterSqlx
+
 		if parameter.slave {
 			e.appendSlave(db)
 		} else {
@@ -248,7 +248,7 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 		if e.cache, err = newCache(dsn.strDriverName, parameter.strDSN); err != nil {
 			log.Errorf("new cache by driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
 		}
-		e.adapterCache = e.adapterSqlx
+		e.adapterCache = adapter
 		if len(options) > 0 {
 			expSec := fmt.Sprintf("%v", options[0])
 			e.expireTime, _ = strconv.Atoi(expSec)
@@ -256,10 +256,10 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 			e.expireTime = 3600 //one hour expire
 		}
 	default:
-		log.Errorf("adapter instance type [%v] url [%s] not support", e.adapterSqlx, strUrl)
+		log.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
 		return nil
 	}
-	log.Infof("[%s] open url [%s] with options [%+v] ok", e.adapterSqlx.String(), parameter.strDSN, opt)
+	log.Infof("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
 	return e
 }
 

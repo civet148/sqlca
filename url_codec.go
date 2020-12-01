@@ -286,40 +286,35 @@ func (e *Engine) parseSqliteUrl(strUrl string) (parameter dsnParameter) {
 //DSN no windows authentication: "Provider=SQLOLEDB;port=1433;server=127.0.0.1\SQLEXPRESS;database=test;user id=sa;password=123456"
 //DSN with windows authentication: "Provider=SQLOLEDB;integrated security=SSPI;port=1433;Data Source=127.0.0.1;database=mydb"
 func (e *Engine) parseMssqlUrl(strUrl string) (parameter dsnParameter) {
-
-	var isWindowsAuth bool
-	var dsnArgs []string
-
 	ui := ParseUrl(strUrl)
 	parameter.parseUrlInfo(ui)
-	if strWindowsAuth, ok := ui.Queries["windows"]; ok {
-		if strWindowsAuth == "true" {
-			isWindowsAuth = true
-		}
-	}
 	e.setDatabaseName(parseDatabaseName(ui.Path))
+	parameter.strDSN = buildMssqlDSN(parameter.ip, parameter.port, parameter.user, parameter.password, parameter.db, parameter.queries)
+	return
+}
 
+func buildMssqlDSN(strIP, strPort, strUser, strPassword, strDatabase string, queries map[string]string) (strDSN string) {
+	var isWindowsAuth bool
+	var dsnArgs []string
 	dsnArgs = append(dsnArgs, "Provider=SQLOLEDB") //set driver provider
 	if isWindowsAuth {                             //windows authentication
 		dsnArgs = append(dsnArgs, "integrated security=SSPI") //set security mode
 	}
 
-	strIP, strPort := getHostPort(ui.Host)
 	strDataSource := fmt.Sprintf("server=%s", strIP)           // set data source (host ip or domain)
 	dsnArgs = append(dsnArgs, fmt.Sprintf("port=%s", strPort)) //set port to connect
-	if strInst, ok := ui.Queries["instance"]; ok {
+	if strInst, ok := queries["instance"]; ok {
 		if strInst != "" {
 			strDataSource += "\\" + strInst //set instance name if not null
 		}
 	}
 	dsnArgs = append(dsnArgs, strDataSource)
-	dsnArgs = append(dsnArgs, fmt.Sprintf("database=%s", e.getDatabaseName())) //database name
+	dsnArgs = append(dsnArgs, fmt.Sprintf("database=%s", strDatabase)) //database name
 	if !isWindowsAuth {
-		dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", ui.User))
-		dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", ui.Password))
+		dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", strUser))
+		dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", strPassword))
 	}
-	parameter.strDSN = strings.Join(dsnArgs, ";")
-	return
+	return strings.Join(dsnArgs, ";")
 }
 
 //DSN: `{"password":"123456","db_index":0,"master_host":"127.0.0.1:6379","replicate_hosts":["127.0.0.1:6380","127.0.0.1:6381"]}`

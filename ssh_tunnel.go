@@ -182,11 +182,14 @@ func (s *SSH) buildPostgresTunnelDSN(dsn *dsnDriver) *dsnDriver {
 	log.Debugf("buildPostgresTunnelDSN dsn [%+v] ssh [%+v]", dsn, s)
 	var strListenPort = fmt.Sprintf("%d", s.listenPort)
 	var parameter = &dsn.parameter
-	dsn.parameter.strDSN = buildPostgresDSN(s.listenIP, strListenPort, parameter.user, parameter.password, parameter.db, parameter.queries)
+	parameter.strDSN = buildPostgresDSN(s.listenIP, strListenPort, parameter.user, parameter.password, parameter.db, parameter.queries)
 	return dsn
 }
 
 func (s *SSH) buildMssqlTunnelDSN(dsn *dsnDriver) *dsnDriver {
 	log.Debugf("buildMssqlTunnelDSN dsn [%+v] ssh [%+v]", dsn, s)
+	var strListenPort = fmt.Sprintf("%d", s.listenPort)
+	var parameter = &dsn.parameter
+	parameter.strDSN = buildMssqlDSN(s.listenIP, strListenPort, parameter.user, parameter.password, parameter.db, parameter.queries)
 	return dsn
 }

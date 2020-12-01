@@ -66,13 +66,13 @@ func main() {
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 
-	////connect database directly
-	//for _, url := range urls {
-	//	e := sqlca.NewEngine(url)
-	//	e.Debug(true) //debug on
-	//	Direct(e)
-	//	log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
-	//}
+	//connect database directly
+	for _, url := range urls {
+		e := sqlca.NewEngine(url)
+		e.Debug(true) //debug on
+		Direct(e)
+		log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
+	}
 
 	//connect database through SSH tunnel
 	for _, url := range urls {

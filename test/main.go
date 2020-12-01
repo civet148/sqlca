@@ -871,7 +871,10 @@ func CustomizeUpsert(e *sqlca.Engine) {
 	//INSERT INTO users(id, name, phone, sex, email, disable, balance)
 	//VALUES('1', "customize upsert", "8617923930921", '1', "civet148@gmail.com", '0', '6.66')
 	//ON DUPLICATE KEY UPDATE balance=balance+VALUES(balance)
-	e.Model(&do).Table(TABLE_NAME_USERS).Upsert("balance=balance+VALUES(balance)")
+	e.Model(&do).
+		Table(TABLE_NAME_USERS).
+		OnConflict("id"). // only postgres required
+		Upsert("balance=balance+VALUES(balance)")
 }
 
 func JoinQuery(e *sqlca.Engine) {

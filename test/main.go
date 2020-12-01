@@ -79,9 +79,9 @@ func main() {
 		e := sqlca.NewEngine(url, &sqlca.Options{
 			Debug: true,
 			SSH: &sqlca.SSH{
-				User:     "ubuntu",
-				Host:     "192.168.124.162", //SSH server account and host (default port 22)
-				Password: "lilobin148",      //SSH server password
+				User:     "ubuntu",          //SSH server login account name
+				Host:     "192.168.124.162", //SSH server host (default port 22)
+				Password: "123456",          //SSH server password
 				//PrivateKey: "path/to/private/key.pem", //private key of SSH
 			},
 		})

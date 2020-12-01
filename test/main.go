@@ -159,6 +159,8 @@ func OrmInsertByModel(e *sqlca.Engine) {
 		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
 	}
 	log.Debugf("user [%+v]", user)
+
+	//insert from model except 'created_at', 'updated_at' column
 	if lastInsertId, err := e.Model(&user).Table(TABLE_NAME_USERS).Exclude("created_at", "updated_at").Insert(); err != nil {
 		log.Errorf("insert data model [%+v] error [%v]", user, err.Error())
 	} else {
@@ -180,6 +182,7 @@ func OrmInsertByModel(e *sqlca.Engine) {
 			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
 		})
 	}
+	//bulk insert from model slice except 'email', 'created_at', 'updated_at' column
 	if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Exclude("email", "created_at", "updated_at").Insert(); err != nil {
 		log.Errorf("bulk insert data model [%+v] error [%v]", users, err.Error())
 	} else {

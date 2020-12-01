@@ -180,7 +180,9 @@ func (s *SSH) buildMysqlTunnelDSN(dsn *dsnDriver) *dsnDriver {
 
 func (s *SSH) buildPostgresTunnelDSN(dsn *dsnDriver) *dsnDriver {
 	log.Debugf("buildPostgresTunnelDSN dsn [%+v] ssh [%+v]", dsn, s)
-
+	var strListenPort = fmt.Sprintf("%d", s.listenPort)
+	var parameter = &dsn.parameter
+	dsn.parameter.strDSN = buildPostgresDSN(s.listenIP, strListenPort, parameter.user, parameter.password, parameter.db, parameter.queries)
 	return dsn
 }
 

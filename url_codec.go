@@ -258,15 +258,20 @@ func (e *Engine) parsePostgresUrl(strUrl string) (parameter dsnParameter) {
 	e.setDatabaseName(parseDatabaseName(ui.Path))
 	strDatabase := e.getDatabaseName()
 	strIP, strPort := getHostPort(ui.Host)
-
-	var ok bool
-	var strSSLMode string
-
-	if strSSLMode, ok = ui.Queries["sslmode"]; !ok {
-		strSSLMode = "disable"
-	}
-	parameter.strDSN = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", strIP, strPort, ui.User, ui.Password, strDatabase, strSSLMode)
+	parameter.strDSN = buildPostgresDSN(strIP, strPort, ui.User, ui.Password, strDatabase, ui.Queries)
 	return
+}
+
+func buildPostgresDSN(strIP, strPort, strUser, strPassword, strDatabase string, queries map[string]string) string {
+	var kvs []string
+	var strExtras string
+	for k, v := range queries {
+		kvs = append(kvs, fmt.Sprintf("%s=%s", k, v))
+	}
+	if len(kvs) > 0 {
+		strExtras = strings.Join(kvs, " ")
+	}
+	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s %s", strIP, strPort, strUser, strPassword, strDatabase, strExtras)
 }
 
 //DSN: "/var/lib/my.db"

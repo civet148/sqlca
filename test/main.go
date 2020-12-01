@@ -66,13 +66,13 @@ func main() {
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 
-	//connect database directly
-	for _, url := range urls {
-		e := sqlca.NewEngine(url)
-		e.Debug(true) //debug on
-		Direct(e)
-		log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
-	}
+	////connect database directly
+	//for _, url := range urls {
+	//	e := sqlca.NewEngine(url)
+	//	e.Debug(true) //debug on
+	//	Direct(e)
+	//	log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
+	//}
 
 	//connect database through SSH tunnel
 	for _, url := range urls {
@@ -414,14 +414,14 @@ func OrmDeleteFromTable(e *sqlca.Engine) {
 	}
 
 	//delete from where condition (without data model)
-	if rows, err := e.Table(TABLE_NAME_USERS).Where("id > 1001").Delete(); err != nil {
+	if rows, err := e.Model(nil).Table(TABLE_NAME_USERS).Where("id > 1001").Delete(); err != nil {
 		log.Errorf("delete from table error [%v]", err.Error())
 	} else {
 		log.Infof("delete from table ok, affected rows [%v]", rows)
 	}
 
 	//delete from primary key 'id' and value (without data model)
-	if rows, err := e.Table(TABLE_NAME_USERS).Id(1002).Where("disable=1").Delete(); err != nil {
+	if rows, err := e.Model(nil).Table(TABLE_NAME_USERS).Id(1002).Where("disable=1").Delete(); err != nil {
 		log.Errorf("delete from table error [%v]", err.Error())
 	} else {
 		log.Infof("delete from table ok, affected rows [%v]", rows)

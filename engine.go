@@ -18,9 +18,11 @@ import (
 )
 
 type Options struct {
+	Debug bool //enable debug mode
 	Max   int  //max active connections
 	Idle  int  //max idle connections
 	Slave bool //is a slave DSN ?
+	SSH   *SSH //SSH tunnel server config
 }
 
 type TxHandler interface {
@@ -90,30 +92,45 @@ func init() {
 	log.SetLevel(log.LEVEL_INFO)
 }
 
-// args: a url format string for database driver eg. "mysql://root:123456@127.0.0.1/test?charset=utf8mb4"
-// more detail see Open method
-func NewEngine(strUrl ...interface{}) *Engine {
+// args[0] data source name url
+// args[1] options
+// if length of args is 0, must call Open method manual
+func NewEngine(args ...interface{}) *Engine {
 
 	e := &Engine{
 		strPkName:     DEFAULT_PRIMARY_KEY_NAME,
 		expireTime:    DEFAULT_CAHCE_EXPIRE_SECONDS,
 		slowQueryTime: DEFAULT_SLOW_QUERY_ALERT_TIME,
+		adapterSqlx:   AdapterSqlx_MySQL,
 	}
 	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA, TAG_NAME_PROTOBUF, TAG_NAME_JSON)
 
-	var argc = len(strUrl)
+	var ok bool
+	var strOpenUrl string
+	var argc = len(args)
 	if argc == 0 {
 		return e
 	} else if argc > 0 {
 		if argc == 1 {
-			if strOpenUrl, ok := strUrl[0].(string); ok {
+			if strOpenUrl, ok = args[0].(string); ok {
 				e.Open(strOpenUrl)
 			}
 		} else {
-			if strFmt, ok := strUrl[0].(string); ok {
-				strOpenUrl := fmt.Sprintf(strFmt, strUrl[1:]...)
-				e.Open(strOpenUrl)
+			var v1 Options
+			var v2 *Options
+			var options *Options
+			strOpenUrl = args[0].(string)
+			if v1, ok = args[1].(Options); ok {
+				options = &v1
+			} else {
+				if v2, ok = args[1].(*Options); ok {
+					options = v2
+				} else {
+					strOpenUrl = fmt.Sprintf(args[0].(string), args[1:]...) //legacy version compatible
+					return e.Open(strOpenUrl)
+				}
 			}
+			e.Open(strOpenUrl, options)
 		}
 	}
 
@@ -158,67 +175,80 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 //     [redis-alone]    Open("redis://123456@127.0.0.1:6379/cluster?db=0")
 //     [redis-cluster]  Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
 //
+//  3. SSH tunnel
+// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false&max=100&idle=1&ssh=root:123456")
+// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false&max=100&idle=1")
+// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false&max=100&idle=1")
 // options:
 //        1. specify master or slave, MySQL/Postgres (Options)
 //        2. cache data expire seconds, just for redis (Integer)
 func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 
 	var err error
-	var adapterType AdapterType
 
 	//var strDriverName, strDSN string
 	us := strings.Split(strUrl, URL_SCHEME_SEP)
 	if len(us) != 2 { //default mysql
-		adapterType = AdapterSqlx_MySQL
-		e.dsn = e.parseMysqlDSN(adapterType, strUrl)
+		e.dsn = e.parseMysqlDSN(e.adapterSqlx, strUrl)
 	} else {
-		adapterType = getAdapterType(us[0])
-		e.dsn = e.getDriverNameAndDSN(adapterType, strUrl)
+		e.adapterSqlx = getAdapterType(us[0])
+		e.dsn = e.getDriverNameAndDSN(e.adapterSqlx, strUrl)
 	}
 
-	var dsn = e.dsn
-	switch adapterType {
+	var dsn = &e.dsn
+	var opt *Options
+	var parameter = &dsn.parameter
+	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
 
 		var db *sqlx.DB
-		if db, err = sqlx.Open(dsn.strDriverName, dsn.parameter.strDSN); err != nil {
-			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, dsn.parameter.strDSN, err.Error())
+		if len(options) != 0 {
+
+			if v, ok := options[0].(*Options); ok {
+				opt = v
+			} else {
+				o := options[0].(Options)
+				opt = &o
+			}
+			e.Debug(opt.Debug)
+			if opt.SSH != nil { //SSH tunnel enable
+				dsn = opt.SSH.openSSHTunnel(dsn)
+			}
+		}
+
+		if db, err = sqlx.Open(dsn.strDriverName, parameter.strDSN); err != nil {
+			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
 			return nil
 		}
 		if err = db.Ping(); err != nil {
-			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, dsn.parameter.strDSN, err.Error())
+			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
 			panic(err.Error())
 			return nil
 		}
 
-		if len(options) == 1 {
-			var opt Options
-			if v, ok := options[0].(*Options); ok {
-				opt = *v
-			} else {
-				opt = options[0].(Options)
-			}
-			dsn.SetParameters(opt.Max, opt.Idle, opt.Slave)
+		if opt != nil {
+			dsn.SetMax(opt.Max)
+			dsn.SetIdle(opt.Idle)
+			dsn.SetSlave(opt.Slave)
 		}
 		log.Debugf("dsn parameter [%+v]", dsn.parameter)
-		if dsn.parameter.max != 0 {
-			db.SetMaxOpenConns(dsn.parameter.max)
+		if parameter.max != 0 {
+			db.SetMaxOpenConns(parameter.max)
 		}
-		if dsn.parameter.idle != 0 {
-			db.SetMaxIdleConns(dsn.parameter.idle)
+		if parameter.idle != 0 {
+			db.SetMaxIdleConns(parameter.idle)
 		}
-		e.adapterSqlx = adapterType
-		if dsn.parameter.slave {
+		e.adapterSqlx = e.adapterSqlx
+		if parameter.slave {
 			e.appendSlave(db)
 		} else {
 			e.appendMaster(db)
 		}
 	case AdapterCache_Redis:
-		var err error
-		if e.cache, err = newCache(dsn.strDriverName, dsn.parameter.strDSN); err != nil {
-			log.Errorf("new cache by driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, dsn.parameter.strDSN, err.Error())
+		if e.cache, err = newCache(dsn.strDriverName, parameter.strDSN); err != nil {
+			log.Errorf("new cache by driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
 		}
-		e.adapterCache = adapterType
+		e.adapterCache = e.adapterSqlx
 		if len(options) > 0 {
 			expSec := fmt.Sprintf("%v", options[0])
 			e.expireTime, _ = strconv.Atoi(expSec)
@@ -226,10 +256,10 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 			e.expireTime = 3600 //one hour expire
 		}
 	default:
-		log.Errorf("adapter instance type [%v] url [%s] not support", adapterType, strUrl)
+		log.Errorf("adapter instance type [%v] url [%s] not support", e.adapterSqlx, strUrl)
+		return nil
 	}
-
-	//log.Struct(e)
+	log.Infof("[%s] open url [%s] with options [%+v] ok", e.adapterSqlx.String(), parameter.strDSN, opt)
 	return e
 }
 

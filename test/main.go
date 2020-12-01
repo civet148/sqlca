@@ -41,7 +41,8 @@ type ClassDo struct {
 }
 
 var urls = []string{
-	"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4",
+	"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //raw mysql DSN (default 'mysql' if scheme is not specified)
+	//"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4",
 	//"mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false",
 	//"postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable",
 }
@@ -57,28 +58,50 @@ var urls = []string{
 
 func main() {
 
+	//e.Open("root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4") // open with raw mysql DSN
 	//e.Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 	//e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", &sqlca.Options{Max: 20, Idle: 2})             //MySQL master
-	//e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", sqlca.Options{Max: 20, Idle: 5, Slave: true}) //MySQL slave
-	//e.Open("root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4") // open with raw mysql DSN
+	//e.Open("mysql://root:123456@127.0.0.1:3307/test?charset=utf8mb4", sqlca.Options{Max: 20, Idle: 5, Slave: true}) //MySQL slave
 	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable") //postgres
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 
-	for _, v := range urls {
-		_ = v
-		e := sqlca.NewEngine(v)
+	//connect database directly
+	for _, url := range urls {
+		e := sqlca.NewEngine(url)
 		e.Debug(true) //debug on
-		Benchmark(e)
-		log.Infof("")
+		Direct(e)
 		log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
-		log.Infof("")
 	}
 
+	//connect database through SSH tunnel
+	for _, url := range urls {
+		e := sqlca.NewEngine(url, &sqlca.Options{
+			Debug: true,
+			SSH: &sqlca.SSH{
+				User:     "ubuntu",
+				Host:     "192.168.124.162", //SSH server account and host (default port 22)
+				Password: "lilobin148",      //SSH server password
+				//PrivateKey: "path/to/private/key.pem", //private key of SSH
+			},
+		})
+		SSHTunnel(e)
+		log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
+	}
 	log.Info("program exit...")
 }
 
-func Benchmark(e *sqlca.Engine) {
+func SSHTunnel(e *sqlca.Engine) {
+	var users []UserDO
+	if _, err := e.Model(&users).Table(TABLE_NAME_USERS).Limit(10).Query(); err != nil {
+		log.Error(err.Error())
+		return
+	}
+	log.Infof("SSH tunnel query users [%+v]", users)
+}
+
+//connect database directly
+func Direct(e *sqlca.Engine) {
 
 	e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
 

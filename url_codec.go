@@ -11,10 +11,23 @@ import (
 )
 
 const (
-	URL_SCHEME_SEP  = "://"
-	URL_QUERY_SLAVE = "slave"
-	URL_QUERY_MAX   = "max"
-	URL_QUERY_IDLE  = "idle"
+	URL_SCHEME_SEP    = "://"
+	URL_QUERY_SLAVE   = "slave"
+	URL_QUERY_MAX     = "max"
+	URL_QUERY_IDLE    = "idle"
+	URL_QUERY_CHARSET = "charset"
+)
+
+const (
+	//DSN no windows authentication: "Provider=SQLOLEDB;port=1433;server=127.0.0.1\SQLEXPRESS;database=test;user id=sa;password=123456"
+	//DSN with windows authentication: "Provider=SQLOLEDB;integrated security=SSPI;port=1433;Data Source=127.0.0.1;database=mydb"
+	WINDOWS_DSN_PROVIDER_SQLOLEDB        = "Provider=SQLOLEDB"
+	WINDOWS_DSN_PORT                     = "Port"
+	WINDOWS_DSN_DATA_SOURCE              = "Server"
+	WINDOWS_DSN_INITIAL_CATALOG          = "Database"
+	WINDOWS_DSN_USER_ID                  = "User Id"
+	WINDOWS_DSN_PASSWORD                 = "Password"
+	WINDOWS_DSN_INTEGRATED_SECURITY_SSPI = "Integrated Security=SSPI"
 )
 
 type UrlInfo struct {
@@ -35,21 +48,50 @@ type dsnDriver struct {
 }
 
 type dsnParameter struct {
-	strDSN string
-	slave  bool
-	max    int
-	idle   int
+	host     string //ip:port
+	ip       string //ip
+	port     string //port
+	user     string
+	password string
+	db       string
+	charset  string
+	slave    bool
+	max      int
+	idle     int
+	strDSN   string
+	queries  map[string]string
 }
 
-func (d *dsnDriver) SetParameters(max, idle int, slave bool) {
-	d.parameter.max = max
-	d.parameter.idle = idle
-	d.parameter.slave = slave
+func (d *dsnDriver) SetMax(max int) {
+	if max > 0 {
+		d.parameter.max = max
+	}
 }
 
-func (d *dsnParameter) parseQueries(ui *UrlInfo) {
+func (d *dsnDriver) SetIdle(idle int) {
+	if idle > 0 {
+		d.parameter.idle = idle
+	}
+}
+
+func (d *dsnDriver) SetSlave(slave bool) {
+	if slave {
+		d.parameter.slave = slave
+	}
+}
+
+func (d *dsnParameter) parseUrlInfo(ui *UrlInfo) {
 	var ok bool
 	var val string
+
+	d.user = ui.User
+	d.host = ui.Host
+	d.ip, d.port = getHostPort(d.host)
+	d.password = ui.Password
+	d.db = parseDatabaseName(ui.Path)
+	d.charset = ui.Queries[URL_QUERY_CHARSET]
+	d.queries = ui.Queries
+
 	if val, ok = ui.Queries[URL_QUERY_SLAVE]; ok {
 		if val == "true" {
 			d.slave = true
@@ -194,15 +236,13 @@ func getHostPort(strHost string) (ip, port string) {
 func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 
 	ui := ParseUrl(strUrl)
+	parameter.parseUrlInfo(ui)
 	e.setDatabaseName(parseDatabaseName(ui.Path))
 	parameter.strDSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
 	var queries []string
-
-	parameter.parseQueries(ui)
 	for k, v := range ui.Queries {
 		queries = append(queries, fmt.Sprintf("%v=%v", k, v))
 	}
-
 	if len(queries) > 0 {
 		parameter.strDSN += fmt.Sprintf("?%s", strings.Join(queries, "&"))
 	}
@@ -213,6 +253,8 @@ func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 func (e *Engine) parsePostgresUrl(strUrl string) (parameter dsnParameter) {
 
 	ui := ParseUrl(strUrl)
+	parameter.parseUrlInfo(ui)
+
 	e.setDatabaseName(parseDatabaseName(ui.Path))
 	strDatabase := e.getDatabaseName()
 	strIP, strPort := getHostPort(ui.Host)
@@ -220,7 +262,6 @@ func (e *Engine) parsePostgresUrl(strUrl string) (parameter dsnParameter) {
 	var ok bool
 	var strSSLMode string
 
-	parameter.parseQueries(ui)
 	if strSSLMode, ok = ui.Queries["sslmode"]; !ok {
 		strSSLMode = "disable"
 	}
@@ -237,14 +278,15 @@ func (e *Engine) parseSqliteUrl(strUrl string) (parameter dsnParameter) {
 	return
 }
 
-//DSN no windows authentication: "Provider=SQLOLEDB;port=1433;Data Source=127.0.0.1;Initial Catalog=mydb;user id=sa;password=123456"
-//DSN with windows authentication: "Provider=SQLOLEDB;integrated security=SSPI;port=1433;Data Source=127.0.0.1;Initial Catalog=mydb;user id=sa;password=123456"
+//DSN no windows authentication: "Provider=SQLOLEDB;port=1433;server=127.0.0.1\SQLEXPRESS;database=test;user id=sa;password=123456"
+//DSN with windows authentication: "Provider=SQLOLEDB;integrated security=SSPI;port=1433;Data Source=127.0.0.1;database=mydb"
 func (e *Engine) parseMssqlUrl(strUrl string) (parameter dsnParameter) {
 
 	var isWindowsAuth bool
 	var dsnArgs []string
 
 	ui := ParseUrl(strUrl)
+	parameter.parseUrlInfo(ui)
 	if strWindowsAuth, ok := ui.Queries["windows"]; ok {
 		if strWindowsAuth == "true" {
 			isWindowsAuth = true
@@ -252,27 +294,8 @@ func (e *Engine) parseMssqlUrl(strUrl string) (parameter dsnParameter) {
 	}
 	e.setDatabaseName(parseDatabaseName(ui.Path))
 
-	//dsnArgs = append(dsnArgs, "Provider=SQLOLEDB") //set driver provider
-	//if isWindowsAuth {                             //windows authentication
-	//	dsnArgs = append(dsnArgs, "integrated security=SSPI") //set security mode
-	//}
-	//
-	//strIP, strPort := getHostPort(ui.Host)
-	//strDataSource := fmt.Sprintf("Data Source=%s", strIP)      // set data source (host ip or domain)
-	//dsnArgs = append(dsnArgs, fmt.Sprintf("port=%s", strPort)) //set port to connect
-	//if strInst, ok := ui.Queries["instance"]; ok {
-	//	if strInst != "" {
-	//		strDataSource += "\\" + strInst //set instance name if not null
-	//	}
-	//}
-	//dsnArgs = append(dsnArgs, strDataSource)
-	//dsnArgs = append(dsnArgs, fmt.Sprintf("Initial Catalog=%s", e.getDatabaseName())) //database name
-	//dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", ui.User))
-	//dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", ui.Password))
-	//strDSN = strings.Join(dsnArgs, ";")
-
-	//dsnArgs = append(dsnArgs, "Provider=SQLOLEDB") //set driver provider
-	if isWindowsAuth { //windows authentication
+	dsnArgs = append(dsnArgs, "Provider=SQLOLEDB") //set driver provider
+	if isWindowsAuth {                             //windows authentication
 		dsnArgs = append(dsnArgs, "integrated security=SSPI") //set security mode
 	}
 
@@ -286,8 +309,10 @@ func (e *Engine) parseMssqlUrl(strUrl string) (parameter dsnParameter) {
 	}
 	dsnArgs = append(dsnArgs, strDataSource)
 	dsnArgs = append(dsnArgs, fmt.Sprintf("database=%s", e.getDatabaseName())) //database name
-	dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", ui.User))
-	dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", ui.Password))
+	if !isWindowsAuth {
+		dsnArgs = append(dsnArgs, fmt.Sprintf("user id=%s", ui.User))
+		dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", ui.Password))
+	}
 	parameter.strDSN = strings.Join(dsnArgs, ";")
 	return
 }
@@ -318,9 +343,37 @@ func (e *Engine) parseRedisUrl(strUrl string) (parameter dsnParameter) {
 
 //root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4
 func (e *Engine) parseMysqlDSN(adapterType AdapterType, strMySQLDSN string) (dsn dsnDriver) {
-	e.strDatabaseName = trimBetween(strMySQLDSN, "/", "?")
+	var strQueries string
+	var querySlice []string
+	var strUserPassword string
+	dsn.parameter.queries = make(map[string]string, 0)
+	strDatabaseName := trimBetween(strMySQLDSN, "/", "?")
 	dsn.strDriverName = adapterType.DriverName()
 	dsn.parameter.strDSN = strMySQLDSN
+	dsn.parameter.db = strDatabaseName
+	dsn.parameter.host = trimBetween(strMySQLDSN, "(", ")")
+	dsn.parameter.ip, dsn.parameter.port = getHostPort(dsn.parameter.host)
+	strQueries = cutLeft(strMySQLDSN, "?")
+	strUserPassword = cutRight(strMySQLDSN, "@")
+	ss := strings.Split(strUserPassword, ":")
+	dsn.parameter.user = ss[0]
+	dsn.parameter.password = ss[1]
+	querySlice = strings.Split(strQueries, "&")
+	for _, q := range querySlice {
+		qv := strings.Split(q, "=")
+		if len(qv) == 2 {
+			if qv[0] == URL_QUERY_CHARSET {
+				dsn.parameter.charset = qv[1]
+			}
+			dsn.parameter.queries[qv[0]] = qv[1]
+		}
+	}
+	e.setDatabaseName(strDatabaseName)
+	return
+}
+
+func cutFirst(strIn, strSep string) (strOut string) {
+
 	return
 }
 

@@ -104,7 +104,6 @@ func (a AdapterType) String() string {
 		return "AdapterSqlx_Mssql"
 	case AdapterCache_Redis:
 		return "AdapterCache_Redis"
-	default:
 	}
 	return "Adapter_Unknown"
 }

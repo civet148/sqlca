@@ -80,11 +80,11 @@ const (
 )
 
 const (
-	AdapterSqlx_MySQL    AdapterType = 1  //sqlx: mysql
-	AdapterSqlx_Postgres AdapterType = 2  //sqlx: postgresql
-	AdapterSqlx_Sqlite   AdapterType = 3  //sqlx: sqlite
-	AdapterSqlx_Mssql    AdapterType = 4  //sqlx: mssql server
-	AdapterCache_Redis   AdapterType = 11 //cache: redis
+	AdapterSqlx_MySQL    AdapterType = 1  //mysql
+	AdapterSqlx_Postgres AdapterType = 2  //postgresql
+	AdapterSqlx_Sqlite   AdapterType = 3  //sqlite
+	AdapterSqlx_Mssql    AdapterType = 4  //mssql server
+	AdapterCache_Redis   AdapterType = 11 //redis
 )
 
 func (a AdapterType) GoString() string {
@@ -992,6 +992,26 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 	return
 }
 
+// handle special characters, prevent SQL inject
+func (e *Engine) handleSpecialChars(strIn string) (strOut string) {
+
+	strIn = strings.TrimSpace(strIn) //trim blank characters
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL:
+		strIn = strings.Replace(strIn, `\`, `\\`, -1)
+		strIn = strings.Replace(strIn, `'`, `\'`, -1)
+		strIn = strings.Replace(strIn, `"`, `\"`, -1)
+	case AdapterSqlx_Postgres:
+		strIn = strings.Replace(strIn, `'`, `''`, -1)
+	case AdapterSqlx_Mssql:
+		strIn = strings.Replace(strIn, `'`, `''`, -1)
+	case AdapterSqlx_Sqlite:
+	case AdapterCache_Redis:
+	}
+
+	return strIn
+}
+
 func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (strUpdates string) {
 
 	var cols []string
@@ -1003,7 +1023,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 				//log.Warnf("column [%v] selected but have no value", v)
 				continue
 			}
-			strVal := handleSpecialChars(fmt.Sprintf("%v", val))
+			strVal := e.handleSpecialChars(fmt.Sprintf("%v", val))
 			c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(v), e.getQuoteColumnValue(strVal)) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
 		}

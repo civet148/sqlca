@@ -44,17 +44,6 @@ func mapToBytesSlice(m map[string]string) (arrays [][]byte) {
 	return
 }
 
-// handle special characters, prevent SQL inject
-func handleSpecialChars(strIn string) (strOut string) {
-
-	strIn = strings.TrimSpace(strIn) //trim blank characters
-	strIn = strings.Replace(strIn, `\`, `\\`, -1)
-	strIn = strings.Replace(strIn, `'`, `\'`, -1)
-	strIn = strings.Replace(strIn, `"`, `\"`, -1)
-
-	return strIn
-}
-
 // parse struct tag and value to map
 func (s *ModelReflector) ToMap(tagNames ...string) map[string]interface{} {
 

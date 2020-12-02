@@ -143,6 +143,7 @@ func Direct(e *sqlca.Engine) {
 	NilPointerQuery(e)
 	JsonStructQuery(e)
 	BuiltInSliceQuery(e)
+	QueryJSON(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -935,6 +936,18 @@ func NilPointerQuery(e *sqlca.Engine) {
 		return
 	}
 	log.Infof("count [%d] UserClass data [%+v]", c, user)
+}
+
+//query result returns json string
+func QueryJSON(e *sqlca.Engine) {
+
+	var users []UserDO
+	strJsonResults, err := e.Model(&users).Table(TABLE_NAME_USERS).Limit(10).QueryJson()
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
+	log.Infof("user results to JSON %s", strJsonResults)
 }
 
 func JsonStructQuery(e *sqlca.Engine) {

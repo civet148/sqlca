@@ -977,6 +977,25 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 	return tx.TxCommit()
 }
 
+//query result marshal to json
+func (e *Engine) QueryJson() (s string, err error) {
+	var count int64
+	count, err = e.Query()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	if count != 0 && e.model != nil {
+		var data []byte
+		if data, err = json.Marshal(e.model); err != nil {
+			log.Errorf(err.Error())
+			return
+		}
+		s = string(data)
+	}
+	return
+}
+
 //slow query alert on or off
 //on -> true/false
 //ms -> milliseconds (can be 0 if on is false)

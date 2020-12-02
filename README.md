@@ -31,6 +31,7 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 - [db2go](cmd/db2go) command line tool generate table schema output to .go or .proto file
 - Custom sql.Scanner implement fetching 
 - SSH tunnel
+- Query results marshal to json string (QueryJson function)
 - Simply and developer friendly more than other ORM
 
 

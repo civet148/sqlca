@@ -24,6 +24,7 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 * 支持数据对象模型切片进行批量插入
 * 支持自定义sql.Scanner实现(赋值)
 * 支持Case...When语法
+* 支持查询结果转JSON (QueryJson方法 )
 * 支持SSH tunnel
 
 # 测试案例

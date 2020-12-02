@@ -70,6 +70,7 @@ func main() {
 	for _, url := range urls {
 		e := sqlca.NewEngine(url)
 		e.Debug(true) //debug on
+		//e.SetLogFile("sqlca.log")
 		Direct(e)
 		log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
 	}
@@ -85,6 +86,7 @@ func main() {
 				//PrivateKey: "path/to/private/key.pem", //private key of SSH
 			},
 		})
+		//e.SetLogFile("sqlca.log")
 		SSHTunnel(e)
 		log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
 	}

@@ -175,10 +175,6 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 //     [redis-alone]    Open("redis://123456@127.0.0.1:6379/cluster?db=0")
 //     [redis-cluster]  Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
 //
-//  3. SSH tunnel
-// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false&max=100&idle=1&ssh=root:123456")
-// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false&max=100&idle=1")
-// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false&max=100&idle=1")
 // options:
 //        1. specify master or slave, MySQL/Postgres (Options)
 //        2. cache data expire seconds, just for redis (Integer)

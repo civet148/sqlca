@@ -104,11 +104,11 @@ func (s *ModelReflector) convertMapString(ms map[string]string) (mi map[string]i
 }
 
 // get struct field's tag value
-func (s *ModelReflector) getTag(sf reflect.StructField, tagName string) (strValue string) {
+func (s *ModelReflector) getTag(sf reflect.StructField, tagName string) (strValue string, ignore bool) {
 
 	strValue = sf.Tag.Get(tagName)
 	if strValue == SQLCA_TAG_VALUE_IGNORE {
-		return ""
+		return "", true
 	}
 	return
 }
@@ -165,8 +165,13 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 		if v == TAG_NAME_SQLCA {
 			continue
 		}
+
+		strTagValue, ignore := s.getTag(field, v)
 		//parse db、json、protobuf tag
-		tagVal = handleTagValue(v, s.getTag(field, v))
+		tagVal = handleTagValue(v, strTagValue)
+		if ignore {
+			break
+		}
 		if tagVal != "" {
 			//log.Debugf("ModelReflector.setValueByField tag [%v] value [%+v]", tagVal, val.Interface())
 			if d, ok := val.Interface().(driver.Valuer); ok {
@@ -181,12 +186,13 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 	for _, v := range tagNames {
 
 		if v == TAG_NAME_SQLCA { //parse sqlca tag
-			strTagValue := s.getTag(field, v)
-			vs := strings.Split(strTagValue, ",")
-			for _, vv := range vs {
-				if vv == SQLCA_TAG_VALUE_READ_ONLY { //column is read only
-					s.engine.readOnly = append(s.engine.readOnly, tagVal)
-					//log.Debugf("%v [%v]", tagVal, SQLCAL_TAG_VALUE_READ_ONLY)
+			strTagValue, ignore := s.getTag(field, v)
+			if !ignore && strTagValue != "" {
+				vs := strings.Split(strTagValue, ",")
+				for _, vv := range vs {
+					if vv == SQLCA_TAG_VALUE_READ_ONLY { //column is read only
+						s.engine.readOnly = append(s.engine.readOnly, tagVal)
+					}
 				}
 			}
 		}
@@ -572,11 +578,15 @@ func (e *Engine) fetchToBaseType(fetcher *Fetcher, typ reflect.Type, val reflect
 
 func handleTagValue(strTagName, strTagValue string) string {
 
-	if strTagName == TAG_NAME_JSON && strTagValue != "" {
+	if strTagValue == "" {
+		return ""
+	}
+
+	if strTagName == TAG_NAME_JSON {
 
 		vs := strings.Split(strTagValue, ",")
 		strTagValue = vs[0]
-	} else if strTagName == TAG_NAME_PROTOBUF && strTagValue != "" {
+	} else if strTagName == TAG_NAME_PROTOBUF {
 		//parse protobuf tag value
 		vs := strings.Split(strTagValue, ",")
 		for _, vv := range vs {

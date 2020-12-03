@@ -311,7 +311,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 			if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
 				e.model = models[0] //map, struct or slice
 			} else {
-				e.model = models //base type argument like int/string/float32...
+				e.model = models //built-in types, eg int/string/float32...
 			}
 		}
 

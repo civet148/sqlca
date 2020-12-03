@@ -685,7 +685,7 @@ func CustomTag(e *sqlca.Engine) {
 		Id       int32  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"` // protobuf tag
 		Name     string `json:"name,omitempty"`                                      // json tag
 		Phone    string `db:"phone"`                                                 // db tag
-		IgnoreMe string `db:"-" json:"-"`
+		IgnoreMe string `db:"-" json:"ignore_me"`                                    //ignore it
 	}
 
 	var users []CustomUser

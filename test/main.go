@@ -139,7 +139,6 @@ func Direct(e *sqlca.Engine) {
 	MySqlJsonQuery(e)
 	CustomizeUpsert(e)
 	JoinQuery(e)
-	NestedQuery(e)
 	NilPointerQuery(e)
 	JsonStructQuery(e)
 	BuiltInSliceQuery(e)
@@ -930,31 +929,10 @@ func JoinQuery(e *sqlca.Engine) {
 	log.Infof("count [%d] UserClass data [%+v]", c, ucs)
 }
 
-func NestedQuery(e *sqlca.Engine) {
-	type UserClass struct {
-		User    UserDO
-		Classes ClassDo //slice in structure will be ignored...
-	}
-
-	var ucs []UserClass
-	c, err := e.Model(&ucs).Select("a.*, b.*").
-		Table("users a").
-		InnerJoin("classes b").
-		//LeftJoin("classes b").
-		//RightJoin("classes b").
-		On("a.id=b.user_id").
-		Where("a.id <= 9").
-		Query()
-	if err != nil {
-		log.Errorf(err.Error())
-		return
-	}
-	log.Infof("count [%d] UserClass data [%+v]", c, ucs)
-}
-
 func NilPointerQuery(e *sqlca.Engine) {
 	var user *UserDO //nil pointer of UserDO （pass pointer address to query)
-	c, err := e.Model(&user).Select("a.*").
+	c, err := e.Model(&user).
+		Select("a.*").
 		Table("users a").
 		Where("a.id <= 9").
 		Query()

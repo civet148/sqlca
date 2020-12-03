@@ -43,8 +43,8 @@ type ClassDo struct {
 var urls = []string{
 	"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //raw mysql DSN (default 'mysql' if scheme is not specified)
 	//"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4",
-	//"mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false",
 	//"postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable",
+	//"mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false",
 }
 
 //func (u *UserData) Scan(src interface{}) (err error) {
@@ -865,7 +865,7 @@ func CustomizeUpsert(e *sqlca.Engine) {
 	var do = UserDO{
 		Id:      1,
 		Name:    "customize upsert",
-		Phone:   "8617923930921",
+		Phone:   "8617923930922",
 		Sex:     1,
 		Email:   "civet148@gmail.com",
 		Disable: 0,
@@ -874,10 +874,23 @@ func CustomizeUpsert(e *sqlca.Engine) {
 	//INSERT INTO users(id, name, phone, sex, email, disable, balance)
 	//VALUES('1', "customize upsert", "8617923930921", '1', "civet148@gmail.com", '0', '6.66')
 	//ON DUPLICATE KEY UPDATE balance=balance+VALUES(balance)
-	e.Model(&do).
+
+	var strCustomUpdates string
+	adapter := e.GetAdapter()
+	switch adapter {
+	case sqlca.AdapterSqlx_MySQL:
+		strCustomUpdates = "balance=balance+VALUES(balance)"
+	case sqlca.AdapterSqlx_Postgres:
+		strCustomUpdates = "balance=users.balance+excluded.balance"
+	}
+	if _, err := e.Model(&do).
 		Table(TABLE_NAME_USERS).
 		OnConflict("id"). // only postgres required
-		Upsert("balance=balance+VALUES(balance)")
+		Upsert(strCustomUpdates); err != nil {
+
+		log.Error(err.Error())
+		return
+	}
 }
 
 func JoinQuery(e *sqlca.Engine) {

@@ -1092,3 +1092,7 @@ func (e *Engine) RightJoin(strTableName string) *Join {
 		strTableName: strTableName,
 	}
 }
+
+func (e *Engine) GetAdapter() AdapterType {
+	return e.adapterSqlx
+}

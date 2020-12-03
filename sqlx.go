@@ -1052,11 +1052,11 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 }
 
 func (e *Engine) getOnConflictDo() (strDo string) {
+	var strUpdates string
+	var strCustomizeUpdates = e.getCustomizeUpdates()
 	switch e.adapterSqlx {
 	case AdapterSqlx_MySQL:
 		{
-			var strUpdates string
-			var strCustomizeUpdates = e.getCustomizeUpdates()
 			if len(strCustomizeUpdates) != 0 {
 				strUpdates = strings.Join(strCustomizeUpdates, ",")
 			} else {
@@ -1073,7 +1073,11 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 		}
 	case AdapterSqlx_Postgres:
 		{
-			strUpdates := e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
+			if len(strCustomizeUpdates) != 0 {
+				strUpdates = strings.Join(strCustomizeUpdates, ",")
+			} else {
+				strUpdates = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
+			}
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v RETURNING \"%v\"", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}

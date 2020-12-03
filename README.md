@@ -27,7 +27,7 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 - Read only column(s) specified by `sqlca:"readonly"` tag 
 - Case...when syntax 
 - Decimal, `sqlca.Decimal` instead of float64 for high precision calculation
-- Force specified where condition when UPDATE/DELETE 
+- Force specify where condition when UPDATE/DELETE 
 - [db2go](cmd/db2go) command line tool generate table schema output to .go or .proto file
 - Custom sql.Scanner implement fetching 
 - SSH tunnel

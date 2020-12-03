@@ -14,10 +14,10 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 
 - Almost full-featured ORM
 - Multiple databases (MySQL/Postgres/MS-SQLSERVER), read/write splitting
-- Multiple model type `struct, slice, built-in type, map` 
+- Multiple model type `struct, slice, built-in types, map` 
 - Batch insert
 - Query/Insert/Update
-- Upsert by customization [only MySQL]
+- Upsert by customization [only MySQL/Postgres]
 - Transactions wrapper (auto rollback or commit)
 - Slow query warning
 - Json column query and unmarshal to sub struct nested in data model
@@ -31,7 +31,7 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 - [db2go](cmd/db2go) command line tool generate table schema output to .go or .proto file
 - Custom sql.Scanner implement fetching 
 - SSH tunnel
-- Query results marshal to json string (QueryJson function)
+- Query results marshal to json string (QueryJson)
 - Simply and developer friendly more than other ORM
 
 

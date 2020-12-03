@@ -895,13 +895,27 @@ func CustomizeUpsert(e *sqlca.Engine) {
 
 func JoinQuery(e *sqlca.Engine) {
 
+	type User struct {
+		Id    int32  `db:"id"`
+		Name  string `db:"name"`
+		Phone string `db:"phone"`
+		Sex   int8   `db:"sex"`
+		Email string `db:"email"`
+	}
+
+	type Class struct {
+		UserId  int32  `db:"user_id"`
+		ClassNo string `db:"class_no"`
+	}
+
 	type UserClass struct {
-		User  UserDO
-		Class ClassDo
+		User  User
+		Class Class
 	}
 
 	var ucs []UserClass
-	c, err := e.Model(&ucs).Select("a.*, b.*").
+	c, err := e.Model(&ucs).
+		Select("a.id", "a.name", "a.phone", "a.sex", "a.email", "a.disable", "a.balance", "b.user_id", "b.class_no").
 		Table("users a").
 		InnerJoin("classes b").
 		//LeftJoin("classes b").

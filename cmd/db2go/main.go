@@ -13,9 +13,13 @@ import (
 	"strings"
 )
 
+const (
+	VERSION = "v1.3.9"
+)
+
 var argvUrl = flag.String("url", "", "mysql://root:123456@127.0.0.1:3306/test?charset=utf8")
 var argvOutput = flag.String("out", ".", "output directory, default .")
-var argvDatabase = flag.String("db", "", "export databases, like 'test,chat_db'")
+var argvDatabase = flag.String("db", "", "database name e.g 'testdb'")
 var argvTables = flag.String("table", "", "export tables, eg. 'users,devices'")
 var argvTags = flag.String("tag", "", "golang struct tag name, default json,db")
 var argvPrefix = flag.String("prefix", "", "export file prefix")
@@ -32,7 +36,7 @@ var argvOrm = flag.Bool("orm", false, "generate ORM code inner data object")
 var argvOmitEmpty = flag.Bool("omitempty", false, "omit empty for json tag")
 var argvJsonProperties = flag.String("json-properties", "", "custom properties for json tag")
 var argvStruct = flag.Bool("struct", false, "generate struct getter and setter")
-var argvConst = flag.Bool("const", false, "generate const variants format methods")
+var argvVersion = flag.Bool("version", false, "print version")
 
 func init() {
 	flag.Parse()
@@ -53,7 +57,11 @@ func main() {
 	cmd.Orm = *argvOrm
 	cmd.OmitEmpty = *argvOmitEmpty
 	cmd.Struct = *argvStruct
-	cmd.Const = *argvConst
+
+	if *argvVersion {
+		fmt.Printf("version %s\n", VERSION)
+		return
+	}
 	if cmd.Struct {
 		structs.ExportStruct(&cmd)
 	} else {

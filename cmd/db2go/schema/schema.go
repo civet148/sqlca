@@ -44,7 +44,6 @@ type Commander struct {
 	Orm            bool          `json:"Orm,omitempty"`
 	OmitEmpty      bool          `json:"OmitEmpty,omitempty"`
 	Struct         bool          `json:"Struct"`
-	Const          bool          `json:"Const"`
 	Engine         *sqlca.Engine `json:"-"`
 	JsonProperties string        `json:"-"`
 }

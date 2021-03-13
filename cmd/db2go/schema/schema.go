@@ -44,6 +44,7 @@ type Commander struct {
 	Orm            bool          `json:"Orm,omitempty"`
 	OmitEmpty      bool          `json:"OmitEmpty,omitempty"`
 	Struct         bool          `json:"Struct"`
+	BitAsBool      bool          `json:"BitAsBool,omitempty"`
 	Engine         *sqlca.Engine `json:"-"`
 	JsonProperties string        `json:"-"`
 }
@@ -281,13 +282,19 @@ func GetDatabaseName(strPath string) (strName string) {
 }
 
 //将数据库字段类型转为go语言对应的数据类型
-func GetGoColumnType(strTableName string, col TableColumn, enableDecimal bool) (strGoColType string, isDecimal bool) {
+func GetGoColumnType(strTableName string, col TableColumn, enableDecimal, bitAsBool bool) (strGoColType string, isDecimal bool) {
 
 	var bUnsigned bool
 	var strColName, strDataType, strColumnType string
 	strColName = col.Name
 	strDataType = col.DataType
 	strColumnType = col.ColumnType
+
+	//log.Debugf("table [%s] column name [%s] type [%s]", strTableName, strColName, strDataType)
+	//bit type column redeclare as bool
+	if bitAsBool && strDataType == DB_COLUMN_TYPE_BIT {
+		return DB_COLUMN_TYPE_BOOL, false
+	}
 
 	if strings.Contains(strColumnType, "unsigned") { //判断字段是否为无符号类型
 		bUnsigned = true
@@ -313,6 +320,7 @@ func GetGoColumnType(strTableName string, col TableColumn, enableDecimal bool) (
 			strGoColType = "sqlca.Decimal"
 		}
 	}
+
 	return
 }
 

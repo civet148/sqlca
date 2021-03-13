@@ -116,7 +116,7 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 
 func haveDecimal(table *TableSchema, TableCols []TableColumn) (ok bool) {
 	for _, v := range TableCols {
-		_, ok = GetGoColumnType(table.TableName, v, false)
+		_, ok = GetGoColumnType(table.TableName, v, false, false)
 		if ok {
 			break
 		}
@@ -146,7 +146,7 @@ func makeObjectMethods(cmd *Commander, table *TableSchema) (strContent string) {
 			continue
 		}
 		strColName := CamelCaseConvert(v.Name)
-		strColType, _ := GetGoColumnType(table.TableName, v, cmd.EnableDecimal)
+		strColType, _ := GetGoColumnType(table.TableName, v, cmd.EnableDecimal, cmd.BitAsBool)
 		strContent += MakeGetter(table.StructName, strColName, strColType)
 		strContent += MakeSetter(table.StructName, strColName, strColType)
 	}
@@ -245,7 +245,7 @@ func makeTableStructure(cmd *Commander, table *TableSchema) (strContent string) 
 		var tagValues []string
 		var strColType, strColName string
 		strColName = CamelCaseConvert(v.Name)
-		strColType, _ = GetGoColumnType(table.TableName, v, cmd.EnableDecimal)
+		strColType, _ = GetGoColumnType(table.TableName, v, cmd.EnableDecimal, cmd.BitAsBool)
 
 		if IsInSlice(v.Name, cmd.ReadOnly) {
 			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", sqlca.TAG_NAME_SQLCA, sqlca.SQLCA_TAG_VALUE_READ_ONLY))

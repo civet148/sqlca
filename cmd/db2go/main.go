@@ -37,6 +37,7 @@ var argvOmitEmpty = flag.Bool("omitempty", false, "omit empty for json tag")
 var argvJsonProperties = flag.String("json-properties", "", "custom properties for json tag")
 var argvStruct = flag.Bool("struct", false, "generate struct getter and setter")
 var argvVersion = flag.Bool("version", false, "print version")
+var argvBitAsBool = flag.Bool("bit-as-bool", false, "convert bit type redeclare as bool")
 
 func init() {
 	flag.Parse()
@@ -57,6 +58,7 @@ func main() {
 	cmd.Orm = *argvOrm
 	cmd.OmitEmpty = *argvOmitEmpty
 	cmd.Struct = *argvStruct
+	cmd.BitAsBool = *argvBitAsBool
 
 	if *argvVersion {
 		fmt.Printf("version %s\n", VERSION)

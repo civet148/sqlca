@@ -146,7 +146,7 @@ func makeObjectMethods(cmd *Commander, table *TableSchema) (strContent string) {
 			continue
 		}
 		strColName := CamelCaseConvert(v.Name)
-		strColType, _ := GetGoColumnType(table.TableName, v, cmd.EnableDecimal, cmd.BitAsBool)
+		strColType, _ := GetGoColumnType(table.TableName, v, cmd.EnableDecimal, cmd.TinyintAsBool)
 		strContent += MakeGetter(table.StructName, strColName, strColType)
 		strContent += MakeSetter(table.StructName, strColName, strColType)
 	}
@@ -245,7 +245,7 @@ func makeTableStructure(cmd *Commander, table *TableSchema) (strContent string) 
 		var tagValues []string
 		var strColType, strColName string
 		strColName = CamelCaseConvert(v.Name)
-		strColType, _ = GetGoColumnType(table.TableName, v, cmd.EnableDecimal, cmd.BitAsBool)
+		strColType, _ = GetGoColumnType(table.TableName, v, cmd.EnableDecimal, cmd.TinyintAsBool)
 
 		if IsInSlice(v.Name, cmd.ReadOnly) {
 			tagValues = append(tagValues, fmt.Sprintf("%v:\"%v\"", sqlca.TAG_NAME_SQLCA, sqlca.SQLCA_TAG_VALUE_READ_ONLY))

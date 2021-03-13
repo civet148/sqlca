@@ -44,7 +44,7 @@ type Commander struct {
 	Orm            bool          `json:"Orm,omitempty"`
 	OmitEmpty      bool          `json:"OmitEmpty,omitempty"`
 	Struct         bool          `json:"Struct"`
-	BitAsBool      bool          `json:"BitAsBool,omitempty"`
+	TinyintAsBool  bool          `json:"TinyintAsBool,omitempty"`
 	Engine         *sqlca.Engine `json:"-"`
 	JsonProperties string        `json:"-"`
 }
@@ -282,7 +282,7 @@ func GetDatabaseName(strPath string) (strName string) {
 }
 
 //将数据库字段类型转为go语言对应的数据类型
-func GetGoColumnType(strTableName string, col TableColumn, enableDecimal, bitAsBool bool) (strGoColType string, isDecimal bool) {
+func GetGoColumnType(strTableName string, col TableColumn, enableDecimal, tinyintAsBool bool) (strGoColType string, isDecimal bool) {
 
 	var bUnsigned bool
 	var strColName, strDataType, strColumnType string
@@ -291,8 +291,9 @@ func GetGoColumnType(strTableName string, col TableColumn, enableDecimal, bitAsB
 	strColumnType = col.ColumnType
 
 	//log.Debugf("table [%s] column name [%s] type [%s]", strTableName, strColName, strDataType)
-	//bit type column redeclare as bool
-	if bitAsBool && strDataType == DB_COLUMN_TYPE_BIT {
+	//tinyint type column redeclare as bool
+	if tinyintAsBool && strDataType == DB_COLUMN_TYPE_TINYINT {
+		log.Warnf("table [%s] column [%s] %s redeclare as bool type", strTableName, strColName, strDataType)
 		return DB_COLUMN_TYPE_BOOL, false
 	}
 

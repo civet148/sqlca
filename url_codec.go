@@ -1,10 +1,8 @@
 package sqlca
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/civet148/gotools/log"
-	"github.com/civet148/redigogo"
 	"net/url"
 	"strconv"
 	"strings"
@@ -315,30 +313,6 @@ func buildMssqlDSN(strIP, strPort, strUser, strPassword, strDatabase string, que
 		dsnArgs = append(dsnArgs, fmt.Sprintf("password=%s", strPassword))
 	}
 	return strings.Join(dsnArgs, ";")
-}
-
-//DSN: `{"password":"123456","db_index":0,"master_host":"127.0.0.1:6379","replicate_hosts":["127.0.0.1:6380","127.0.0.1:6381"]}`
-func (e *Engine) parseRedisUrl(strUrl string) (parameter dsnParameter) {
-
-	ui := ParseUrl(strUrl)
-	cc := &redigogo.Config{
-		Password:   ui.User, //redis have no user, just password
-		MasterHost: fmt.Sprintf("%v", ui.Host),
-	}
-
-	if v, ok := ui.Queries[CACHE_DB_INDEX]; ok {
-		cc.Index, _ = strconv.Atoi(v)
-	}
-	if v, ok := ui.Queries[CACHE_REPLICATE]; ok {
-		cc.ReplicateHosts = strings.Split(v, ",")
-	}
-
-	if jsonData, err := json.Marshal(cc); err != nil {
-		log.Errorf("url [%v] illegal", strUrl)
-	} else {
-		parameter.strDSN = string(jsonData)
-	}
-	return
 }
 
 //root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4

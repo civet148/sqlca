@@ -23,7 +23,7 @@ type UserDO struct {
 	Phone     string        `db:"phone"`
 	Sex       int8          `db:"sex"`
 	Email     string        `db:"email"`
-	Disable   int8          `db:"disable"`
+	Disable   bool          `db:"disable"`
 	Balance   sqlca.Decimal `db:"balance"`
 	CreatedAt string        `db:"created_at" sqlca:"readonly"`
 	UpdatedAt string        `db:"updated_at" sqlca:"readonly"`
@@ -59,7 +59,6 @@ var urls = []string{
 func main() {
 
 	//e.Open("root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4") // open with raw mysql DSN
-	//e.Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381") //redis cluster mode
 	//e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", &sqlca.Options{Max: 20, Idle: 2})             //MySQL master
 	//e.Open("mysql://root:123456@127.0.0.1:3307/test?charset=utf8mb4", sqlca.Options{Max: 20, Idle: 5, Slave: true}) //MySQL slave
 	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable") //postgres
@@ -76,20 +75,20 @@ func main() {
 	}
 
 	//connect database through SSH tunnel
-	for _, url := range urls {
-		e := sqlca.NewEngine(url, &sqlca.Options{
-			Debug: true,
-			SSH: &sqlca.SSH{
-				User:     "ubuntu",          //SSH server login account name
-				Host:     "192.168.124.162", //SSH server host (default port 22)
-				Password: "123456",          //SSH server password
-				//PrivateKey: "path/to/private/key.pem", //private key of SSH
-			},
-		})
-		//e.SetLogFile("sqlca.log")
-		SSHTunnel(e)
-		log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
-	}
+	//for _, url := range urls {
+	//	e := sqlca.NewEngine(url, &sqlca.Options{
+	//		Debug: true,
+	//		SSH: &sqlca.SSH{
+	//			User:     "ubuntu",          //SSH server login account name
+	//			Host:     "192.168.124.162", //SSH server host (default port 22)
+	//			Password: "123456",          //SSH server password
+	//			//PrivateKey: "path/to/private/key.pem", //private key of SSH
+	//		},
+	//	})
+	//	//e.SetLogFile("sqlca.log")
+	//	SSHTunnel(e)
+	//	log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
+	//}
 	log.Info("program exit...")
 }
 
@@ -104,8 +103,6 @@ func SSHTunnel(e *sqlca.Engine) {
 
 //connect database directly
 func Direct(e *sqlca.Engine) {
-
-	e.Open("redis://127.0.0.1:6379", 3600) //redis alone mode
 
 	OrmInsertByModel(e)
 	OrmUpsertByModel(e)
@@ -143,6 +140,7 @@ func Direct(e *sqlca.Engine) {
 	JsonStructQuery(e)
 	BuiltInSliceQuery(e)
 	QueryJSON(e)
+	BoolConvert(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -178,7 +176,7 @@ func OrmInsertByModel(e *sqlca.Engine) {
 			Phone:     fmt.Sprintf("phone(%v)", i),
 			Sex:       0,
 			Email:     "xxx@gmail.com",
-			Disable:   0,
+			Disable:   false,
 			Balance:   sqlca.NewDecimal(i),
 			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
 			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
@@ -226,7 +224,7 @@ func OrmUpdateByModel(e *sqlca.Engine) {
 		Phone:     "8618699999999",
 		Sex:       1,
 		Email:     "john@gmail.com",
-		Disable:   1,
+		Disable:   true,
 		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
 		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
 	}
@@ -369,7 +367,6 @@ func OrmUpdateIndexToCache(e *sqlca.Engine) {
 		Table(TABLE_NAME_USERS).
 		Distinct().
 		Select("name", "phone", "email", "sex").
-		Cache("name", "phone").
 		Update(); err != nil {
 		log.Errorf("update data model [%+v] error [%v]", user, err.Error())
 	} else {
@@ -473,7 +470,7 @@ func OrmFind(e *sqlca.Engine) {
 func OrmWhereRequire(e *sqlca.Engine) {
 
 	var user = UserDO{
-		Disable: 2,
+		Disable: true,
 	}
 	if _, err := e.Model(&user).Table(TABLE_NAME_USERS).Update(); err != nil { // expect return error
 		log.Errorf("%v", err.Error())
@@ -867,7 +864,7 @@ func CustomizeUpsert(e *sqlca.Engine) {
 		Phone:   "8617923930922",
 		Sex:     1,
 		Email:   "civet148@gmail.com",
-		Disable: 0,
+		Disable: false,
 		Balance: sqlca.NewDecimal(6.66),
 	}
 	//INSERT INTO users(id, name, phone, sex, email, disable, balance)
@@ -991,4 +988,18 @@ func BuiltInSliceQuery(e *sqlca.Engine) {
 		return
 	}
 	log.Infof("id list %+v", idList)
+}
+
+func BoolConvert(e *sqlca.Engine) {
+	user := &UserDO{}
+	e.Model(user).Table(TABLE_NAME_USERS).Limit(1).Query()
+	log.Info("user query [%+v]", user)
+
+	if user.Disable {
+		user.Disable = false
+	} else {
+		user.Disable = true
+	}
+	e.Model(user).Table(TABLE_NAME_USERS).Upsert()
+	log.Info("user upsert [%+v] ", user)
 }

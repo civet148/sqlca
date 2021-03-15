@@ -37,7 +37,7 @@ var argvOmitEmpty = flag.Bool("omitempty", false, "omit empty for json tag")
 var argvJsonProperties = flag.String("json-properties", "", "custom properties for json tag")
 var argvStruct = flag.Bool("struct", false, "generate struct getter and setter")
 var argvVersion = flag.Bool("version", false, "print version")
-var argvTinyintAsBool = flag.Bool("tinyint-as-bool", false, "convert tinyint type redeclare as bool")
+var argvTinyintAsBool = flag.String("tinyint-as-bool", "", "convert tinyint columns redeclare as bool")
 
 func init() {
 	flag.Parse()
@@ -58,7 +58,6 @@ func main() {
 	cmd.Orm = *argvOrm
 	cmd.OmitEmpty = *argvOmitEmpty
 	cmd.Struct = *argvStruct
-	cmd.TinyintAsBool = *argvTinyintAsBool
 
 	if *argvVersion {
 		fmt.Printf("version %s\n", VERSION)
@@ -96,6 +95,10 @@ func main() {
 
 		if *argvWithout != "" {
 			cmd.Without = schema.TrimSpaceSlice(strings.Split(*argvWithout, ","))
+		}
+
+		if *argvTinyintAsBool != "" {
+			cmd.TinyintAsBool = schema.TrimSpaceSlice(strings.Split(*argvTinyintAsBool, ","))
 		}
 
 		if *argvProtobuf {

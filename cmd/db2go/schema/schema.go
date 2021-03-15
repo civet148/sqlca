@@ -44,7 +44,7 @@ type Commander struct {
 	Orm            bool          `json:"Orm,omitempty"`
 	OmitEmpty      bool          `json:"OmitEmpty,omitempty"`
 	Struct         bool          `json:"Struct"`
-	TinyintAsBool  bool          `json:"TinyintAsBool,omitempty"`
+	TinyintAsBool  []string      `json:"TinyintAsBool,omitempty"`
 	Engine         *sqlca.Engine `json:"-"`
 	JsonProperties string        `json:"-"`
 }
@@ -282,7 +282,7 @@ func GetDatabaseName(strPath string) (strName string) {
 }
 
 //将数据库字段类型转为go语言对应的数据类型
-func GetGoColumnType(strTableName string, col TableColumn, enableDecimal, tinyintAsBool bool) (strGoColType string, isDecimal bool) {
+func GetGoColumnType(strTableName string, col TableColumn, enableDecimal bool, tinyintAsBool []string) (strGoColType string, isDecimal bool) {
 
 	var bUnsigned bool
 	var strColName, strDataType, strColumnType string
@@ -292,9 +292,11 @@ func GetGoColumnType(strTableName string, col TableColumn, enableDecimal, tinyin
 
 	//log.Debugf("table [%s] column name [%s] type [%s]", strTableName, strColName, strDataType)
 	//tinyint type column redeclare as bool
-	if tinyintAsBool && strDataType == DB_COLUMN_TYPE_TINYINT {
-		log.Warnf("table [%s] column [%s] %s redeclare as bool type", strTableName, strColName, strDataType)
-		return DB_COLUMN_TYPE_BOOL, false
+	if len(tinyintAsBool) > 0 && strDataType == DB_COLUMN_TYPE_TINYINT {
+		if IsInSlice(strColName, tinyintAsBool) {
+			log.Warnf("table [%s] column [%s] %s redeclare as bool type", strTableName, strColName, strDataType)
+			return DB_COLUMN_TYPE_BOOL, false
+		}
 	}
 
 	if strings.Contains(strColumnType, "unsigned") { //判断字段是否为无符号类型

@@ -335,7 +335,6 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		dsn:             e.dsn,
 		dbMasters:       e.dbMasters,
 		dbSlaves:        e.dbSlaves,
-		cache:           e.cache,
 		adapterSqlx:     e.adapterSqlx,
 		adapterCache:    e.adapterCache,
 		strPkName:       e.strPkName,
@@ -469,14 +468,6 @@ func (e *Engine) getDistinct() string {
 
 func (e *Engine) setDistinct() {
 	e.strDistinct = DATABASE_KEY_NAME_DISTINCT
-}
-
-func (e *Engine) setUseCache(enable bool) {
-	e.bUseCache = enable
-}
-
-func (e *Engine) getUseCache() bool {
-	return e.bUseCache
 }
 
 func (e *Engine) sepStrByDot(strIn string) (strPrefix, strSuffix string) {
@@ -679,6 +670,7 @@ func (e *Engine) getQuoteColumnName(v string) (strColumn string) {
 }
 
 func (e *Engine) getQuoteColumnValue(v interface{}) (strValue string) {
+	v = convertBool2Int(v)
 	return fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote())
 }
 
@@ -1151,6 +1143,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 				continue
 			}
 
+			v = convertBool2Int(v)
 			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
 
 			if k == e.GetPkName() && e.isPkValueNil() {

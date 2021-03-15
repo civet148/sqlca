@@ -6,14 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/civet148/gotools/log"
-	"github.com/civet148/redigogo"
 	_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
 	"github.com/gansidui/geohash"
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
 	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
 	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
-	"strconv"
 	"strings"
 )
 
@@ -44,15 +42,11 @@ type Engine struct {
 	dbMasters       []*sqlx.DB             // DB instance masters
 	dbSlaves        []*sqlx.DB             // DB instance slaves
 	tx              *sql.Tx                // sql tx instance
-	cache           redigogo.Cache         // redis cache instance
-	isCacheBefore   bool                   // is cache update before db or not (default false)
 	adapterSqlx     AdapterType            // what's adapter of sqlx
 	adapterCache    AdapterType            // what's adapter of cache
 	modelType       ModelType              // model type
 	operType        OperType               // operation type
 	expireTime      int                    // cache expire time of seconds
-	bUseCache       bool                   // can update to cache or read from cache? (true=yes false=no)
-	bCacheFirst     bool                   // cache first or database first (true=cache first; false=db first)
 	bForce          bool                   // force update/insert read only column(s)
 	bAutoRollback   bool                   // auto rollback when tx error occurred
 	model           interface{}            // data model [struct object or struct slice]
@@ -144,19 +138,14 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 	switch adapterType {
 	case AdapterSqlx_MySQL:
 		driver.parameter = e.parseMysqlUrl(strUrl)
-		return
 	case AdapterSqlx_Postgres:
 		driver.parameter = e.parsePostgresUrl(strUrl)
-		return
 	case AdapterSqlx_Sqlite:
 		driver.parameter = e.parseSqliteUrl(strUrl)
-		return
 	case AdapterSqlx_Mssql:
 		driver.parameter = e.parseMssqlUrl(strUrl)
-		return
-	case AdapterCache_Redis:
-		driver.parameter = e.parseRedisUrl(strUrl)
-		return
+	default:
+		panic(fmt.Sprintf("unknown adapter [%s]", adapterType))
 	}
 	return
 }
@@ -240,17 +229,6 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 		} else {
 			e.appendMaster(db)
 		}
-	case AdapterCache_Redis:
-		if e.cache, err = newCache(dsn.strDriverName, parameter.strDSN); err != nil {
-			log.Errorf("new cache by driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
-		}
-		e.adapterCache = adapter
-		if len(options) > 0 {
-			expSec := fmt.Sprintf("%v", options[0])
-			e.expireTime, _ = strconv.Atoi(expSec)
-		} else {
-			e.expireTime = 3600 //one hour expire
-		}
 	default:
 		log.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
 		return nil
@@ -269,20 +247,6 @@ func (e *Engine) Attach(strDatabaseName string, db *sqlx.DB) *Engine {
 // set log file
 func (e *Engine) SetLogFile(strPath string) {
 	log.Open(strPath)
-}
-
-// set cache indexes. if null, the primary key (eg. 'id') will be cached to redis
-func (e *Engine) Cache(indexes ...string) *Engine {
-	e.setUseCache(true)
-	for _, v := range indexes {
-
-		if itf := e.getModelValue(v); itf != nil {
-			e.setIndexes(v, itf)
-		} else {
-			log.Warnf("index key=%v value=%v", v, itf)
-		}
-	}
-	return e
 }
 
 // log debug mode on or off
@@ -494,14 +458,6 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	defer e.cleanWhereCondition()
 
 	e.setOperType(OperType_Query)
-	if e.getUseCache() {
-
-		var ok bool
-		if rowsAffected, ok = e.queryCache(); ok {
-			log.Debugf("query from cache ok, rows affected [%v]", rowsAffected)
-			return
-		}
-	}
 
 	strSql := e.makeSqlxString()
 	c := e.Counter()
@@ -573,9 +529,6 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 		}
 	}
 
-	if lastInsertId > 0 {
-		e.upsertCache(lastInsertId)
-	}
 	return
 }
 
@@ -626,9 +579,6 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 				log.Errorf("get last insert id error %v model %+v", err, e.model)
 				return
 			}
-			if lastInsertId > 0 {
-				e.upsertCache(lastInsertId)
-			}
 		}
 	}
 
@@ -647,9 +597,6 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	e.setOperType(OperType_Update)
 	defer e.cleanWhereCondition()
 
-	if e.getCacheBefore() {
-		e.updateCache() //update data to cache before database updated
-	}
 	var r sql.Result
 	var strSql string
 	strSql = e.makeSqlxString()
@@ -669,10 +616,6 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 		return
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSql)
-
-	if rowsAffected > 0 && !e.getCacheBefore() {
-		e.updateCache() //update data to cache after database updated
-	}
 	return
 }
 
@@ -697,10 +640,6 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 		return
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSql)
-
-	if rowsAffected > 0 {
-		e.deleteCache() //delete from cache
-	}
 	return
 }
 
@@ -887,16 +826,6 @@ func (e *Engine) SetCustomTag(tagNames ...string) *Engine {
 		e.dbTags = append(e.dbTags, tagNames...)
 	}
 	return e
-}
-
-// set cache update before database
-func (e *Engine) SetCacheBefore(ok bool) {
-	e.isCacheBefore = ok
-}
-
-// get cache update before database
-func (e *Engine) getCacheBefore() bool {
-	return e.isCacheBefore
 }
 
 // ping database

@@ -358,6 +358,9 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 				}
 			}
 
+			//convert bool value to int value
+			strFieldVal = convertBoolString(strFieldVal)
+
 			if strTagVal != "" && strTagVal != SQLCA_TAG_VALUE_IGNORE {
 				keys = append(keys, strTagVal)
 				values = append(values, strFieldVal)
@@ -659,4 +662,41 @@ func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) {
 		panic(fmt.Sprintf("can't assign value [%v] to variant type [%v]\n", v, typ.Kind()))
 		return
 	}
+}
+
+func convertBool2Int(v interface{}) interface{} {
+	typ := reflect.TypeOf(v)
+	val := reflect.ValueOf(v)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		val = val.Elem()
+	}
+	switch typ.Kind() {
+	case reflect.Bool:
+		{
+			if val.Interface() == false {
+				return 0
+			} else {
+				return 1
+			}
+		}
+	case reflect.String:
+		{
+			if val.Interface() == "false" {
+				return 0
+			} else if val.Interface() == "true" {
+				return 1
+			}
+		}
+	}
+	return v
+}
+
+func convertBoolString(strVal string) string {
+	if strVal == "false" {
+		return "0"
+	} else if strVal == "true" {
+		return "1"
+	}
+	return strVal
 }

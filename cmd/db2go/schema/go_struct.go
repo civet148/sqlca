@@ -116,7 +116,7 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 
 func haveDecimal(table *TableSchema, TableCols []TableColumn) (ok bool) {
 	for _, v := range TableCols {
-		_, ok = GetGoColumnType(table.TableName, v, false, false)
+		_, ok = GetGoColumnType(table.TableName, v, false, nil)
 		if ok {
 			break
 		}

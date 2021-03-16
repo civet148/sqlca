@@ -332,6 +332,7 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 
 	if typ.Kind() == reflect.Struct {
 
+		var isBool bool
 		NumField := val.NumField()
 		for i := 0; i < NumField; i++ {
 			typField := typ.Field(i)
@@ -344,6 +345,10 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 			if !valField.IsValid() || !valField.CanInterface() {
 				//fmt.Printf("Filed [%s] tag(%s)  is not valid \n", typField.Type.Name(), e.getTagValue(typField))
 				return
+			}
+
+			if typField.Type.Kind() == reflect.Bool {
+				isBool = true
 			}
 			strTagVal := e.getTagValue(typField)
 			strFieldVal := fmt.Sprintf("%v", valField)
@@ -359,7 +364,9 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 			}
 
 			//convert bool value to int value
-			strFieldVal = convertBoolString(strFieldVal)
+			if isBool {
+				strFieldVal = convertBoolString(strFieldVal)
+			}
 
 			if strTagVal != "" && strTagVal != SQLCA_TAG_VALUE_IGNORE {
 				keys = append(keys, strTagVal)
@@ -693,6 +700,7 @@ func convertBool2Int(v interface{}) interface{} {
 }
 
 func convertBoolString(strVal string) string {
+
 	if strVal == "false" {
 		return "0"
 	} else if strVal == "true" {

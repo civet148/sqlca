@@ -492,26 +492,6 @@ func (e *Engine) getModelValue(strKey string) interface{} {
 	return e.dict[strCol]
 }
 
-func (e *Engine) setIndexes(name string, value interface{}) {
-
-	if name == e.GetPkName() {
-		return
-	}
-	typ := reflect.TypeOf(value)
-	switch typ.Kind() {
-	case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array, reflect.Func, reflect.Ptr, reflect.Chan, reflect.UnsafePointer:
-		log.Errorf("index value type [%v] illegal", typ.Kind())
-	}
-	e.cacheIndexes = append(e.cacheIndexes, tableIndex{
-		Name:  name,
-		Value: value,
-	})
-}
-
-func (e *Engine) getIndexes() []tableIndex {
-	return e.cacheIndexes
-}
-
 func (e *Engine) setDatabaseName(strName string) {
 	e.strDatabaseName = strName
 }
@@ -639,20 +619,6 @@ func (e *Engine) getCustomWhere() string {
 	return e.strWhere
 }
 
-func (e *Engine) getIndexWhere() (strCondition string) {
-	if e.getOperType() == OperType_Query && len(e.getIndexes()) > 0 {
-
-		var conditions []string
-		for _, v := range e.getIndexes() {
-			cond := fmt.Sprintf("%v=%v",
-				e.getQuoteColumnName(v.Name), e.getQuoteColumnValue(v.Value))
-			conditions = append(conditions, cond)
-		}
-		strCondition = strings.Join(conditions, " AND ")
-	}
-	return
-}
-
 // primary key value like 'id'=xxx condition
 func (e *Engine) getPkWhere() (strCondition string) {
 
@@ -670,7 +636,6 @@ func (e *Engine) getQuoteColumnName(v string) (strColumn string) {
 }
 
 func (e *Engine) getQuoteColumnValue(v interface{}) (strValue string) {
-	v = convertBool2Int(v)
 	return fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote())
 }
 
@@ -1015,6 +980,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 				//log.Warnf("column [%v] selected but have no value", v)
 				continue
 			}
+			val = convertBool2Int(val)
 			strVal := e.handleSpecialChars(fmt.Sprintf("%v", val))
 			c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(v), e.getQuoteColumnValue(strVal)) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
@@ -1142,7 +1108,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 			if e.isReadOnly(k) || e.isExcluded(k) {
 				continue
 			}
-
+			//log.Warnf("dict key %+v value %#v", k, v)
 			v = convertBool2Int(v)
 			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
 
@@ -1233,12 +1199,7 @@ func (e *Engine) makeNotCondition(cond condition) (strCondition string) {
 
 func (e *Engine) makeWhereCondition() (strWhere string) {
 
-	if e.isPkValueNil() {
-		strIndexCond := e.getIndexWhere()
-		if strIndexCond != "" {
-			strWhere += e.getIndexWhere()
-		}
-	} else {
+	if !e.isPkValueNil() {
 		strWhere += e.getPkWhere()
 	}
 
@@ -1345,7 +1306,6 @@ func (e *Engine) isQuestionPlaceHolder(query string, args ...interface{}) bool {
 func (e *Engine) cleanWhereCondition() {
 	e.strWhere = ""
 	e.strPkValue = ""
-	e.cacheIndexes = nil
 }
 
 func (e *Engine) autoRollback() {

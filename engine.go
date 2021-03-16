@@ -71,7 +71,6 @@ type Engine struct {
 	notConditions   []condition            // not in condition
 	andConditions   []string               // and condition
 	orConditions    []string               // or condition
-	cacheIndexes    []tableIndex           // index read or write cache
 	dbTags          []string               // custom db tag names
 	readOnly        []string               // read only column names
 	slowQueryTime   int                    // slow query alert time (milliseconds)

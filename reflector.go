@@ -680,14 +680,14 @@ func convertBool2Int(v interface{}) interface{} {
 				return 1
 			}
 		}
-	case reflect.String:
-		{
-			if val.Interface() == "false" {
-				return 0
-			} else if val.Interface() == "true" {
-				return 1
-			}
-		}
+		//case reflect.String:
+		//	{
+		//		if val.Interface() == "false" {
+		//			return 0
+		//		} else if val.Interface() == "true" {
+		//			return 1
+		//		}
+		//	}
 	}
 	return v
 }

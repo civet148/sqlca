@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/civet148/gotools/log"
 	"github.com/civet148/sqlca"
 	"time"
@@ -150,11 +149,12 @@ func OrmInsertByModel(e *sqlca.Engine) {
 
 	user := UserDO{
 		//Id:    0,
-		Name:      "admin",
-		Phone:     "8618600000000",
+		Name:      "lory",
+		Phone:     "+8618682371690",
 		Sex:       1,
-		Balance:   sqlca.NewDecimal("123.45"),
-		Email:     "admin@golang.org",
+		Balance:   sqlca.NewDecimal("123.456"),
+		Email:     "true",
+		Disable:   true,
 		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
 		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
 	}
@@ -167,27 +167,27 @@ func OrmInsertByModel(e *sqlca.Engine) {
 		log.Infof("insert data model [%+v] exclude created_at and updated_at ok, last insert id [%v]", user, lastInsertId)
 	}
 
-	//bulk insert
-	var users []UserDO
-	for i := 0; i < 3; i++ {
-		users = append(users, UserDO{
-			Id:        0,
-			Name:      fmt.Sprintf("name(%v)", i),
-			Phone:     fmt.Sprintf("phone(%v)", i),
-			Sex:       0,
-			Email:     "xxx@gmail.com",
-			Disable:   false,
-			Balance:   sqlca.NewDecimal(i),
-			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-		})
-	}
-	//bulk insert from model slice except 'email', 'created_at', 'updated_at' column
-	if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Exclude("email", "created_at", "updated_at").Insert(); err != nil {
-		log.Errorf("bulk insert data model [%+v] error [%v]", users, err.Error())
-	} else {
-		log.Infof("bulk insert data model [%+v] exclude email, created_at and updated_at ok, last insert id [%v]", users, lastInsertId)
-	}
+	////bulk insert
+	//var users []UserDO
+	//for i := 0; i < 3; i++ {
+	//	users = append(users, UserDO{
+	//		Id:        0,
+	//		Name:      fmt.Sprintf("name(%v)", i),
+	//		Phone:     fmt.Sprintf("phone(%v)", i),
+	//		Sex:       0,
+	//		Email:     "xxx@gmail.com",
+	//		Disable:   false,
+	//		Balance:   sqlca.NewDecimal(i),
+	//		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
+	//		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
+	//	})
+	//}
+	////bulk insert from model slice except 'email', 'created_at', 'updated_at' column
+	//if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Exclude("email", "created_at", "updated_at").Insert(); err != nil {
+	//	log.Errorf("bulk insert data model [%+v] error [%v]", users, err.Error())
+	//} else {
+	//	log.Infof("bulk insert data model [%+v] exclude email, created_at and updated_at ok, last insert id [%v]", users, lastInsertId)
+	//}
 }
 
 func OrmUpsertByModel(e *sqlca.Engine) {

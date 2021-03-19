@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	VERSION = "v1.3.9"
+	SSH_SCHEME = "ssh://"
+	VERSION    = "v1.3.9"
 )
 
 var argvUrl = flag.String("url", "", "mysql://root:123456@127.0.0.1:3306/test?charset=utf8")
@@ -38,7 +39,7 @@ var argvJsonProperties = flag.String("json-properties", "", "custom properties f
 var argvStruct = flag.Bool("struct", false, "generate struct getter and setter")
 var argvVersion = flag.Bool("version", false, "print version")
 var argvTinyintAsBool = flag.String("tinyint-as-bool", "", "convert tinyint columns redeclare as bool")
-var argvSSH = flag.String("ssh", "", "ssh tunnel e.g root:123456@192.168.1.23:22")
+var argvSSH = flag.String("ssh", "", "ssh tunnel e.g ssh://root:123456@192.168.1.23:22")
 
 func init() {
 	flag.Parse()
@@ -60,6 +61,12 @@ func main() {
 	cmd.OmitEmpty = *argvOmitEmpty
 	cmd.Struct = *argvStruct
 	cmd.SSH = *argvSSH
+
+	if cmd.SSH != "" {
+		if !strings.Contains(cmd.SSH, SSH_SCHEME) {
+			cmd.SSH = SSH_SCHEME + cmd.SSH
+		}
+	}
 
 	if *argvVersion {
 		fmt.Printf("version %s\n", VERSION)

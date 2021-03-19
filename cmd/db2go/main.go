@@ -38,6 +38,7 @@ var argvJsonProperties = flag.String("json-properties", "", "custom properties f
 var argvStruct = flag.Bool("struct", false, "generate struct getter and setter")
 var argvVersion = flag.Bool("version", false, "print version")
 var argvTinyintAsBool = flag.String("tinyint-as-bool", "", "convert tinyint columns redeclare as bool")
+var argvSSH = flag.String("ssh", "", "ssh tunnel e.g root:123456@192.168.1.23:22")
 
 func init() {
 	flag.Parse()
@@ -58,6 +59,7 @@ func main() {
 	cmd.Orm = *argvOrm
 	cmd.OmitEmpty = *argvOmitEmpty
 	cmd.Struct = *argvStruct
+	cmd.SSH = *argvSSH
 
 	if *argvVersion {
 		fmt.Printf("version %s\n", VERSION)
@@ -125,8 +127,24 @@ func main() {
 		cmd.Host = ui.Host
 		cmd.User = ui.User
 		cmd.Password = ui.Password
-		cmd.Engine = sqlca.NewEngine(cmd.ConnUrl)
+		cmd.Engine = sqlca.NewEngine(cmd.ConnUrl, tunnelOption(cmd.SSH))
+
 		export(&cmd, cmd.Engine)
+	}
+}
+
+func tunnelOption(strSSH string) *sqlca.Options {
+	if strSSH == "" {
+		return nil
+	}
+	ssh := sqlca.ParseUrl(strSSH)
+
+	return &sqlca.Options{
+		SSH: &sqlca.SSH{
+			User:     ssh.User,
+			Password: ssh.Password,
+			Host:     ssh.Host,
+		},
 	}
 }
 

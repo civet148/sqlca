@@ -47,6 +47,7 @@ type Commander struct {
 	TinyintAsBool  []string      `json:"TinyintAsBool,omitempty"`
 	Engine         *sqlca.Engine `json:"-"`
 	JsonProperties string        `json:"-"`
+	SSH            string        `json:"ssh"`
 }
 
 func (c *Commander) String() string {

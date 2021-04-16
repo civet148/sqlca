@@ -568,11 +568,15 @@ func (e *Engine) appendStrings(src []string, dest ...string) []string {
 }
 
 func (e *Engine) setSelectColumns(strColumns ...string) {
-	e.selectColumns = strColumns
+	if len(strColumns) > 0 {
+		e.selectColumns = strColumns
+	}
 }
 
 func (e *Engine) setExcludeColumns(strColumns ...string) {
-	e.excludeColumns = e.appendStrings(e.excludeColumns, strColumns...)
+	if len(strColumns) > 0 {
+		e.excludeColumns = e.appendStrings(e.excludeColumns, strColumns...)
+	}
 }
 
 func (e *Engine) getSelectColumns() (strColumns []string) {
@@ -580,15 +584,21 @@ func (e *Engine) getSelectColumns() (strColumns []string) {
 }
 
 func (e *Engine) setAscColumns(strColumns ...string) {
-	e.ascColumns = e.appendStrings(e.ascColumns, strColumns...)
+	if len(strColumns) > 0 {
+		e.ascColumns = e.appendStrings(e.ascColumns, strColumns...)
+	}
 }
 
 func (e *Engine) setDescColumns(strColumns ...string) {
-	e.descColumns = e.appendStrings(e.descColumns, strColumns...)
+	if len(strColumns) > 0 {
+		e.descColumns = e.appendStrings(e.descColumns, strColumns...)
+	}
 }
 
 func (e *Engine) setCustomizeUpdates(strUpdates ...string) {
-	e.strUpdates = strUpdates
+	if len(strUpdates) > 0 {
+		e.strUpdates = strUpdates
+	}
 }
 
 func (e *Engine) getCustomizeUpdates() []string {
@@ -660,7 +670,9 @@ func (e *Engine) setOperType(operType OperType) {
 }
 
 func (e *Engine) setConflictColumns(strColumns ...string) {
-	e.conflictColumns = e.appendStrings(e.conflictColumns, strColumns...)
+	if len(strColumns) > 0 {
+		e.conflictColumns = e.appendStrings(e.conflictColumns, strColumns...)
+	}
 }
 
 func (e *Engine) getConflictColumns() []string {
@@ -744,7 +756,9 @@ func (e *Engine) getOffset() string {
 }
 
 func (e *Engine) setOrderBy(strColumns ...string) {
-	e.orderByColumns = e.appendStrings(e.orderByColumns, strColumns...)
+	if len(strColumns) > 0 {
+		e.orderByColumns = e.appendStrings(e.orderByColumns, strColumns...)
+	}
 }
 
 func (e *Engine) getOrderBy() (strOrderBy string) {
@@ -756,7 +770,9 @@ func (e *Engine) getOrderBy() (strOrderBy string) {
 }
 
 func (e *Engine) setGroupBy(strColumns ...string) {
-	e.groupByColumns = e.appendStrings(e.groupByColumns, strColumns...)
+	if len(strColumns) > 0 {
+		e.groupByColumns = e.appendStrings(e.groupByColumns, strColumns...)
+	}
 }
 
 func (e *Engine) setHaving(havingCondition string) {

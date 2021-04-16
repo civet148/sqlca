@@ -989,7 +989,10 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 
 	if len(cols) == 0 {
 		//may be model is a base type slice
-		args := e.model.([]interface{})
+		args, ok := e.model.([]interface{})
+		if !ok {
+			return
+		}
 		count := len(args)
 		//log.Debugf("args count [%v] values [%+v]", count, args)
 		for i, k := range strColumns {

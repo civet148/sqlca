@@ -5,7 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"github.com/civet148/gotools/log"
+	"github.com/civet148/log"
 	"reflect"
 	"strconv"
 	"strings"

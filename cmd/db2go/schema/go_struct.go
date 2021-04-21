@@ -2,7 +2,7 @@ package schema
 
 import (
 	"fmt"
-	"github.com/civet148/gotools/log"
+	"github.com/civet148/log"
 	"github.com/civet148/sqlca"
 	"os"
 	"strings"

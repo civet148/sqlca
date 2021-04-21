@@ -3,9 +3,9 @@ package sqlca
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/civet148/gotools/log"
 	"github.com/civet148/gotools/wss"
 	_ "github.com/civet148/gotools/wss/tcpsock" //required (register socket instance)
+	"github.com/civet148/log"
 	"github.com/elliotchance/sshtunnel"
 	"golang.org/x/crypto/ssh"
 	"net"

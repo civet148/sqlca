@@ -2,7 +2,7 @@ package mysql
 
 import (
 	"fmt"
-	"github.com/civet148/gotools/log"
+	"github.com/civet148/log"
 	"github.com/civet148/sqlca"
 	"github.com/civet148/sqlca/cmd/db2go/schema"
 	"os"

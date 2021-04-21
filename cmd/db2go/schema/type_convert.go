@@ -1,7 +1,7 @@
 package schema
 
 import (
-	"github.com/civet148/gotools/log"
+	"github.com/civet148/log"
 	"strings"
 )
 

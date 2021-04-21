@@ -3,7 +3,7 @@ package sqlca
 import (
 	"database/sql"
 	"fmt"
-	"github.com/civet148/gotools/log"
+	"github.com/civet148/log"
 	"github.com/jmoiron/sqlx"
 	"math/rand"
 	"reflect"

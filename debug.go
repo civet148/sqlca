@@ -2,7 +2,7 @@ package sqlca
 
 import (
 	"fmt"
-	"github.com/civet148/gotools/log"
+	"github.com/civet148/log"
 	"reflect"
 	"runtime"
 	"strings"

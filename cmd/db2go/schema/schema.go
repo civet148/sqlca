@@ -3,7 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/civet148/gotools/log"
+	"github.com/civet148/log"
 	"github.com/civet148/sqlca"
 	"os"
 	"strings"

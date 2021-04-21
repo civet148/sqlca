@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/civet148/gotools/log"
+	"github.com/civet148/log"
 	"github.com/civet148/sqlca"
 	_ "github.com/civet148/sqlca/cmd/db2go/mssql"
 	_ "github.com/civet148/sqlca/cmd/db2go/mysql"

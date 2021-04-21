@@ -1200,7 +1200,21 @@ func (e *Engine) makeInCondition(cond condition) (strCondition string) {
 
 	var strValues []string
 	for _, v := range cond.ColumnValues {
-		strValues = append(strValues, fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()))
+
+		var typ = reflect.TypeOf(v)
+		var val = reflect.ValueOf(v)
+		switch typ.Kind() {
+		case reflect.Slice:
+			{
+				n := val.Len()
+				for i := 0; i < n; i++ {
+					strValues = append(strValues, fmt.Sprintf("%v%v%v", e.getSingleQuote(), val.Index(i).Interface(), e.getSingleQuote()))
+				}
+			}
+		default:
+			strValues = append(strValues, fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()))
+		}
+
 	}
 	strCondition = fmt.Sprintf("%v %v (%v)", cond.ColumnName, DATABASE_KEY_NAME_IN, strings.Join(strValues, ","))
 	return

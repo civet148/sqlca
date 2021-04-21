@@ -440,7 +440,7 @@ func OrmInCondition(e *sqlca.Engine) {
 	if rows, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
 		//Where("id > 2").
-		In("id", 1, 3, 6, 7).
+		In("id", []int32{1, 3, 6, 7}).
 		In("disable", 0, 1).
 		Or("created_at > ?", "2020-06-01 00:00:00").
 		Query(); err != nil {

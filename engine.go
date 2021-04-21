@@ -361,6 +361,9 @@ func (e *Engine) Limit(args ...int) *Engine {
 //page query
 //SELECT ... FROM ... WHERE ... LIMIT (pageNo*pageSize), pageSize
 func (e *Engine) Page(pageNo, pageSize int) *Engine {
+	if pageNo < 0 || pageSize == 0 {
+		return e
+	}
 	return e.Limit(pageNo*pageSize, pageSize)
 }
 

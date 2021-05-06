@@ -38,6 +38,11 @@ func NewDecimal(v interface{}) (d Decimal) {
 		d.dec = decimal.NewFromFloat32(v.(float32))
 	case float64:
 		d.dec = decimal.NewFromFloat(v.(float64))
+	case []byte:
+		if d.dec, err = decimal.NewFromString(string(v.([]byte))); err != nil {
+			log.Errorf(" decimal.NewFromString return error [%v]", err.Error())
+			panic(err.Error())
+		}
 	case string:
 		if d.dec, err = decimal.NewFromString(v.(string)); err != nil {
 			log.Errorf(" decimal.NewFromString return error [%v]", err.Error())

@@ -100,7 +100,7 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 	for i, v := range table.Columns {
 		table.Columns[i].Comment = ReplaceCRLF(v.Comment)
 	}
-	if cmd.Orm || (haveDecimal(table, table.Columns) && cmd.EnableDecimal) {
+	if haveDecimal(table, table.Columns, cmd.EnableDecimal) {
 		strHead += IMPORT_SQLCA + "\n\n" //根据数据库中是否存在decimal类型决定是否导入sqlca包
 	}
 
@@ -114,9 +114,9 @@ func ExportTableColumns(cmd *Commander, table *TableSchema) (err error) {
 	return
 }
 
-func haveDecimal(table *TableSchema, TableCols []TableColumn) (ok bool) {
+func haveDecimal(table *TableSchema, TableCols []TableColumn, enableDecimal bool) (ok bool) {
 	for _, v := range TableCols {
-		_, ok = GetGoColumnType(table.TableName, v, false, nil)
+		_, ok = GetGoColumnType(table.TableName, v, enableDecimal, nil)
 		if ok {
 			break
 		}

@@ -321,6 +321,7 @@ func GetGoColumnType(strTableName string, col TableColumn, enableDecimal bool, t
 		if !enableDecimal {
 			strGoColType = "float64"
 		} else {
+			isDecimal = true
 			strGoColType = "sqlca.Decimal"
 		}
 	}

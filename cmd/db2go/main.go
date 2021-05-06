@@ -134,7 +134,11 @@ func main() {
 		cmd.Host = ui.Host
 		cmd.User = ui.User
 		cmd.Password = ui.Password
-		cmd.Engine = sqlca.NewEngine(cmd.ConnUrl, tunnelOption(cmd.SSH))
+		if strings.TrimSpace(cmd.SSH) != "" {
+			cmd.Engine = sqlca.NewEngine(cmd.ConnUrl, tunnelOption(cmd.SSH))
+		} else {
+			cmd.Engine = sqlca.NewEngine(cmd.ConnUrl)
+		}
 
 		export(&cmd, cmd.Engine)
 	}

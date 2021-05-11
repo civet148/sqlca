@@ -572,6 +572,9 @@ func (e *Engine) fetchToScanner(fetcher *Fetcher, field reflect.StructField, val
 	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
 		vp := val.Addr()
 		d := vp.Interface().(sql.Scanner)
+		if v == "" {
+			return
+		}
 		if err := d.Scan(v); err != nil {
 			log.Errorf("scan '%v' to scanner [%+v] error [%+v]", v, vp.Interface(), err.Error())
 		}

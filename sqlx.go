@@ -571,15 +571,16 @@ func (e *Engine) appendStrings(src []string, dest ...string) []string {
 	return src
 }
 
-func (e *Engine) setSelectColumns(strColumns ...string) {
-	if len(strColumns) > 0 {
-		if e.selected {
-			e.selectColumns = e.appendStrings(e.selectColumns, strColumns...)
-		} else {
-			e.selected = true
-			e.selectColumns = strColumns
-		}
+func (e *Engine) setSelectColumns(strColumns ...string) (ok bool) {
+	if len(strColumns) == 0 {
+		return false
 	}
+	if e.selected {
+		e.selectColumns = e.appendStrings(e.selectColumns, strColumns...)
+	} else {
+		e.selectColumns = strColumns
+	}
+	return true
 }
 
 func (e *Engine) setExcludeColumns(strColumns ...string) {

@@ -231,7 +231,7 @@ func OrmUpdateByModel(e *sqlca.Engine) {
 	}
 
 	//SQL: update users set name='john', phone='8618699999999', sex='1', email='john@gmail.com' where id='1'... exclude created_at and updated_at
-	if rowsAffected, err := e.Model(&user).Table(TABLE_NAME_USERS).Id(1).Exclude("created_at", "updated_at").Update(); err != nil {
+	if rowsAffected, err := e.Model(&user).Table(TABLE_NAME_USERS).Select("phone", "sex", "name", "email").Id(1).Exclude("created_at", "updated_at").Update(); err != nil {
 		log.Errorf("update data model [%+v] error [%v]", user, err.Error())
 	} else {
 		log.Infof("update data model [%+v] exclude created_at and updated_at ok, rows affected [%v]", user, rowsAffected)

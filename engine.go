@@ -289,7 +289,9 @@ func (e *Engine) Id(value interface{}) *Engine {
 
 // orm select/update columns
 func (e *Engine) Select(strColumns ...string) *Engine {
-	e.setSelectColumns(strColumns...)
+	if e.setSelectColumns(strColumns...) {
+		e.selected = true
+	}
 	return e
 }
 

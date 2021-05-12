@@ -79,6 +79,7 @@ type Engine struct {
 	nearby          *nearby                // nearby
 	strUpdates      []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
 	joins           []*Join                //inner/left/right/full-outer join(s)
+	selected        bool
 }
 
 func init() {

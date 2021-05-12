@@ -573,7 +573,12 @@ func (e *Engine) appendStrings(src []string, dest ...string) []string {
 
 func (e *Engine) setSelectColumns(strColumns ...string) {
 	if len(strColumns) > 0 {
-		e.selectColumns = e.appendStrings(e.selectColumns, strColumns...)
+		if e.selected {
+			e.selectColumns = e.appendStrings(e.selectColumns, strColumns...)
+		} else {
+			e.selected = true
+			e.selectColumns = strColumns
+		}
 	}
 }
 

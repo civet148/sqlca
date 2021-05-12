@@ -67,6 +67,10 @@ const (
 	DATABASE_KEY_NAME_LEFT_JOIN  = "LEFT JOIN"
 	DATABASE_KEY_NAME_RIGHT_JOIN = "RIGHT JOIN"
 	DATABASE_KEY_NAME_FULL_JOIN  = "FULL OUTER JOIN" //MSSQL-SERVER
+	DATABASE_KEY_NAME_SUM        = "SUM"
+	DATABASE_KEY_NAME_AVG        = "AVG"
+	DATABASE_KEY_NAME_MIN        = "MIN"
+	DATABASE_KEY_NAME_MAX        = "MAX"
 )
 
 type AdapterType int
@@ -1346,4 +1350,14 @@ func (e *Engine) autoRollback() {
 		_ = e.tx.Rollback()
 		log.Debugf("tx auto rollback successful")
 	}
+}
+
+func (e *Engine) groupFunc(strKey, strColumn string, strAS ...string) string {
+	var strAlias string
+	if len(strAS) == 0 {
+		strAlias = strColumn
+	} else {
+		strAlias = strAS[0]
+	}
+	return fmt.Sprintf("%s(%s) AS %s", strKey, strColumn, strAlias)
 }

@@ -246,6 +246,8 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 
 	//SQL: select id, name, phone from users where id=1
 	//e.Model(&user).Table(TABLE_NAME_USERS).Id(1).Select("id", "name", "phone").Query();
+	c, _ := e.Model(user).Table(TABLE_NAME_USERS).Select("id").Id(1).Count()
+	log.Debugf("users table record count (%d)", c)
 
 	// select * from users where id=1
 	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Query(); err != nil {

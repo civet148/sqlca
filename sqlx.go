@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"math/rand"
 	"reflect"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -1190,7 +1191,17 @@ func (e *Engine) makeSqlxQueryPrimaryKey() (strSql string) {
 	return
 }
 
-func (e *Engine) makeSqlxString() (strSql string) {
+func (e *Engine) getCaller(skip int) (strFunc string) {
+	pc, _, _, ok := runtime.Caller(skip)
+	if ok {
+		n := runtime.FuncForPC(pc).Name()
+		ns := strings.Split(n, ".")
+		strFunc = ns[len(ns)-1]
+	}
+	return
+}
+
+func (e *Engine) makeSQL() (strSql string) {
 
 	switch e.operType {
 	case OperType_Query:
@@ -1207,8 +1218,7 @@ func (e *Engine) makeSqlxString() (strSql string) {
 		log.Errorf("operation illegal")
 	}
 	strSql = strings.TrimSpace(strSql)
-	log.Debugf("[%v] SQL [%s]", e.operType, strSql)
-
+	log.Debugf("[%v] SQL [%s]", e.getCaller(3), strSql)
 	return
 }
 

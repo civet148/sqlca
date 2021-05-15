@@ -464,7 +464,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 
 	e.setOperType(OperType_Query)
 
-	strSql := e.makeSqlxString()
+	strSql := e.makeSQL()
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
 
@@ -501,7 +501,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 
 	e.setOperType(OperType_Insert)
 	var strSql string
-	strSql = e.makeSqlxString()
+	strSql = e.makeSQL()
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Insert [%s]", strSql))
 
@@ -557,7 +557,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 
 	e.setOperType(OperType_Upsert)
 	var strSql string
-	strSql = e.makeSqlxString()
+	strSql = e.makeSQL()
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Upsert [%s]", strSql))
 	db := e.getMaster()
@@ -604,7 +604,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 
 	var r sql.Result
 	var strSql string
-	strSql = e.makeSqlxString()
+	strSql = e.makeSQL()
 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Update [%s]", strSql))
@@ -627,7 +627,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 // orm delete record(s) from db and cache
 func (e *Engine) Delete() (rowsAffected int64, err error) {
 	e.setOperType(OperType_Delete)
-	strSql := e.makeSqlxString()
+	strSql := e.makeSQL()
 	defer e.cleanWhereCondition()
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Delete [%s]", strSql))

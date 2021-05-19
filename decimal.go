@@ -296,11 +296,11 @@ func (d Decimal) MarshalBinary() (data []byte, err error) {
 //	return d.dec.UnmarshalJSON(data)
 //}
 //
-//// MarshalBSON implements the bson.Marshaler interface.
+// MarshalBSON implements the bson.Marshaler interface.
 //func (d Decimal) MarshalBSONValue() (bsontype.Type, []byte, error) {
-//	v, err := d.dec.MarshalJSON()
-//	return bsontype.String, v, err
+//	return bsontype.String, []byte(d.dec.String()), nil
 //}
+//
 //// UnmarshalBSON implements the bson.Unmarshaler interface.
 //func (d *Decimal) UnmarshalBSONValue(_ bsontype.Type, data []byte) error {
 //	return d.dec.UnmarshalJSON(data)
@@ -308,15 +308,14 @@ func (d Decimal) MarshalBinary() (data []byte, err error) {
 //
 //// GetBSON implements the bson.Getter interface (mgo.v2)
 //func (d Decimal) GetBSON() (interface{}, error) {
-//	data, err := d.dec.MarshalJSON()
-//	return string(data), err
+//	return d.dec.String(), nil
 //}
 //
 //// SetBSON implements the bson.Setter interface (mgo.v2)
 //func (d *Decimal) SetBSON(raw bson.Raw) error {
 //	var strData string
 //	if err := raw.Unmarshal(&strData); err != nil {
-//		fmt.Printf("SetBSON unmarshal raw [%+v] error [%s]", raw, err)
+//		fmt.Printf("SetBSON unmarshal raw [%+v] error [%s]\n", raw, err)
 //		return err
 //	}
 //	return d.dec.UnmarshalJSON([]byte(strData))

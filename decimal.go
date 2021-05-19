@@ -2,8 +2,10 @@ package sqlca
 
 import (
 	"database/sql/driver"
-	"github.com/civet148/log"
+	"fmt"
+	//"go.mongodb.org/mongo-driver/bson/bsontype"
 	"github.com/shopspring/decimal"
+	//"gopkg.in/mgo.v2/bson"
 )
 
 type Decimal struct {
@@ -40,12 +42,12 @@ func NewDecimal(v interface{}) (d Decimal) {
 		d.dec = decimal.NewFromFloat(v.(float64))
 	case []byte:
 		if d.dec, err = decimal.NewFromString(string(v.([]byte))); err != nil {
-			log.Errorf(" decimal.NewFromString return error [%v]", err.Error())
+			fmt.Printf(" decimal.NewFromString return error [%v]\n", err.Error())
 			panic(err.Error())
 		}
 	case string:
 		if d.dec, err = decimal.NewFromString(v.(string)); err != nil {
-			log.Errorf(" decimal.NewFromString return error [%v]", err.Error())
+			fmt.Printf(" decimal.NewFromString return error [%v]", err.Error())
 			panic(err.Error())
 		}
 	default:
@@ -283,6 +285,50 @@ func (d *Decimal) UnmarshalJSON(decimalBytes []byte) error {
 func (d Decimal) MarshalBinary() (data []byte, err error) {
 	return d.dec.MarshalBinary()
 }
+
+//
+//// MarshalBSON implements the bson.Marshaler interface.
+//func (d Decimal) MarshalBSON() ([]byte, error) {
+//	return d.dec.MarshalJSON()
+//}
+//
+//func (d *Decimal) UnmarshalBSON(data []byte) error {
+//	return d.dec.UnmarshalJSON(data)
+//}
+//
+//// MarshalBSON implements the bson.Marshaler interface.
+//func (d Decimal) MarshalBSONValue() (bsontype.Type, []byte, error) {
+//	v, err := d.dec.MarshalJSON()
+//	return bsontype.String, v, err
+//}
+//// UnmarshalBSON implements the bson.Unmarshaler interface.
+//func (d *Decimal) UnmarshalBSONValue(_ bsontype.Type, data []byte) error {
+//	return d.dec.UnmarshalJSON(data)
+//}
+//
+//// GetBSON implements the bson.Getter interface (mgo.v2)
+//func (d Decimal) GetBSON() (interface{}, error) {
+//	data, err := d.dec.MarshalJSON()
+//	return string(data), err
+//}
+//
+//// SetBSON implements the bson.Setter interface (mgo.v2)
+//func (d *Decimal) SetBSON(raw bson.Raw) error {
+//	var strData string
+//	if err := raw.Unmarshal(&strData); err != nil {
+//		fmt.Printf("SetBSON unmarshal raw [%+v] error [%s]", raw, err)
+//		return err
+//	}
+//	return d.dec.UnmarshalJSON([]byte(strData))
+//}
+//
+//func (d Decimal) Marshal() ([]byte, error) {
+//	return d.dec.MarshalJSON()
+//}
+//
+//func (d *Decimal) Unmarshal(data []byte) error {
+//	return d.dec.UnmarshalJSON(data)
+//}
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface. As a string representation
 // is already used when encoding to text, this method stores that string as []byte

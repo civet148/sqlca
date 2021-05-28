@@ -313,12 +313,22 @@ func (d Decimal) MarshalBinary() (data []byte, err error) {
 //
 //// SetBSON implements the bson.Setter interface (mgo.v2)
 //func (d *Decimal) SetBSON(raw bson.Raw) error {
+//	var err error
 //	var strData string
-//	if err := raw.Unmarshal(&strData); err != nil {
-//		fmt.Printf("SetBSON unmarshal raw [%+v] error [%s]\n", raw, err)
-//		return err
+//	if err = raw.Unmarshal(&strData); err != nil {
+//		var d128 bson.Decimal128
+//		if err = raw.Unmarshal(&d128); err != nil {
+//			fmt.Printf("SetBSON call raw.Unmarshal to decimal128 error [%s]\n", err)
+//			return err
+//		}
+//		*d = NewDecimal(d128.String())
+//	} else {
+//		if err = d.dec.UnmarshalJSON([]byte(strData)); err != nil {
+//			fmt.Printf("SetBSON call dec.UnmarshalJSON [%s] error [%s]\n", strData, err)
+//			return err
+//		}
 //	}
-//	return d.dec.UnmarshalJSON([]byte(strData))
+//	return nil
 //}
 //
 //func (d Decimal) Marshal() ([]byte, error) {

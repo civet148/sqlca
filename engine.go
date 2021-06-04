@@ -447,10 +447,29 @@ func (e *Engine) Slave() *Engine {
 // SELECT COUNT(*) FROM table WHERE ...
 // count, err := e.Model(nil).Table("users").Where("delete=1").Count()
 func (e *Engine) Count() (count int64, err error) {
-	e.setModel(&count)
+	if e.model == nil {
+		e.setModel(&count)
+	}
 	e.setSelectColumnsForce("COUNT(*)")
-	_, err = e.Query()
-	return
+	assert(e.strTableName, "table name not found")
+	defer e.cleanWhereCondition()
+
+	e.setOperType(OperType_Query)
+
+	strSql := e.makeSQL()
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
+
+	var rows *sql.Rows
+
+	db := e.getQueryDB()
+	if rows, err = db.Query(strSql); err != nil {
+		log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		return
+	}
+
+	defer rows.Close()
+	return e.fetchRows(rows)
 }
 
 // orm query

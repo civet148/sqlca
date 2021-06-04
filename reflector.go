@@ -130,13 +130,26 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 			if !valField.IsValid() || !valField.CanInterface() {
 				continue
 			}
-			//log.Debugf("reflect.Struct field [%v] kind [%+v]", i, typField.Type.Kind())
+
 			if typField.Type.Kind() == reflect.Struct {
 
 				if _, ok := valField.Interface().(driver.Valuer); ok {
 					s.parseValuer(typField, valField, tagNames...)
 				} else {
-					s.parseStructField(typField.Type, valField, tagNames...) //recurse every field that type is a struct
+					tagVal, ignore := s.getTag(typField, TAG_NAME_DB)
+					if ignore {
+						continue
+					}
+					if tagVal == "" {
+						s.parseStructField(typField.Type, valField, tagNames...) //recurse every field that type is a struct
+					} else {
+						data, err := json.Marshal(valField.Interface())
+						if err != nil {
+							fmt.Printf("[sqlca] marshal struct failed error [%s]\n", err.Error())
+							continue
+						}
+						s.dict[tagVal] = string(data)
+					}
 				}
 			} else {
 				s.setValueByField(typField, valField, tagNames...) // save field tag value and field value to map

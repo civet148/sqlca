@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca"
 	"time"
@@ -17,6 +16,11 @@ type UserData struct {
 	Female bool  `db:"female" json:"female"`
 }
 
+type ExtraData struct {
+	Available float64 `db:"available"`
+	BankCard  string  `db:"bank_card"`
+}
+
 type UserDO struct {
 	Id        int32         `db:"id"`
 	Name      string        `db:"name"`
@@ -29,6 +33,7 @@ type UserDO struct {
 	UpdatedAt string        `db:"updated_at" sqlca:"readonly"`
 	IgnoreMe  string        `db:"-"`
 	SexName   string        `db:"sex_name" sqlca:"readonly"`
+	ExtraData ExtraData     `db:"extra_data"`
 }
 
 type ClassDo struct {
@@ -158,6 +163,10 @@ func OrmInsertByModel(e *sqlca.Engine) {
 		Disable:   true,
 		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
 		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
+		ExtraData: ExtraData{
+			Available: 23.003,
+			BankCard:  "622588339993321",
+		},
 	}
 	log.Debugf("user [%+v]", user)
 
@@ -168,27 +177,27 @@ func OrmInsertByModel(e *sqlca.Engine) {
 		log.Infof("insert data model [%+v] exclude created_at and updated_at ok, last insert id [%v]", user, lastInsertId)
 	}
 
-	//bulk insert
-	var users []UserDO
-	for i := 0; i < 3; i++ {
-		users = append(users, UserDO{
-			Id:        0,
-			Name:      fmt.Sprintf("name(%v)", i),
-			Phone:     fmt.Sprintf("phone(%v)", i),
-			Sex:       0,
-			Email:     "true",
-			Disable:   true,
-			Balance:   sqlca.NewDecimal(i),
-			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-		})
-	}
-	//bulk insert from model slice except 'created_at', 'updated_at' column
-	if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Exclude("created_at", "updated_at").Insert(); err != nil {
-		log.Errorf("bulk insert data model [%+v] error [%v]", users, err.Error())
-	} else {
-		log.Infof("bulk insert data model [%+v] exclude email, created_at and updated_at ok, last insert id [%v]", users, lastInsertId)
-	}
+	////bulk insert
+	//var users []UserDO
+	//for i := 0; i < 3; i++ {
+	//	users = append(users, UserDO{
+	//		Id:        0,
+	//		Name:      fmt.Sprintf("name(%v)", i),
+	//		Phone:     fmt.Sprintf("phone(%v)", i),
+	//		Sex:       0,
+	//		Email:     "true",
+	//		Disable:   true,
+	//		Balance:   sqlca.NewDecimal(i),
+	//		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
+	//		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
+	//	})
+	//}
+	////bulk insert from model slice except 'created_at', 'updated_at' column
+	//if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Exclude("created_at", "updated_at").Insert(); err != nil {
+	//	log.Errorf("bulk insert data model [%+v] error [%v]", users, err.Error())
+	//} else {
+	//	log.Infof("bulk insert data model [%+v] exclude email, created_at and updated_at ok, last insert id [%v]", users, lastInsertId)
+	//}
 }
 
 func OrmUpsertByModel(e *sqlca.Engine) {
@@ -253,7 +262,7 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Query(); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", user, err.Error())
 	} else {
-		log.Infof("query into model [%+v] ok, rows affected [%v]", user, rowsAffected)
+		log.Infof("query into user model [%+v] ok, rows affected [%v], extra data available [%v]", user, rowsAffected, user.ExtraData.Available)
 	}
 }
 

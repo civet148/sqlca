@@ -469,7 +469,8 @@ func (e *Engine) Count() (count int64, err error) {
 	}
 
 	defer rows.Close()
-	return e.fetchRows(rows)
+	_, _ = e.fetchRows(rows)
+	return
 }
 
 // orm query

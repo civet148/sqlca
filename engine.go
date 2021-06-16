@@ -501,6 +501,47 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	return e.fetchRows(rows)
 }
 
+// orm query with total count
+// return rows affected and error, if err is not nil must be something wrong
+// NOTE: Model function is must be called before call this function
+// if slave == true, try query from a slave connection, if not exist query from master
+func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
+	//assert(e.model, "model is nil, please call Model method first")
+	assert(e.strTableName, "table name not found")
+	defer e.cleanWhereCondition()
+
+	e.setOperType(OperType_Query)
+
+	strSql := e.makeSQL()
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
+
+	var rowsQuery, rowsCount *sql.Rows
+	dbQuery := e.getQueryDB()
+	if rowsQuery, err = dbQuery.Query(strSql); err != nil {
+		log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		return
+	}
+
+	defer rowsQuery.Close()
+	if rowsAffected, err = e.fetchRows(rowsQuery); err != nil {
+		return
+	}
+
+	strCountSql := e.makeSqlxQueryCount()
+	dbCount := e.getQueryDB()
+	if rowsCount, err = dbCount.Query(strCountSql); err != nil {
+		log.Errorf("query [%v] error [%v]", strCountSql, err.Error())
+		return
+	}
+
+	defer rowsCount.Close()
+	for rowsCount.Next() {
+		rowsCount.Scan(&total)
+	}
+	return
+}
+
 // orm find with customer conditions (map[string]interface{})
 func (e *Engine) Find(conditions map[string]interface{}) (rowsAffected int64, err error) {
 	assert(len(conditions), "find condition is nil")

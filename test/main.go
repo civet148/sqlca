@@ -146,6 +146,7 @@ func Direct(e *sqlca.Engine) {
 	BuiltInSliceQuery(e)
 	QueryJSON(e)
 	BoolConvert(e)
+	QueryEx(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -962,6 +963,17 @@ func QueryJSON(e *sqlca.Engine) {
 		return
 	}
 	log.Infof("user results to JSON %s", strJsonResults)
+}
+
+func QueryEx(e *sqlca.Engine) {
+
+	var users []UserDO
+	rows, total, err := e.Model(&users).Table(TABLE_NAME_USERS).Limit(2).QueryEx()
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
+	log.Infof("user rows [%d] total [%d]", rows, total)
 }
 
 func JsonStructQuery(e *sqlca.Engine) {

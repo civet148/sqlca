@@ -915,6 +915,9 @@ func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 	}
 	return
 }
+func (e *Engine) getCountColumn() string {
+	return "COUNT(*)"
+}
 
 func (e *Engine) getRawColumns() (strColumns string) {
 	var selectCols []string
@@ -1313,6 +1316,22 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), e.getLimit(), e.getOffset())
 	}
 
+	return
+}
+
+func (e *Engine) makeSqlxQueryCount() (strSqlx string) {
+	strWhere := e.makeWhereCondition()
+
+	switch e.adapterSqlx {
+	case AdapterSqlx_Mssql:
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getCountColumn(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
+	default:
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getCountColumn(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), e.getOffset())
+	}
 	return
 }
 

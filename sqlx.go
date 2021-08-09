@@ -72,6 +72,7 @@ const (
 	DATABASE_KEY_NAME_AVG        = "AVG"
 	DATABASE_KEY_NAME_MIN        = "MIN"
 	DATABASE_KEY_NAME_MAX        = "MAX"
+	DATABASE_KEY_NAME_COUNT      = "COUNT"
 )
 
 type AdapterType int

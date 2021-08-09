@@ -254,11 +254,6 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 
 	user := &UserDO{}
 
-	//SQL: select id, name, phone from users where id=1
-	//e.Model(&user).Table(TABLE_NAME_USERS).Id(1).Select("id", "name", "phone").Query();
-	c, _ := e.Model(user).Table(TABLE_NAME_USERS).Select("id").Id(1).Count()
-	log.Debugf("users table record count (%d)", c)
-
 	// select * from users where id=1
 	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Query(); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", user, err.Error())
@@ -731,12 +726,13 @@ func DuplicateUpdateGetId(e *sqlca.Engine) {
 }
 
 func Count(e *sqlca.Engine) {
-
-	if count, err := e.Model(nil).
+	var count int64
+	if _, err := e.Model(&count).
+		Count("id", "id_count").
 		Table(TABLE_NAME_USERS).
 		Where("created_at > ?", "2020-06-01 02:03:04").
 		And("disable=0").
-		Count(); err != nil {
+		Query(); err != nil {
 
 		log.Errorf("error [%v]", err.Error())
 	} else {

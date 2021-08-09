@@ -443,36 +443,6 @@ func (e *Engine) Slave() *Engine {
 	return e
 }
 
-// orm count records
-// SELECT COUNT(*) FROM table WHERE ...
-// count, err := e.Model(nil).Table("users").Where("delete=1").Count()
-func (e *Engine) Count() (count int64, err error) {
-	if e.model == nil {
-		e.setModel(&count)
-	}
-	e.setSelectColumnsForce("COUNT(*)")
-	assert(e.strTableName, "table name not found")
-	defer e.cleanWhereCondition()
-
-	e.setOperType(OperType_Query)
-
-	strSql := e.makeSQL()
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
-
-	var rows *sql.Rows
-
-	db := e.getQueryDB()
-	if rows, err = db.Query(strSql); err != nil {
-		log.Errorf("query [%v] error [%v]", strSql, err.Error())
-		return
-	}
-
-	defer rows.Close()
-	_, _ = e.fetchRows(rows)
-	return
-}
-
 // orm query
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
@@ -1090,6 +1060,10 @@ func (e *Engine) RightJoin(strTableName string) *Join {
 
 func (e *Engine) GetAdapter() AdapterType {
 	return e.adapterSqlx
+}
+
+func (e *Engine) Count(strColumn string, strAS ...string) *Engine {
+	return e.Select(e.groupFunc(DATABASE_KEY_NAME_COUNT, strColumn, strAS...))
 }
 
 func (e *Engine) Sum(strColumn string, strAS ...string) *Engine {

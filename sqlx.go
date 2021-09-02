@@ -1326,11 +1326,11 @@ func (e *Engine) makeSqlxQueryCount() (strSqlx string) {
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
-			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getCountColumn(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
 	default:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
-			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getCountColumn(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), e.getOffset())
 	}
 	return

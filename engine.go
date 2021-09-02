@@ -507,7 +507,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 
 	defer rowsCount.Close()
 	for rowsCount.Next() {
-		rowsCount.Scan(&total)
+		total++
 	}
 	return
 }

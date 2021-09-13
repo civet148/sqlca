@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca"
+	"github.com/civet148/sqlca/v2"
 	"time"
 )
 

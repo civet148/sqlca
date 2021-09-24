@@ -4,6 +4,7 @@ import (
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v2"
 	"time"
+	//_ "github.com/mattn/go-sqlite3" //import go sqlite3 if you want
 )
 
 const (

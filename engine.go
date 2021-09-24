@@ -11,7 +11,7 @@ import (
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
 	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
-	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
+	//_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
 	"strings"
 )
 

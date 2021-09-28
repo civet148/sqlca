@@ -316,6 +316,12 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 			}
 			if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
 				e.model = models[0] //map, struct or slice
+				if typ.Kind() == reflect.Slice && val.IsNil() {
+					modelVal := reflect.ValueOf(e.model)
+					elemTyp := modelVal.Type().Elem()
+					elemVal := reflect.New(elemTyp).Elem()
+					val.Set(reflect.MakeSlice(elemVal.Type(), 0, 0))
+				}
 			} else {
 				e.model = models //built-in types, eg int/string/float32...
 			}

@@ -261,6 +261,10 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 	} else {
 		log.Infof("query into user model [%+v] ok, rows affected [%v], extra data available [%v]", user, rowsAffected, user.ExtraData.Available)
 	}
+
+	type UserInfo struct {
+		Users []*UserDO `json:"users" db:"users"`
+	}
 }
 
 func OrmQueryExcludeIntoModel(e *sqlca.Engine) {

@@ -11,7 +11,6 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.2.0
-	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/shopspring/decimal v1.2.0
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 )

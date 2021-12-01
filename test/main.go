@@ -17,7 +17,8 @@ type UserData struct {
 	Female bool  `db:"female" json:"female"`
 }
 
-type ExtraData struct {
+type CardInfo struct {
+	CardType  int     `db:"card_type"`
 	Available float64 `db:"available"`
 	BankCard  string  `db:"bank_card"`
 }
@@ -34,7 +35,7 @@ type UserDO struct {
 	UpdatedAt string        `db:"updated_at" sqlca:"readonly"`
 	IgnoreMe  string        `db:"-"`
 	SexName   string        `db:"sex_name" sqlca:"readonly"`
-	ExtraData ExtraData     `db:"extra_data"`
+	ExtraData []*CardInfo   `db:"extra_data"`
 }
 
 type ClassDo struct {
@@ -110,44 +111,44 @@ func SSHTunnel(e *sqlca.Engine) {
 //connect database directly
 func Direct(e *sqlca.Engine) {
 
-	OrmInsertByModel(e)
-	OrmUpsertByModel(e)
-	OrmUpdateByModel(e)
+	//OrmInsertByModel(e)
+	//OrmUpsertByModel(e)
+	//OrmUpdateByModel(e)
 	OrmQueryIntoModel(e)
-	OrmQueryExcludeIntoModel(e)
-	OrmQueryIntoModelSlice(e)
-	OrmUpdateIndexToCache(e)
-	OrmSelectMultiTable(e)
-	OrmDeleteFromTable(e)
-	OrmInCondition(e)
-	OrmFind(e)
-	OrmWhereRequire(e)
-	OrmToSQL(e)
-	OrmGroupByHaving(e)
-	RawQueryIntoModel(e)
-	RawQueryIntoModelSlice(e)
-	RawQueryIntoMap(e)
-	RawExec(e)
-	TxGetExec(e)
-	TxRollback(e)
-	TxForUpdate(e)
-	TxWrapper(e)
-	CustomTag(e)
-	BuiltInTypesUpdate(e)
-	DuplicateUpdateGetId(e)
-	Count(e)
-	CaseWhen(e)
-	UpdateByMap(e)
-	NearBy(e)
-	MySqlJsonQuery(e)
-	CustomizeUpsert(e)
-	JoinQuery(e)
-	NilPointerQuery(e)
-	JsonStructQuery(e)
-	BuiltInSliceQuery(e)
-	QueryJSON(e)
-	BoolConvert(e)
-	QueryEx(e)
+	//OrmQueryExcludeIntoModel(e)
+	//OrmQueryIntoModelSlice(e)
+	//OrmUpdateIndexToCache(e)
+	//OrmSelectMultiTable(e)
+	//OrmDeleteFromTable(e)
+	//OrmInCondition(e)
+	//OrmFind(e)
+	//OrmWhereRequire(e)
+	//OrmToSQL(e)
+	//OrmGroupByHaving(e)
+	//RawQueryIntoModel(e)
+	//RawQueryIntoModelSlice(e)
+	//RawQueryIntoMap(e)
+	//RawExec(e)
+	//TxGetExec(e)
+	//TxRollback(e)
+	//TxForUpdate(e)
+	//TxWrapper(e)
+	//CustomTag(e)
+	//BuiltInTypesUpdate(e)
+	//DuplicateUpdateGetId(e)
+	//Count(e)
+	//CaseWhen(e)
+	//UpdateByMap(e)
+	//NearBy(e)
+	//MySqlJsonQuery(e)
+	//CustomizeUpsert(e)
+	//JoinQuery(e)
+	//NilPointerQuery(e)
+	//JsonStructQuery(e)
+	//BuiltInSliceQuery(e)
+	//QueryJSON(e)
+	//BoolConvert(e)
+	//QueryEx(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
@@ -165,9 +166,17 @@ func OrmInsertByModel(e *sqlca.Engine) {
 		Disable:   true,
 		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
 		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-		ExtraData: ExtraData{
-			Available: 23.003,
-			BankCard:  "622588339993321",
+		ExtraData: []*CardInfo{
+			{
+				CardType:  1,
+				Available: 23.003,
+				BankCard:  "622588339993321",
+			},
+			{
+				CardType:  2,
+				Available: 23.003,
+				BankCard:  "12345678900000",
+			},
 		},
 	}
 	log.Debugf("user [%+v]", user)
@@ -256,10 +265,11 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 	user := &UserDO{}
 
 	// select * from users where id=1
-	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Query(); err != nil {
+	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(15).Query(); err != nil {
 		log.Errorf("query into data model [%+v] error [%v]", user, err.Error())
 	} else {
-		log.Infof("query into user model [%+v] ok, rows affected [%v], extra data available [%v]", user, rowsAffected, user.ExtraData.Available)
+		log.Infof("query into user model [%+v] ok, rows affected [%v]]", user, rowsAffected)
+		log.Json("user.ExtraData", user.ExtraData)
 	}
 
 	type UserInfo struct {

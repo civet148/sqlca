@@ -111,104 +111,85 @@ func SSHTunnel(e *sqlca.Engine) {
 //connect database directly
 func Direct(e *sqlca.Engine) {
 
-	//OrmInsertByModel(e)
-	//OrmUpsertByModel(e)
-	//OrmUpdateByModel(e)
+	OrmInsertByModel(e)
+	OrmUpsertByModel(e)
+	OrmUpdateByModel(e)
 	OrmQueryIntoModel(e)
-	//OrmQueryExcludeIntoModel(e)
-	//OrmQueryIntoModelSlice(e)
-	//OrmUpdateIndexToCache(e)
-	//OrmSelectMultiTable(e)
-	//OrmDeleteFromTable(e)
-	//OrmInCondition(e)
-	//OrmFind(e)
-	//OrmWhereRequire(e)
-	//OrmToSQL(e)
-	//OrmGroupByHaving(e)
-	//RawQueryIntoModel(e)
-	//RawQueryIntoModelSlice(e)
-	//RawQueryIntoMap(e)
-	//RawExec(e)
-	//TxGetExec(e)
-	//TxRollback(e)
-	//TxForUpdate(e)
-	//TxWrapper(e)
-	//CustomTag(e)
-	//BuiltInTypesUpdate(e)
-	//DuplicateUpdateGetId(e)
-	//Count(e)
-	//CaseWhen(e)
-	//UpdateByMap(e)
-	//NearBy(e)
-	//MySqlJsonQuery(e)
-	//CustomizeUpsert(e)
-	//JoinQuery(e)
-	//NilPointerQuery(e)
-	//JsonStructQuery(e)
-	//BuiltInSliceQuery(e)
-	//QueryJSON(e)
-	//BoolConvert(e)
-	//QueryEx(e)
+	OrmQueryExcludeIntoModel(e)
+	OrmQueryIntoModelSlice(e)
+	OrmUpdateIndexToCache(e)
+	OrmSelectMultiTable(e)
+	OrmDeleteFromTable(e)
+	OrmInCondition(e)
+	OrmFind(e)
+	OrmWhereRequire(e)
+	OrmToSQL(e)
+	OrmGroupByHaving(e)
+	RawQueryIntoModel(e)
+	RawQueryIntoModelSlice(e)
+	RawQueryIntoMap(e)
+	RawExec(e)
+	TxGetExec(e)
+	TxRollback(e)
+	TxForUpdate(e)
+	TxWrapper(e)
+	CustomTag(e)
+	BuiltInTypesUpdate(e)
+	DuplicateUpdateGetId(e)
+	Count(e)
+	CaseWhen(e)
+	UpdateByMap(e)
+	NearBy(e)
+	MySqlJsonQuery(e)
+	CustomizeUpsert(e)
+	JoinQuery(e)
+	NilPointerQuery(e)
+	JsonStructQuery(e)
+	BuiltInSliceQuery(e)
+	QueryJSON(e)
+	BoolConvert(e)
+	QueryEx(e)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
-
-	user := UserDO{
-		//Id:    0,
-		Name:      "lory",
-		Phone:     "+8618682371690",
-		Sex:       1,
-		Balance:   sqlca.NewDecimal("123.456"),
-		Email:     "true",
-		Disable:   true,
-		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-		ExtraData: []*CardInfo{
-			{
-				CardType:  1,
-				Available: 23.003,
-				BankCard:  "622588339993321",
+	var users = make([]UserDO, 0)
+	for i := 0; i < 3; i++ {
+		users = append(users, UserDO{
+			//Id:    0,
+			Name:      "lory",
+			Phone:     "+8618682371690",
+			Sex:       1,
+			Balance:   sqlca.NewDecimal("123.456"),
+			Email:     "true",
+			Disable:   true,
+			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
+			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
+			ExtraData: []*CardInfo{
+				{
+					CardType:  1,
+					Available: 23.003,
+					BankCard:  "622588339993321",
+				},
+				{
+					CardType:  2,
+					Available: 23.003,
+					BankCard:  "12345678900000",
+				},
 			},
-			{
-				CardType:  2,
-				Available: 23.003,
-				BankCard:  "12345678900000",
-			},
-		},
+		})
 	}
-	log.Debugf("user [%+v]", user)
+
+	log.Debugf("users [%+v]", users)
 
 	//insert from model except 'created_at', 'updated_at' column
-	if lastInsertId, err := e.Model(&user).Table(TABLE_NAME_USERS).Exclude("created_at", "updated_at").Insert(); err != nil {
-		log.Errorf("insert data model [%+v] error [%v]", user, err.Error())
+	if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Exclude("created_at", "updated_at").Insert(); err != nil {
+		log.Errorf("insert data model [%+v] error [%v]", users, err.Error())
 	} else {
-		log.Infof("insert data model [%+v] exclude created_at and updated_at ok, last insert id [%v]", user, lastInsertId)
+		log.Infof("insert data model [%+v] exclude created_at and updated_at ok, last insert id [%v]", users, lastInsertId)
 	}
-
-	////bulk insert
-	//var users []UserDO
-	//for i := 0; i < 3; i++ {
-	//	users = append(users, UserDO{
-	//		Id:        0,
-	//		Name:      fmt.Sprintf("name(%v)", i),
-	//		Phone:     fmt.Sprintf("phone(%v)", i),
-	//		Sex:       0,
-	//		Email:     "true",
-	//		Disable:   true,
-	//		Balance:   sqlca.NewDecimal(i),
-	//		CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-	//		UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-	//	})
-	//}
-	////bulk insert from model slice except 'created_at', 'updated_at' column
-	//if lastInsertId, err := e.Model(&users).Table(TABLE_NAME_USERS).Exclude("created_at", "updated_at").Insert(); err != nil {
-	//	log.Errorf("bulk insert data model [%+v] error [%v]", users, err.Error())
-	//} else {
-	//	log.Infof("bulk insert data model [%+v] exclude email, created_at and updated_at ok, last insert id [%v]", users, lastInsertId)
-	//}
 }
 
 func OrmUpsertByModel(e *sqlca.Engine) {

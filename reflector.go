@@ -115,7 +115,6 @@ func (s *ModelReflector) getTag(sf reflect.StructField, tagName string) (strValu
 
 // parse struct fields
 func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, tagNames ...string) {
-
 	kind := typ.Kind()
 	if kind == reflect.Struct {
 		NumField := val.NumField()
@@ -152,6 +151,7 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 				}
 			} else if typField.Type.Kind() == reflect.Slice || typField.Type.Kind() == reflect.Map {
 				if tagVal != "" {
+
 					data, err := json.Marshal(valField.Interface())
 					if err != nil {
 						fmt.Printf("[sqlca] marshal struct failed error [%s]\n", err.Error())
@@ -371,8 +371,15 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 			if typField.Type.Kind() == reflect.Bool {
 				isBool = true
 			}
+			var strFieldVal string
 			strTagVal := e.getTagValue(typField)
-			strFieldVal := fmt.Sprintf("%v", valField)
+
+			if typField.Type.Kind() == reflect.Slice || typField.Type.Kind() == reflect.Map {
+				data, _ := json.Marshal(valField.Interface())
+				strFieldVal = fmt.Sprintf("%s", data)
+			} else {
+				strFieldVal = fmt.Sprintf("%v", valField)
+			}
 
 			if e.isPkValueNil() && strTagVal == e.GetPkName() {
 				continue

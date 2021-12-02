@@ -80,6 +80,7 @@ type Engine struct {
 	strUpdates      []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
 	joins           []*Join                //inner/left/right/full-outer join(s)
 	selected        bool
+	noVerbose       bool
 }
 
 func init() {
@@ -1080,4 +1081,9 @@ func (e *Engine) Min(strColumn string, strAS ...string) *Engine {
 
 func (e *Engine) Max(strColumn string, strAS ...string) *Engine {
 	return e.Select(e.groupFunc(DATABASE_KEY_NAME_MAX, strColumn, strAS...))
+}
+
+func (e *Engine) NoVerbose() *Engine {
+	e.noVerbose = true
+	return e
 }

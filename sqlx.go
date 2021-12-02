@@ -1228,7 +1228,9 @@ func (e *Engine) makeSQL() (strSql string) {
 		log.Errorf("operation illegal")
 	}
 	strSql = strings.TrimSpace(strSql)
-	log.Debugf("[%v] SQL [%s]", e.getCaller(3), strSql)
+	if !e.noVerbose {
+		log.Debugf("[%v] SQL [%s]", e.getCaller(3), strSql)
+	}
 	return
 }
 

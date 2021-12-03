@@ -1,7 +1,6 @@
 package sqlca
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -14,11 +13,6 @@ import (
 	_ "github.com/lib/pq"              //postgres golang driver
 	//_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
 	"strings"
-)
-
-const (
-	printMaxSqlCount = 4096
-	printSqlSuffix   = "..."
 )
 
 type Options struct {
@@ -541,12 +535,6 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	var strSql string
 	strSql = e.makeSQL()
 	c := e.Counter()
-	buf := bytes.NewBufferString(strSql)
-	if bytes.Count(buf.Bytes(), nil) > printMaxSqlCount {
-		buf.Truncate(printMaxSqlCount)
-		strSql = buf.String() + printSqlSuffix
-	}
-
 	defer c.Stop(fmt.Sprintf("Insert [%s]", strSql))
 
 	switch e.adapterSqlx {
@@ -603,11 +591,6 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 	var strSql string
 	strSql = e.makeSQL()
 	c := e.Counter()
-	buf := bytes.NewBufferString(strSql)
-	if bytes.Count(buf.Bytes(), nil) > printMaxSqlCount {
-		buf.Truncate(printMaxSqlCount)
-		strSql = buf.String() + printSqlSuffix
-	}
 	defer c.Stop(fmt.Sprintf("Upsert [%s]", strSql))
 	db := e.getMaster()
 

@@ -77,6 +77,7 @@ func main() {
 		e := sqlca.NewEngine(url)
 		e.Debug(true) //debug on
 		//e.SetLogFile("sqlca.log")
+		e.SlowQuery(true, 0)
 		Direct(e)
 		log.Infof("------------------------------------------------------------------------------------------------------------------------------------------------------------")
 	}

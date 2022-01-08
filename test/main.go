@@ -150,6 +150,17 @@ func Direct(e *sqlca.Engine) {
 	QueryJSON(e)
 	BoolConvert(e)
 	QueryEx(e)
+	OrmQueryToDecimal(e)
+}
+
+func OrmQueryToDecimal(e *sqlca.Engine) {
+	var d sqlca.Decimal
+	c, err := e.Model(&d).Table(TABLE_NAME_USERS).Count("id").Query()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	log.Infof("query result count %d decimal %s", c, d)
 }
 
 func OrmInsertByModel(e *sqlca.Engine) {

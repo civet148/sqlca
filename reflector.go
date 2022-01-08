@@ -295,12 +295,16 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err
 			}
 		case reflect.Struct:
 			{
-				err = e.fetchToStruct(fetcher, typ, val)
+				if _, ok := val.Addr().Interface().(sql.Scanner); !ok {
+					err = e.fetchToStruct(fetcher, typ, val)
+				} else {
+					err = e.fetchToBaseType(fetcher, typ, val)
+				}
 				count++
 			}
 		default:
 			{
-				e.fetchToBaseType(fetcher, typ, val)
+				err = e.fetchToBaseType(fetcher, typ, val)
 				count++
 			}
 		}
@@ -674,7 +678,15 @@ func (e *Engine) setValueByField(fetcher *Fetcher, field reflect.StructField, va
 //将string存储的值赋值到变量
 func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) {
 	switch typ.Kind() {
-
+	case reflect.Struct:
+		s, ok := val.Addr().Interface().(sql.Scanner)
+		if !ok {
+			log.Warnf("struct type %s not implement sql.Scanner interface", typ.Name())
+			return
+		}
+		if err := s.Scan(v); err != nil {
+			panic(fmt.Sprintf("scan value %s to sql.Scanner implement object error [%s]", v, err))
+		}
 	case reflect.String:
 		val.SetString(v)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:

@@ -670,6 +670,7 @@ func (e *Engine) getQuoteColumnName(v string) (strColumn string) {
 }
 
 func (e *Engine) getQuoteColumnValue(v interface{}) (strValue string) {
+	v = e.handleSpecialChars(fmt.Sprintf("%v", v))
 	return fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote())
 }
 
@@ -1024,7 +1025,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 				continue
 			}
 			val = convertBool2Int(val)
-			strVal := e.handleSpecialChars(fmt.Sprintf("%v", val))
+			strVal := fmt.Sprintf("%v", val)
 			c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(v), e.getQuoteColumnValue(strVal)) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
 		}
@@ -1139,7 +1140,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 				if e.isContainInts(ii, excludeIndexes) {
 					continue
 				}
-				vq := fmt.Sprintf("%v%v%v", e.getSingleQuote(), vv, e.getSingleQuote()) // column value format
+				vq := e.getQuoteColumnValue(vv)
 				valueQoute = append(valueQoute, vq)
 			}
 			valueQuoteSlice = append(valueQuoteSlice, fmt.Sprintf("(%v)", strings.Join(valueQoute, ",")))
@@ -1161,6 +1162,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 			if k == e.GetPkName() && e.isPkValueNil() {
 				continue
 			}
+			v = e.handleSpecialChars(fmt.Sprintf("%v", v))
 			vq := fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()) // column value format
 			cols = append(cols, c)
 			vals = append(vals, vq)

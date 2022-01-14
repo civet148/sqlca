@@ -73,6 +73,7 @@ const (
 	DATABASE_KEY_NAME_MIN        = "MIN"
 	DATABASE_KEY_NAME_MAX        = "MAX"
 	DATABASE_KEY_NAME_COUNT      = "COUNT"
+	DATABASE_KEY_NAME_ROUND      = "ROUND"
 )
 
 type AdapterType int
@@ -1404,7 +1405,7 @@ func (e *Engine) autoRollback() {
 	}
 }
 
-func (e *Engine) groupFunc(strKey, strColumn string, strAS ...string) string {
+func (e *Engine) aggFunc(strKey, strColumn string, strAS ...string) string {
 	var strAlias string
 	if len(strAS) == 0 {
 		strAlias = strColumn
@@ -1412,4 +1413,14 @@ func (e *Engine) groupFunc(strKey, strColumn string, strAS ...string) string {
 		strAlias = strAS[0]
 	}
 	return fmt.Sprintf("%s(%s) AS %s", strKey, strColumn, strAlias)
+}
+
+func (e *Engine) roundFunc(strColumn string, round int, strAS ...string) string {
+	var strAlias string
+	if len(strAS) == 0 {
+		strAlias = strColumn
+	} else {
+		strAlias = strAS[0]
+	}
+	return fmt.Sprintf("%s(%s, %d) AS %s", DATABASE_KEY_NAME_ROUND, strColumn, round, strAlias)
 }

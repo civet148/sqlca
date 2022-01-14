@@ -1064,23 +1064,27 @@ func (e *Engine) GetAdapter() AdapterType {
 }
 
 func (e *Engine) Count(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.groupFunc(DATABASE_KEY_NAME_COUNT, strColumn, strAS...))
+	return e.Select(e.aggFunc(DATABASE_KEY_NAME_COUNT, strColumn, strAS...))
 }
 
 func (e *Engine) Sum(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.groupFunc(DATABASE_KEY_NAME_SUM, strColumn, strAS...))
+	return e.Select(e.aggFunc(DATABASE_KEY_NAME_SUM, strColumn, strAS...))
 }
 
 func (e *Engine) Avg(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.groupFunc(DATABASE_KEY_NAME_AVG, strColumn, strAS...))
+	return e.Select(e.aggFunc(DATABASE_KEY_NAME_AVG, strColumn, strAS...))
 }
 
 func (e *Engine) Min(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.groupFunc(DATABASE_KEY_NAME_MIN, strColumn, strAS...))
+	return e.Select(e.aggFunc(DATABASE_KEY_NAME_MIN, strColumn, strAS...))
 }
 
 func (e *Engine) Max(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.groupFunc(DATABASE_KEY_NAME_MAX, strColumn, strAS...))
+	return e.Select(e.aggFunc(DATABASE_KEY_NAME_MAX, strColumn, strAS...))
+}
+
+func (e *Engine) Round(strColumn string, round int, strAS ...string) *Engine {
+	return e.Select(e.roundFunc(strColumn, round, strAS...))
 }
 
 func (e *Engine) NoVerbose() *Engine {

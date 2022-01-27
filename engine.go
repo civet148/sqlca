@@ -96,7 +96,7 @@ func NewEngine(args ...interface{}) *Engine {
 		slowQueryTime: DEFAULT_SLOW_QUERY_ALERT_TIME,
 		adapterType:   AdapterType_MySQL,
 	}
-	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA, TAG_NAME_PROTOBUF, TAG_NAME_JSON)
+	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA, TAG_NAME_PROTOBUF, TAG_NAME_JSON, TAG_NAME_BSON)
 
 	var ok bool
 	var strOpenUrl string
@@ -730,16 +730,12 @@ func (e *Engine) TxFunc(fn func(execor Executor) error) (err error) {
 		return
 	}
 	tx := txe.tx
-	if tx, err = tx.TxBegin(); err != nil {
-		log.Errorf("transaction begin error [%v]", err.Error())
-		return
-	}
 	if err = fn(tx); err != nil {
-		_ = tx.TxRollback()
+		_ = tx.txRollback()
 		log.Errorf("transaction rollback by handler error [%v]", err.Error())
 		return
 	}
-	return tx.TxCommit()
+	return tx.txCommit()
 }
 
 //execute transaction by customize function with context
@@ -754,16 +750,16 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 		return
 	}
 	tx := txe.tx
-	if tx, err = tx.TxBegin(); err != nil {
+	if tx, err = tx.txBegin(); err != nil {
 		log.Errorf("transaction begin error [%v]", err.Error())
 		return
 	}
 	if err = fn(ctx, tx); err != nil {
-		_ = tx.TxRollback()
+		_ = tx.txRollback()
 		log.Errorf("transaction rollback by handler error [%v]", err.Error())
 		return
 	}
-	return tx.TxCommit()
+	return tx.txCommit()
 }
 
 //query result marshal to json

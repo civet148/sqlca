@@ -207,7 +207,7 @@ func (m *SqlxExecutor) Delete(e *Engine, strSQL string) (rowsAffected int64, err
 	return
 }
 
-func (m *SqlxExecutor) TxBegin() (tx Executor, err error) {
+func (m *SqlxExecutor) txBegin() (tx Executor, err error) {
 	m.tx, err = m.db.Begin()
 	if err != nil {
 		log.Errorf(err.Error())
@@ -224,30 +224,51 @@ func (m *SqlxExecutor) TxGet(e *Engine, dest interface{}, strQuery string, args 
 	rows, err = m.tx.Query(strQuery)
 	if err != nil {
 		log.Errorf("TxGet sql [%v] args %v query error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		e.autoRollback()
-		return
+		if err = m.tx.Rollback(); err != nil {
+			log.Errorf(err.Error())
+		}
+		return 0, err
 	}
 	e.setModel(dest)
 
 	defer rows.Close()
 	if count, err = e.fetchRows(rows); err != nil {
 		log.Errorf("TxGet sql [%v] args %v fetch row error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		e.autoRollback()
+		if err = m.tx.Rollback(); err != nil {
+			log.Errorf(err.Error())
+		}
 		return
 	}
 	return
 }
 
 func (m *SqlxExecutor) TxExec(e *Engine, strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
+	var result sql.Result
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("TxExec [%s]", strQuery))
+	strQuery = e.formatString(strQuery, args...)
+	log.Debugf("query [%v]", strQuery)
+
+	result, err = m.tx.Exec(strQuery)
+
+	if err != nil {
+		log.Errorf("TxExec exec query [%v] args %+v error [%+v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		if err = m.tx.Rollback(); err != nil {
+			log.Errorf(err.Error())
+		}
+		return 0, 0, err
+	}
+	lastInsertId, _ = result.LastInsertId()
+	rowsAffected, _ = result.RowsAffected()
 	return
 }
 
-func (m *SqlxExecutor) TxRollback() (err error) {
-	return
+func (m *SqlxExecutor) txRollback() (err error) {
+	return m.tx.Rollback()
 }
 
-func (m *SqlxExecutor) TxCommit() (err error) {
-	return
+func (m *SqlxExecutor) txCommit() (err error) {
+	return m.tx.Commit()
 }
 
 func (m *SqlxExecutor) postgresQueryInsert(e *Engine, strSQL string) (lastInsertId int64, err error) {
@@ -307,14 +328,14 @@ func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64
 
 	var db Executor
 	var query = e.makeSqlxQueryPrimaryKey()
-	if db, err = m.TxBegin(); err != nil {
-		log.Errorf("TxBegin error [%v]", err.Error())
+	if db, err = m.txBegin(); err != nil {
+		log.Errorf("txBegin error [%v]", err.Error())
 		return
 	}
 	var count int64
 	if count, err = db.TxGet(e, &lastInsertId, query); err != nil {
 		log.Errorf("TxGet [%v] error [%v]", query, err.Error())
-		_ = db.TxRollback()
+		_ = db.txRollback()
 		return
 	}
 	if count == 0 {
@@ -322,7 +343,7 @@ func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64
 		//if _, _, err = db.TxExec(strSQL); err != nil
 		if lastInsertId, err = e.mssqlQueryInsert(strSQL); err != nil {
 			log.Errorf("mssqlQueryInsert [%v] error [%v]", strSQL, err.Error())
-			_ = db.TxRollback()
+			_ = db.txRollback()
 			return
 		}
 	} else {
@@ -334,12 +355,12 @@ func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64
 		log.Debugf("%v", strUpdates)
 		if _, _, err = db.TxExec(e, strUpdates); err != nil {
 			log.Errorf("TxExec [%v] error [%v]", strSQL, err.Error())
-			_ = db.TxRollback()
+			_ = db.txRollback()
 			return
 		}
 	}
 
-	if err = db.TxCommit(); err != nil {
+	if err = db.txCommit(); err != nil {
 		log.Errorf("TxCommit [%v] error [%v]", strSQL, err.Error())
 		return
 	}

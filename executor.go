@@ -17,9 +17,10 @@ type Executor interface {
 	Insert(e *Engine, strSQL string) (lastInsertId int64, err error)
 	Upsert(e *Engine, strSQL string) (lastInsertId int64, err error)
 	Delete(e *Engine, strSQL string) (rowsAffected int64, err error)
-	TxBegin() (Executor, error)
+	//tx methods
+	txBegin() (Executor, error)
 	TxGet(e *Engine, dest interface{}, strQuery string, args ...interface{}) (count int64, err error)
 	TxExec(e *Engine, strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error)
-	TxRollback() error
-	TxCommit() error
+	txRollback() error
+	txCommit() error
 }

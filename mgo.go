@@ -74,7 +74,7 @@ func (m *MgoExecutor) Delete(e *Engine, strSQL string) (rowsAffected int64, err 
 	return
 }
 
-func (m *MgoExecutor) TxBegin() (tx Executor, err error) {
+func (m *MgoExecutor) txBegin() (tx Executor, err error) {
 	return
 }
 
@@ -86,10 +86,10 @@ func (m *MgoExecutor) TxExec(e *Engine, strQuery string, args ...interface{}) (l
 	return
 }
 
-func (m *MgoExecutor) TxRollback() (err error) {
+func (m *MgoExecutor) txRollback() (err error) {
 	return
 }
 
-func (m *MgoExecutor) TxCommit() (err error) {
+func (m *MgoExecutor) txCommit() (err error) {
 	return
 }

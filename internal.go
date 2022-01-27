@@ -151,7 +151,7 @@ func (e *Engine) txBegin() (txe *Engine, err error) {
 
 	txe = e.clone()
 	db := e.getMaster()
-	if txe.tx, err = db.TxBegin(); err != nil {
+	if txe.tx, err = db.txBegin(); err != nil {
 		log.Errorf("newTx error [%+v]", err.Error())
 		return nil, err
 	}
@@ -1112,11 +1112,11 @@ func (e *Engine) cleanWhereCondition() {
 	e.strPkValue = ""
 }
 
-func (e *Engine) autoRollback() {
+func (e *Engine) autoRollback() bool {
 	if e.bAutoRollback && e.operType == OperType_Tx && e.tx != nil {
-		_ = e.tx.TxRollback()
-		log.Debugf("tx auto rollback successful")
+		return true
 	}
+	return false
 }
 
 func (e *Engine) aggFunc(strKey, strColumn string, strAS ...string) string {

@@ -5,7 +5,6 @@ type condition struct {
 	ColumnValues []interface{}
 }
 
-
 const (
 	TAG_NAME_DB       = "db"
 	TAG_NAME_JSON     = "json"
@@ -81,10 +80,10 @@ const (
 )
 
 const (
-	AdapterSqlx_MySQL    AdapterType = 1  //mysql
-	AdapterSqlx_Postgres AdapterType = 2  //postgresql
-	AdapterSqlx_Sqlite   AdapterType = 3  //sqlite
-	AdapterSqlx_Mssql    AdapterType = 4  //mssql server
+	AdapterType_MySQL    AdapterType = 1  //mysql
+	AdapterType_Postgres AdapterType = 2  //postgresql
+	AdapterType_Sqlite   AdapterType = 3  //sqlite
+	AdapterType_Mssql    AdapterType = 4  //mssql server
 	AdapterCache_Redis   AdapterType = 11 //redis
 )
 
@@ -95,14 +94,14 @@ func (a AdapterType) GoString() string {
 func (a AdapterType) String() string {
 
 	switch a {
-	case AdapterSqlx_MySQL:
-		return "AdapterSqlx_MySQL"
-	case AdapterSqlx_Postgres:
-		return "AdapterSqlx_Postgres"
-	case AdapterSqlx_Sqlite:
-		return "AdapterSqlx_Sqlite"
-	case AdapterSqlx_Mssql:
-		return "AdapterSqlx_Mssql"
+	case AdapterType_MySQL:
+		return "AdapterType_MySQL"
+	case AdapterType_Postgres:
+		return "AdapterType_Postgres"
+	case AdapterType_Sqlite:
+		return "AdapterType_Sqlite"
+	case AdapterType_Mssql:
+		return "AdapterType_Mssql"
 	case AdapterCache_Redis:
 		return "AdapterCache_Redis"
 	}
@@ -111,13 +110,13 @@ func (a AdapterType) String() string {
 
 func (a AdapterType) DriverName() string {
 	switch a {
-	case AdapterSqlx_MySQL:
+	case AdapterType_MySQL:
 		return DRIVER_NAME_MYSQL
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		return DRIVER_NAME_POSTGRES
-	case AdapterSqlx_Sqlite:
+	case AdapterType_Sqlite:
 		return DRIVER_NAME_SQLITE
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		return DRIVER_NAME_MSSQL
 	case AdapterCache_Redis:
 		return DRIVER_NAME_REDIS
@@ -127,10 +126,10 @@ func (a AdapterType) DriverName() string {
 }
 
 var adapterNames = map[string]AdapterType{
-	DRIVER_NAME_MYSQL:    AdapterSqlx_MySQL,
-	DRIVER_NAME_POSTGRES: AdapterSqlx_Postgres,
-	DRIVER_NAME_SQLITE:   AdapterSqlx_Sqlite,
-	DRIVER_NAME_MSSQL:    AdapterSqlx_Mssql,
+	DRIVER_NAME_MYSQL:    AdapterType_MySQL,
+	DRIVER_NAME_POSTGRES: AdapterType_Postgres,
+	DRIVER_NAME_SQLITE:   AdapterType_Sqlite,
+	DRIVER_NAME_MSSQL:    AdapterType_Mssql,
 	DRIVER_NAME_REDIS:    AdapterCache_Redis,
 }
 

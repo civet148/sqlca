@@ -2,14 +2,12 @@ package sqlca
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/civet148/log"
 	_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
 	"github.com/gansidui/geohash"
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
-	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
 	//_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
 	"strings"
@@ -39,10 +37,10 @@ type nearby struct {
 type Engine struct {
 	dsn             dsnDriver              // driver name and parameters
 	slave           bool                   // use slave to query ?
-	dbMasters       []*sqlx.DB             // DB instance masters
-	dbSlaves        []*sqlx.DB             // DB instance slaves
-	tx              *sql.Tx                // sql tx instance
-	adapterSqlx     AdapterType            // what's adapter of sqlx
+	dbMasters       []Executor             // DB instance masters
+	dbSlaves        []Executor             // DB instance slaves
+	tx              Executor                //DB tx instance
+	adapterType     AdapterType            // what's adapter of sqlx
 	adapterCache    AdapterType            // what's adapter of cache
 	modelType       ModelType              // model type
 	operType        OperType               // operation type
@@ -96,7 +94,7 @@ func NewEngine(args ...interface{}) *Engine {
 		strPkName:     DEFAULT_PRIMARY_KEY_NAME,
 		expireTime:    DEFAULT_CAHCE_EXPIRE_SECONDS,
 		slowQueryTime: DEFAULT_SLOW_QUERY_ALERT_TIME,
-		adapterSqlx:   AdapterSqlx_MySQL,
+		adapterType:   AdapterType_MySQL,
 	}
 	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA, TAG_NAME_PROTOBUF, TAG_NAME_JSON)
 
@@ -137,13 +135,13 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 
 	driver.strDriverName = adapterType.DriverName()
 	switch adapterType {
-	case AdapterSqlx_MySQL:
+	case AdapterType_MySQL:
 		driver.parameter = e.parseMysqlUrl(strUrl)
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		driver.parameter = e.parsePostgresUrl(strUrl)
-	case AdapterSqlx_Sqlite:
+	case AdapterType_Sqlite:
 		driver.parameter = e.parseSqliteUrl(strUrl)
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		driver.parameter = e.parseMssqlUrl(strUrl)
 	default:
 		panic(fmt.Sprintf("unknown adapter [%s]", adapterType))
@@ -175,7 +173,7 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 	//var strDriverName, strDSN string
 	us := strings.Split(strUrl, URL_SCHEME_SEP)
 	if len(us) != 2 { //default mysql
-		adapter = AdapterSqlx_MySQL
+		adapter = AdapterType_MySQL
 		e.dsn = e.parseMysqlDSN(adapter, strUrl)
 	} else {
 		adapter = getAdapterType(us[0])
@@ -183,26 +181,30 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 	}
 	var dsn = &e.dsn
 	var opt *Options
+	var db Executor
+	//var db *sqlx.DB
 	var parameter = &dsn.parameter
-	switch adapter {
-	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
-		e.adapterSqlx = adapter
-		var db *sqlx.DB
-		if len(options) != 0 {
 
-			if v, ok := options[0].(*Options); ok {
-				opt = v
-			} else {
-				o := options[0].(Options)
-				opt = &o
-			}
-			e.Debug(opt.Debug)
-			if opt.SSH != nil { //SSH tunnel enable
-				dsn = opt.SSH.openSSHTunnel(dsn)
-			}
+	e.adapterType = adapter
+
+	if len(options) != 0 {
+
+		if v, ok := options[0].(*Options); ok {
+			opt = v
+		} else {
+			o := options[0].(Options)
+			opt = &o
 		}
+		e.Debug(opt.Debug)
+		if opt.SSH != nil { //SSH tunnel enable
+			dsn = opt.SSH.openSSHTunnel(dsn)
+		}
+	}
 
-		if db, err = sqlx.Open(dsn.strDriverName, parameter.strDSN); err != nil {
+	switch adapter {
+	case AdapterType_MySQL, AdapterType_Postgres, AdapterType_Sqlite, AdapterType_Mssql:
+		if db, err = newSqlxExecutor(dsn.strDriverName, parameter.strDSN); err != nil {
+		//if db, err = sqlx.Open(dsn.strDriverName, parameter.strDSN); err != nil {
 			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
 			return nil
 		}
@@ -211,37 +213,30 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 			panic(err.Error())
 			return nil
 		}
-
-		if opt != nil {
-			dsn.SetMax(opt.Max)
-			dsn.SetIdle(opt.Idle)
-			dsn.SetSlave(opt.Slave)
-		}
-		log.Debugf("dsn parameter [%+v]", dsn.parameter)
-		if parameter.max != 0 {
-			db.SetMaxOpenConns(parameter.max)
-		}
-		if parameter.idle != 0 {
-			db.SetMaxIdleConns(parameter.idle)
-		}
-
-		if parameter.slave {
-			e.appendSlave(db)
-		} else {
-			e.appendMaster(db)
-		}
 	default:
 		log.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
 		return nil
 	}
-	log.Infof("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
-	return e
-}
 
-// attach from a exist sqlx db instance
-func (e *Engine) Attach(strDatabaseName string, db *sqlx.DB) *Engine {
-	e.appendMaster(db)
-	e.setDatabaseName(strDatabaseName)
+	if opt != nil {
+		dsn.SetMax(opt.Max)
+		dsn.SetIdle(opt.Idle)
+		dsn.SetSlave(opt.Slave)
+	}
+	log.Debugf("dsn parameter [%+v]", dsn.parameter)
+	if parameter.max != 0 {
+		db.SetMaxOpenConns(parameter.max)
+	}
+	if parameter.idle != 0 {
+		db.SetMaxIdleConns(parameter.idle)
+	}
+
+	if parameter.slave {
+		e.appendSlave(db)
+	} else {
+		e.appendMaster(db)
+	}
+	log.Infof("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
 	return e
 }
 
@@ -344,8 +339,8 @@ func (e *Engine) Limit(args ...int) *Engine {
 		return e
 	}
 
-	switch e.adapterSqlx {
-	case AdapterSqlx_Mssql:
+	switch e.adapterType {
+	case AdapterType_Mssql:
 		{
 			e.setLimit(fmt.Sprintf("TOP %v", args[0]))
 		}
@@ -459,17 +454,12 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
 
-	var rows *sql.Rows
-
 	db := e.getQueryDB()
-	if rows, err = db.Query(strSql); err != nil {
+	if rowsAffected, err = db.Query(e, strSql); err != nil {
 		log.Errorf("query [%v] error [%v]", strSql, err.Error())
 		return
 	}
-
-	defer rows.Close()
-
-	return e.fetchRows(rows)
+	return
 }
 
 // orm query with total count
@@ -487,30 +477,8 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
 
-	var rowsQuery, rowsCount *sql.Rows
-	dbQuery := e.getQueryDB()
-	if rowsQuery, err = dbQuery.Query(strSql); err != nil {
-		log.Errorf("query [%v] error [%v]", strSql, err.Error())
-		return
-	}
-
-	defer rowsQuery.Close()
-	if rowsAffected, err = e.fetchRows(rowsQuery); err != nil {
-		return
-	}
-
-	strCountSql := e.makeSqlxQueryCount()
-	dbCount := e.getQueryDB()
-	if rowsCount, err = dbCount.Query(strCountSql); err != nil {
-		log.Errorf("query [%v] error [%v]", strCountSql, err.Error())
-		return
-	}
-
-	defer rowsCount.Close()
-	for rowsCount.Next() {
-		total++
-	}
-	return
+	db := e.getQueryDB()
+	return db.QueryEx(e, strSql)
 }
 
 // orm find with customer conditions (map[string]interface{})
@@ -537,14 +505,14 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Insert [%s]", strSql))
 
-	switch e.adapterSqlx {
-	case AdapterSqlx_Mssql:
+	switch e.adapterType {
+	case AdapterType_Mssql:
 		{
 			if e.isPkInteger() && e.isPkValueNil() {
 				lastInsertId, err = e.mssqlQueryInsert(strSql)
 			}
 		}
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		{
 			if e.isPkInteger() && e.isPkValueNil() {
 				lastInsertId, err = e.postgresQueryInsert(strSql)
@@ -552,17 +520,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 		}
 	default:
 		{
-			var r sql.Result
-			var db *sqlx.DB
-
-			db = e.getMaster()
-			r, err = db.Exec(strSql)
-			if err != nil {
-				log.Errorf("error %v model %+v", err, e.model)
-				return
-			}
-
-			lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
+			lastInsertId, _ = e.defaultInsert(strSql) //MSSQL Server not support last insert id
 		}
 	}
 
@@ -592,26 +550,19 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 	strSql = e.makeSQL()
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Upsert [%s]", strSql))
-	db := e.getMaster()
 
-	switch e.adapterSqlx {
-	case AdapterSqlx_Mssql:
+	switch e.adapterType {
+	case AdapterType_Mssql:
 		{
 			lastInsertId, err = e.mssqlUpsert(e.makeSqlxInsert())
 		}
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		{
 			lastInsertId, err = e.postgresQueryUpsert(strSql)
 		}
 	default:
 		{
-			var r sql.Result
-			r, err = db.Exec(strSql)
-			if err != nil {
-				log.Errorf("error %v model %+v", err, e.model)
-				return
-			}
-			lastInsertId, err = r.LastInsertId()
+			lastInsertId, err = e.defaultUpsert(strSql)
 			if err != nil {
 				log.Errorf("get last insert id error %v model %+v", err, e.model)
 				return
@@ -634,7 +585,6 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	e.setOperType(OperType_Update)
 	defer e.cleanWhereCondition()
 
-	var r sql.Result
 	var strSql string
 	strSql = e.makeSQL()
 
@@ -642,18 +592,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	defer c.Stop(fmt.Sprintf("Update [%s]", strSql))
 
 	db := e.getMaster()
-	r, err = db.Exec(strSql)
-	if err != nil {
-		log.Errorf("error %v model %+v", err, e.model)
-		return
-	}
-	rowsAffected, err = r.RowsAffected()
-	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSql, e.model)
-		return
-	}
-	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSql)
-	return
+	return db.Update(e, strSql)
 }
 
 // orm delete record(s) from db and cache
@@ -663,21 +602,8 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	defer e.cleanWhereCondition()
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Delete [%s]", strSql))
-
-	var r sql.Result
 	db := e.getMaster()
-	r, err = db.Exec(strSql)
-	if err != nil {
-		log.Errorf("error %v model %+v", err, e.model)
-		return
-	}
-	rowsAffected, err = r.RowsAffected()
-	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSql, e.model)
-		return
-	}
-	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSql)
-	return
+	return db.Delete(e, strSql)
 }
 
 // use raw sql to query results
@@ -690,19 +616,9 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strQuery))
 	e.setOperType(OperType_QueryRaw)
-
-	var rows *sqlx.Rows
 	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
-
 	db := e.getQueryDB()
-	if rows, err = db.Queryx(strQuery); err != nil {
-		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
-		return
-	}
-
-	defer rows.Close()
-	return e.fetchRows(rows.Rows)
+	return db.QueryRaw(e, strQuery)
 }
 
 // use raw sql to query results into a map slice (model type is []map[string]string)
@@ -715,23 +631,10 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strQuery))
 
 	e.setOperType(OperType_QueryMap)
-	var rows *sqlx.Rows
 
 	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
 	db := e.getQueryDB()
-	if rows, err = db.Queryx(strQuery); err != nil {
-		log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
-		return
-	}
-
-	defer rows.Close()
-	for rows.Next() {
-		rowsAffected++
-		fetcher, _ := e.getFetcher(rows.Rows)
-		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
-	}
-	return
+	return db.QueryMap(e, strQuery)
 }
 
 // use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
@@ -743,23 +646,10 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	defer c.Stop(fmt.Sprintf("ExecRaw [%s]", strQuery))
 
 	e.setOperType(OperType_ExecRaw)
-
-	var r sql.Result
 	strQuery = e.formatString(strQuery, args...)
 	log.Debugf("query [%v]", strQuery)
 	db := e.getMaster()
-	if r, err = db.Exec(strQuery); err != nil {
-		log.Errorf("error [%v] model [%+v]", err, e.model)
-		return
-	}
-
-	rowsAffected, err = r.RowsAffected()
-	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v]", err.Error(), strQuery)
-		return
-	}
-	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
-	return
+	return db.Exec(e, strQuery)
 }
 
 // force update/insert read only column(s)
@@ -771,67 +661,6 @@ func (e *Engine) Force() *Engine {
 func (e *Engine) AutoRollback() *Engine {
 	e.bAutoRollback = true
 	return e
-}
-
-func (e *Engine) TxBegin() (*Engine, error) {
-	return e.newTx()
-}
-
-func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
-	assert(e.tx, "TxGet tx instance is nil, please call TxBegin to create a tx instance")
-	var rows *sql.Rows
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("TxGet [%s]", strQuery))
-	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("TxGet query [%v]", strQuery)
-
-	rows, err = e.tx.Query(strQuery)
-	if err != nil {
-		log.Errorf("TxGet sql [%v] args %v query error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		e.autoRollback()
-		return
-	}
-	//log.Debugf("TxGet query [%v] rows ok", strQuery)
-	e.setModel(dest)
-
-	defer rows.Close()
-	if count, err = e.fetchRows(rows); err != nil {
-		log.Errorf("TxGet sql [%v] args %v fetch row error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		e.autoRollback()
-		return
-	}
-	//log.Debugf("TxGet query [%v] ok", strQuery)
-	return
-}
-
-func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
-	assert(e.tx, "TxExec tx instance is nil, please call TxBegin to create a tx instance")
-	var result sql.Result
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("TxExec [%s]", strQuery))
-	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
-
-	result, err = e.tx.Exec(strQuery)
-
-	if err != nil {
-		log.Errorf("TxExec exec query [%v] args %+v error [%+v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		e.autoRollback()
-		return
-	}
-	lastInsertId, _ = result.LastInsertId()
-	rowsAffected, _ = result.RowsAffected()
-	return
-}
-
-func (e *Engine) TxRollback() error {
-	assert(e.tx, "TxRollback tx instance is nil, please call TxBegin to create a tx instance")
-	return e.tx.Rollback()
-}
-
-func (e *Engine) TxCommit() error {
-	assert(e.tx, "TxCommit tx instance is nil, please call TxBegin to create a tx instance")
-	return e.tx.Commit()
 }
 
 // make SQL from orm model and operation type
@@ -889,31 +718,19 @@ func (e *Engine) SetReadOnly(columns ...string) {
 	e.readOnly = columns
 }
 
-//execute transaction by customize handler
-//auto rollback when handler return error
-func (e *Engine) TxHandle(handler TxHandler) (err error) {
-	var tx *Engine
-	c := e.Counter()
-	defer c.Stop("TxHandle")
-	if tx, err = e.TxBegin(); err != nil {
-		log.Errorf("transaction begin error [%v]", err.Error())
-		return
-	}
-	if err = handler.OnTransaction(tx); err != nil {
-		_ = tx.TxRollback()
-		log.Warnf("transaction rollback by handler error [%v]", err.Error())
-		return
-	}
-	return tx.TxCommit()
-}
-
 //execute transaction by customize function
 //auto rollback when function return error
-func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
-	var tx *Engine
+func (e *Engine) TxFunc(fn func(execor Executor) error) (err error) {
+	var txe *Engine
 	c := e.Counter()
 	defer c.Stop("TxFunc")
-	if tx, err = e.TxBegin(); err != nil {
+	txe, err = e.txBegin()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	tx := txe.tx
+	if tx, err = tx.TxBegin(); err != nil {
 		log.Errorf("transaction begin error [%v]", err.Error())
 		return
 	}
@@ -927,17 +744,23 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 
 //execute transaction by customize function with context
 //auto rollback when function return error
-func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context, tx *Engine) error) (err error) {
-	var tx *Engine
+func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context, execor Executor) error) (err error) {
+	var txe *Engine
 	c := e.Counter()
 	defer c.Stop("TxFuncContext")
-	if tx, err = e.TxBegin(); err != nil {
+	txe, err = e.txBegin()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	tx := txe.tx
+	if tx, err = tx.TxBegin(); err != nil {
 		log.Errorf("transaction begin error [%v]", err.Error())
 		return
 	}
 	if err = fn(ctx, tx); err != nil {
 		_ = tx.TxRollback()
-		log.Warnf("transaction rollback by handler error [%v]", err.Error())
+		log.Errorf("transaction rollback by handler error [%v]", err.Error())
 		return
 	}
 	return tx.TxCommit()
@@ -1060,7 +883,7 @@ func (e *Engine) RightJoin(strTableName string) *Join {
 }
 
 func (e *Engine) GetAdapter() AdapterType {
-	return e.adapterSqlx
+	return e.adapterType
 }
 
 func (e *Engine) Count(strColumn string, strAS ...string) *Engine {

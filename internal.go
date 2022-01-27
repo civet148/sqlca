@@ -1,10 +1,8 @@
 package sqlca
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/civet148/log"
-	"github.com/jmoiron/sqlx"
 	"math/rand"
 	"reflect"
 	"runtime"
@@ -16,18 +14,18 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func (e *Engine) appendMaster(db *sqlx.DB) {
+func (e *Engine) appendMaster(db Executor) {
 	e.dbMasters = append(e.dbMasters, db)
 	log.Debugf("db masters [%v]", len(e.dbMasters))
 }
 
-func (e *Engine) appendSlave(db *sqlx.DB) {
+func (e *Engine) appendSlave(db Executor) {
 	e.dbSlaves = append(e.dbSlaves, db)
 	log.Debugf("db slaves [%v]", len(e.dbSlaves))
 }
 
 // get slave db instance if use Slave() method to query, if not exist return a master db instance
-func (e *Engine) getQueryDB() (db *sqlx.DB) {
+func (e *Engine) getQueryDB() (db Executor) {
 	if e.slave {
 		db = e.getSlave()
 		if db != nil {
@@ -38,7 +36,7 @@ func (e *Engine) getQueryDB() (db *sqlx.DB) {
 }
 
 // get a master db instance
-func (e *Engine) getMaster() *sqlx.DB {
+func (e *Engine) getMaster() Executor {
 
 	n := len(e.dbMasters)
 	if n > 0 {
@@ -48,7 +46,7 @@ func (e *Engine) getMaster() *sqlx.DB {
 }
 
 // get a slave db instance
-func (e *Engine) getSlave() *sqlx.DB {
+func (e *Engine) getSlave() Executor {
 	n := len(e.dbSlaves)
 	if n > 0 {
 		return e.dbSlaves[rand.Intn(n)]
@@ -133,7 +131,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		dsn:             e.dsn,
 		dbMasters:       e.dbMasters,
 		dbSlaves:        e.dbSlaves,
-		adapterSqlx:     e.adapterSqlx,
+		adapterType:     e.adapterType,
 		adapterCache:    e.adapterCache,
 		strPkName:       e.strPkName,
 		expireTime:      e.expireTime,
@@ -149,115 +147,46 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 	return engine
 }
 
-func (e *Engine) newTx() (txEngine *Engine, err error) {
+func (e *Engine) txBegin() (txe *Engine, err error) {
 
-	txEngine = e.clone()
+	txe = e.clone()
 	db := e.getMaster()
-	if txEngine.tx, err = db.Begin(); err != nil {
+	if txe.tx, err = db.TxBegin(); err != nil {
 		log.Errorf("newTx error [%+v]", err.Error())
 		return nil, err
 	}
-	txEngine.operType = OperType_Tx
+	txe.operType = OperType_Tx
 	return
+}
+
+func (e *Engine) defaultInsert(strSQL string) (lastInsertId int64, err error) {
+	db := e.getMaster()
+	return db.Insert(e, strSQL)
 }
 
 func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err error) {
-	var rows *sql.Rows
-	strSQL += fmt.Sprintf(" RETURNING \"%v\"", e.GetPkName())
-	log.Debugf("[%v]", strSQL)
 	db := e.getMaster()
-	if rows, err = db.Query(strSQL); err != nil {
-		log.Errorf("tx.Query error [%v]", err.Error())
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Warnf("rows.Scan warning [%v]", err.Error())
-			return
-		}
-	}
-	return
+	return db.Insert(e, strSQL)
+}
+
+func (e *Engine) defaultUpsert(strSQL string) (lastInsertId int64, err error) {
+	db := e.getMaster()
+	return db.Upsert(e, strSQL)
 }
 
 func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err error) {
-	var rows *sql.Rows
-	log.Debugf("[%v]", strSQL)
 	db := e.getMaster()
-	if rows, err = db.Query(strSQL); err != nil {
-		log.Errorf("tx.Query error [%v]", err.Error())
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Warnf("rows.Scan warning [%v]", err.Error())
-			return
-		}
-	}
-	return
+	return db.Upsert(e, strSQL)
 }
 
 func (e *Engine) mssqlQueryInsert(strSQL string) (lastInsertId int64, err error) {
-	var rows *sql.Rows
-	strSQL += " SELECT SCOPE_IDENTITY() AS last_insert_id"
-	log.Debugf("[%v]", strSQL)
 	db := e.getMaster()
-	if rows, err = db.Query(strSQL); err != nil {
-		log.Errorf("tx.Query error [%v]", err.Error())
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Warnf("rows.Scan warning [%v]", err.Error())
-			return
-		}
-	}
-	return
+	return db.Insert(e, strSQL)
 }
 
 func (e *Engine) mssqlUpsert(strSQL string) (lastInsertId int64, err error) {
-
-	var db *Engine
-	var query = e.makeSqlxQueryPrimaryKey()
-	if db, err = e.TxBegin(); err != nil {
-		log.Errorf("TxBegin error [%v]", err.Error())
-		return
-	}
-	var count int64
-	if count, err = db.TxGet(&lastInsertId, query); err != nil {
-		log.Errorf("TxGet [%v] error [%v]", query, err.Error())
-		_ = db.TxRollback()
-		return
-	}
-	if count == 0 {
-		// INSERT INTO users(...) values(...)  SELECT SCOPE_IDENTITY() AS last_insert_id
-		//if _, _, err = db.TxExec(strSQL); err != nil
-		if lastInsertId, err = e.mssqlQueryInsert(strSQL); err != nil {
-			log.Errorf("mssqlQueryInsert [%v] error [%v]", strSQL, err.Error())
-			_ = db.TxRollback()
-			return
-		}
-	} else {
-		// UPDATE users SET xxx=yyy WHERE id=nnn
-		strUpdates := fmt.Sprintf("%v %v %v %v %v %v=%v",
-			DATABASE_KEY_NAME_UPDATE, e.getTableName(),
-			DATABASE_KEY_NAME_SET, e.getOnConflictDo(),
-			DATABASE_KEY_NAME_WHERE, e.GetPkName(), lastInsertId)
-		log.Debugf("%v", strUpdates)
-		if _, _, err = db.TxExec(strUpdates); err != nil {
-			log.Errorf("TxExec [%v] error [%v]", strSQL, err.Error())
-			_ = db.TxRollback()
-			return
-		}
-	}
-
-	if err = db.TxCommit(); err != nil {
-		log.Errorf("TxCommit [%v] error [%v]", strSQL, err.Error())
-		return
-	}
-	return
+	db := e.getMaster()
+	return db.Upsert(e, strSQL)
 }
 
 func (e *Engine) getDistinct() string {
@@ -491,60 +420,60 @@ func (e *Engine) getConflictColumns() []string {
 }
 
 func (e *Engine) getSingleQuote() (strQuote string) {
-	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+	switch e.adapterType {
+	case AdapterType_MySQL, AdapterType_Sqlite:
 		return "'"
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		return "'"
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		return "'"
 	}
 	return "'"
 }
 
 func (e *Engine) getForwardQuote() (strQuote string) {
-	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+	switch e.adapterType {
+	case AdapterType_MySQL, AdapterType_Sqlite:
 		return "`"
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		return "\""
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		return "["
 	}
 	return ""
 }
 
 func (e *Engine) getBackQuote() (strQuote string) {
-	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+	switch e.adapterType {
+	case AdapterType_MySQL, AdapterType_Sqlite:
 		return "`"
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		return "\""
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		return "]"
 	}
 	return ""
 }
 
 func (e *Engine) getOnConflictForwardKey() (strKey string) {
-	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+	switch e.adapterType {
+	case AdapterType_MySQL, AdapterType_Sqlite:
 		return "ON DUPLICATE"
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		return "ON CONFLICT ("
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		return ""
 	}
 	return
 }
 
 func (e *Engine) getOnConflictBackKey() (strKey string) {
-	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL, AdapterSqlx_Sqlite:
+	switch e.adapterType {
+	case AdapterType_MySQL, AdapterType_Sqlite:
 		return "KEY UPDATE"
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		return ") DO UPDATE SET"
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		return ""
 	}
 	return
@@ -690,7 +619,7 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 
 func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 
-	if e.adapterSqlx != AdapterSqlx_Postgres {
+	if e.adapterType != AdapterType_Postgres {
 		return //only postgres need conflicts fields
 	}
 
@@ -747,8 +676,8 @@ func (e *Engine) trimNearbySameColumn(strAS string, strColumns ...string) (colum
 func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 
 	columns = strColumns
-	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL:
+	switch e.adapterType {
+	case AdapterType_MySQL:
 		{
 			/* -- MySQL
 			SELECT  id,lng,lat,name,(6371 * ACOS(COS(RADIANS(lat)) * COS(RADIANS(28.803909723)) * COS(RADIANS(121.5619236231) - RADIANS(lng))
@@ -764,7 +693,7 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 				e.setHaving(fmt.Sprintf("%s <= %v", nb.strAS, nb.distance))
 			}
 		}
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		{
 			/* -- Postgres
 			SELECT  a.* FROM
@@ -783,16 +712,16 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 func (e *Engine) handleSpecialChars(strIn string) (strOut string) {
 
 	strIn = strings.TrimSpace(strIn) //trim blank characters
-	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL:
+	switch e.adapterType {
+	case AdapterType_MySQL:
 		strIn = strings.Replace(strIn, `\`, `\\`, -1)
 		strIn = strings.Replace(strIn, `'`, `\'`, -1)
 		strIn = strings.Replace(strIn, `"`, `\"`, -1)
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		strIn = strings.Replace(strIn, `'`, `''`, -1)
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		strIn = strings.Replace(strIn, `'`, `''`, -1)
-	case AdapterSqlx_Sqlite:
+	case AdapterType_Sqlite:
 	case AdapterCache_Redis:
 	}
 
@@ -845,8 +774,8 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 func (e *Engine) getOnConflictDo() (strDo string) {
 	var strUpdates string
 	var strCustomizeUpdates = e.getCustomizeUpdates()
-	switch e.adapterSqlx {
-	case AdapterSqlx_MySQL:
+	switch e.adapterType {
+	case AdapterType_MySQL:
 		{
 			if len(strCustomizeUpdates) != 0 {
 				strUpdates = strings.Join(strCustomizeUpdates, ",")
@@ -862,7 +791,7 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 				}
 			}
 		}
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		{
 			if len(strCustomizeUpdates) != 0 {
 				strUpdates = strings.Join(strCustomizeUpdates, ",")
@@ -873,11 +802,11 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 				strDo = fmt.Sprintf("%v RETURNING \"%v\"", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}
 		}
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		{
 			strDo = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 		}
-	case AdapterSqlx_Sqlite:
+	case AdapterType_Sqlite:
 		{
 		}
 	}
@@ -1102,8 +1031,8 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 	strWhere := e.makeWhereCondition()
 
-	switch e.adapterSqlx {
-	case AdapterSqlx_Mssql:
+	switch e.adapterType {
+	case AdapterType_Mssql:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
 			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
@@ -1119,8 +1048,8 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 func (e *Engine) makeSqlxQueryCount() (strSqlx string) {
 	strWhere := e.makeWhereCondition()
 
-	switch e.adapterSqlx {
-	case AdapterSqlx_Mssql:
+	switch e.adapterType {
+	case AdapterType_Mssql:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
 			DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
@@ -1185,7 +1114,7 @@ func (e *Engine) cleanWhereCondition() {
 
 func (e *Engine) autoRollback() {
 	if e.bAutoRollback && e.operType == OperType_Tx && e.tx != nil {
-		_ = e.tx.Rollback()
+		_ = e.tx.TxRollback()
 		log.Debugf("tx auto rollback successful")
 	}
 }

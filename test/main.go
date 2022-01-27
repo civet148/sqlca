@@ -130,9 +130,6 @@ func Direct(e *sqlca.Engine) {
 	RawQueryIntoModelSlice(e)
 	RawQueryIntoMap(e)
 	RawExec(e)
-	TxGetExec(e)
-	TxRollback(e)
-	TxForUpdate(e)
 	TxWrapper(e)
 	CustomTag(e)
 	BuiltInTypesUpdate(e)
@@ -529,93 +526,14 @@ func OrmGroupByHaving(e *sqlca.Engine) {
 	}
 }
 
-func TxGetExec(e *sqlca.Engine) {
-	var err error
-	log.Enter()
-	defer log.Leave()
-
-	var tx *sqlca.Engine
-	//transaction: select user id form users where phone is '8618600000000' and update users disable to 1 by user id
-	if tx, err = e.TxBegin(); err != nil {
-		log.Errorf("TxBegin error [%v]", err.Error())
-		return
-	}
-
-	var UserId int32
-
-	//query results into base variants
-	_, err = tx.TxGet(&UserId, "SELECT id FROM users WHERE phone='%v'", "8618600000000")
-	if err != nil {
-		log.Errorf("TxGet error %v", err.Error())
-		_ = tx.TxRollback()
-		return
-	}
-	var lastInsertId, rowsAffected int64
-	if UserId == 0 {
-		log.Warnf("select id users by phone number but user not exist")
-		_ = tx.TxRollback()
-		return
-	}
-	log.Debugf("base variant of user id [%+v]", UserId)
-	lastInsertId, rowsAffected, err = tx.TxExec("UPDATE users SET disable=? WHERE id=?", 1, UserId)
-	if err != nil {
-		log.Errorf("TxExec error %v", err.Error())
-		_ = tx.TxRollback()
-		return
-	}
-	log.Infof("user id [%v] disabled, last insert id [%v] rows affected [%v]", UserId, lastInsertId, rowsAffected)
-
-	//query results into a struct object or slice
-	var dos []UserDO
-	_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1 LIMIT 5")
-	if err != nil {
-		log.Errorf("TxGet error %v", err.Error())
-		_ = tx.TxRollback()
-		return
-	}
-	for _, do := range dos {
-		log.Infof("struct user data object [%+v]", do)
-	}
-
-	if err = tx.TxCommit(); err != nil {
-		log.Errorf("TxCommit error [%v]", err.Error())
-		return
-	}
-}
-
-func TxRollback(e *sqlca.Engine) {
-	var err error
-	log.Enter()
-	defer log.Leave()
-
-	var tx *sqlca.Engine
-	//transaction: insert and rollback
-	if tx, err = e.TxBegin(); err != nil {
-		log.Errorf("TxBegin error [%v]", err.Error())
-		return
-	}
-	// tx auto rollback
-	_, _, err = tx.AutoRollback().TxExec("INSERT INTO users(id, name, phone, sex, email) VALUES(1, 'john3', '8618600000000', 2, 'john3@gmail.com')")
-	if err != nil {
-		log.Errorf("TxExec error %v, rollback", err.Error())
-		return
-	}
-
-	if err = tx.TxCommit(); err != nil {
-		log.Errorf("TxCommit error [%v]", err.Error())
-		return
-	}
-	return
-}
-
 func TxWrapper(e *sqlca.Engine) {
 
 	//transaction wrapper (auto rollback + auto commit)
-	_ = e.TxFunc(func(tx *sqlca.Engine) error {
+	_ = e.TxFunc(func(tx sqlca.Executor) error {
 		//query results into a struct object or slice
 		var err error
 		var dos []UserDO
-		_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1 LIMIT 1")
+		_, err = tx.TxGet(e, &dos, "SELECT * FROM users WHERE disable=1 LIMIT 1")
 		if err != nil {
 			log.Errorf("TxGet error %v", err.Error())
 			return err
@@ -623,73 +541,13 @@ func TxWrapper(e *sqlca.Engine) {
 		for _, do := range dos {
 			log.Infof("struct user data object [%+v]", do)
 		}
-		_, _, err = tx.TxExec("UPDATE users SET disable=0 LIMIT 1")
+		_, _, err = tx.TxExec(e, "UPDATE users SET disable=0 LIMIT 1")
 		if err != nil {
 			log.Errorf("TxExec error %v", err.Error())
 			return err
 		}
 		return nil
 	})
-}
-
-func TxForUpdate(e *sqlca.Engine) {
-
-	go func() {
-		e.SlowQuery(true, 0) //设置输出慢查询执行时间，超过规定则打印告警信息（毫秒）
-		if tx, err := e.TxBegin(); err != nil {
-			log.Errorf("[TX1] tx begin error [%v]", err.Error())
-			return
-		} else {
-			var id int32
-			if _, err = tx.TxGet(&id, "SELECT id FROM users WHERE id=1 FOR UPDATE"); err != nil {
-				log.Errorf("[TX1] tx get error [%v]", err.Error())
-				tx.TxRollback()
-				return
-			}
-
-			if _, _, err = tx.TxExec("UPDATE users SET name='i am tx 1' WHERE id=1"); err != nil {
-				log.Errorf("[TX1] tx exec error [%v]", err.Error())
-				tx.TxRollback()
-				return
-			}
-
-			time.Sleep(2 * time.Second) //sleep for lock the record where id=1
-
-			log.Infof("[TX1] id [%v] update ok", id)
-			if err = tx.TxCommit(); err != nil {
-				log.Errorf("[TX1] tx commit error [%v]", err.Error())
-				return
-			}
-		}
-	}()
-
-	time.Sleep(1 * time.Second)
-
-	go func() {
-		if tx, err := e.TxBegin(); err != nil {
-			log.Errorf("[TX2] tx begin error [%v]", err.Error())
-			return
-		} else {
-			var id int32
-			if _, err = tx.TxGet(&id, "SELECT id FROM users WHERE id=1 FOR UPDATE"); err != nil {
-				log.Errorf("[TX2] tx get error [%v]", err.Error())
-				tx.TxRollback()
-				return
-			}
-			if _, _, err = tx.TxExec("UPDATE users SET name='i am tx 2' WHERE id=1"); err != nil {
-				log.Errorf("[TX2] tx exec error [%v]", err.Error())
-				tx.TxRollback()
-				return
-			}
-			log.Infof("[TX2] id [%v] update ok", id)
-			if err = tx.TxCommit(); err != nil {
-				log.Errorf("[TX2] tx commit error [%v]", err.Error())
-				return
-			}
-		}
-	}()
-
-	time.Sleep(3 * time.Second)
 }
 
 func CustomTag(e *sqlca.Engine) {
@@ -891,9 +749,9 @@ func CustomizeUpsert(e *sqlca.Engine) {
 	var strCustomUpdates string
 	adapter := e.GetAdapter()
 	switch adapter {
-	case sqlca.AdapterSqlx_MySQL:
+	case sqlca.AdapterType_MySQL:
 		strCustomUpdates = "balance=balance+VALUES(balance)"
-	case sqlca.AdapterSqlx_Postgres:
+	case sqlca.AdapterType_Postgres:
 		strCustomUpdates = "balance=users.balance+excluded.balance"
 	}
 	if _, err := e.Model(&do).

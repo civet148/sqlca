@@ -50,11 +50,11 @@ func (s *SSH) openSSHTunnel(dsn *dsnDriver) (d *dsnDriver) {
 		panic(err.Error())
 	}
 	switch adapter {
-	case AdapterSqlx_MySQL:
+	case AdapterType_MySQL:
 		d = s.buildMysqlTunnelDSN(dsn)
-	case AdapterSqlx_Postgres:
+	case AdapterType_Postgres:
 		d = s.buildPostgresTunnelDSN(dsn)
-	case AdapterSqlx_Mssql:
+	case AdapterType_Mssql:
 		d = s.buildMssqlTunnelDSN(dsn)
 	default:
 		d = dsn

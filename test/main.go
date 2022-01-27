@@ -529,11 +529,11 @@ func OrmGroupByHaving(e *sqlca.Engine) {
 func TxWrapper(e *sqlca.Engine) {
 
 	//transaction wrapper (auto rollback + auto commit)
-	_ = e.TxFunc(func(tx sqlca.Executor) error {
+	_ = e.TxFunc(func(tx *sqlca.Engine) error {
 		//query results into a struct object or slice
 		var err error
 		var dos []UserDO
-		_, err = tx.TxGet(e, &dos, "SELECT * FROM users WHERE disable=1 LIMIT 1")
+		_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1 LIMIT 1")
 		if err != nil {
 			log.Errorf("TxGet error %v", err.Error())
 			return err
@@ -541,7 +541,7 @@ func TxWrapper(e *sqlca.Engine) {
 		for _, do := range dos {
 			log.Infof("struct user data object [%+v]", do)
 		}
-		_, _, err = tx.TxExec(e, "UPDATE users SET disable=0 LIMIT 1")
+		_, _, err = tx.TxExec("UPDATE users SET disable=0 LIMIT 1")
 		if err != nil {
 			log.Errorf("TxExec error %v", err.Error())
 			return err

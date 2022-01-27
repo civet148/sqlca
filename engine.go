@@ -718,9 +718,18 @@ func (e *Engine) SetReadOnly(columns ...string) {
 	e.readOnly = columns
 }
 
+func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
+	return e.tx.TxGet(e, dest, strQuery, args...)
+}
+
+func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
+	return e.tx.TxExec(e, strQuery, args...)
+}
+
 //execute transaction by customize function
 //auto rollback when function return error
-func (e *Engine) TxFunc(fn func(execor Executor) error) (err error) {
+func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
+
 	var txe *Engine
 	c := e.Counter()
 	defer c.Stop("TxFunc")
@@ -730,7 +739,7 @@ func (e *Engine) TxFunc(fn func(execor Executor) error) (err error) {
 		return
 	}
 	tx := txe.tx
-	if err = fn(tx); err != nil {
+	if err = fn(txe); err != nil {
 		_ = tx.txRollback()
 		log.Errorf("transaction rollback by handler error [%v]", err.Error())
 		return
@@ -740,7 +749,7 @@ func (e *Engine) TxFunc(fn func(execor Executor) error) (err error) {
 
 //execute transaction by customize function with context
 //auto rollback when function return error
-func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context, execor Executor) error) (err error) {
+func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context, tx *Engine) error) (err error) {
 	var txe *Engine
 	c := e.Counter()
 	defer c.Stop("TxFuncContext")
@@ -754,7 +763,7 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 		log.Errorf("transaction begin error [%v]", err.Error())
 		return
 	}
-	if err = fn(ctx, tx); err != nil {
+	if err = fn(ctx, txe); err != nil {
 		_ = tx.txRollback()
 		log.Errorf("transaction rollback by handler error [%v]", err.Error())
 		return

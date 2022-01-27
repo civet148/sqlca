@@ -995,8 +995,12 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 		strCustomer := e.getCustomWhere()
 		if strCustomer == "" {
 			//where condition required when update or delete
-			if e.operType != OperType_Update && e.operType != OperType_Delete && len(e.joins) == 0 {
+			if e.operType != OperType_Update && e.operType != OperType_Delete && len(e.joins)==0 {
 				strWhere += "1=1"
+			} else {
+				if len(e.joins) > 0 {
+					strWhere += "1=1"
+				}
 			}
 		} else {
 			strWhere += strCustomer

@@ -719,11 +719,17 @@ func (e *Engine) SetReadOnly(columns ...string) {
 }
 
 func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
-	return e.tx.TxGet(e, dest, strQuery, args...)
+	if e.tx == nil {
+		log.Panic("tx object is nil, this function must be called in TxFunc wrapper method")
+	}
+	return e.tx.txGet(e, dest, strQuery, args...)
 }
 
 func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
-	return e.tx.TxExec(e, strQuery, args...)
+	if e.tx == nil {
+		log.Panic("tx object is nil, this function must be called in TxFunc wrapper method")
+	}
+	return e.tx.txExec(e, strQuery, args...)
 }
 
 //execute transaction by customize function
@@ -845,21 +851,6 @@ func (e *Engine) NearBy(strLngCol, strLatCol, strAS string, lng, lat, distance f
 func (e *Engine) GeoHash(lng, lat float64, precision int) (strGeoHash string, strNeighbors []string) {
 	strGeoHash, _ = geohash.Encode(lat, lng, precision)
 	strNeighbors = geohash.GetNeighbors(lat, lng, precision)
-	return
-}
-
-func (e *Engine) JsonMarshal(v interface{}) (strJson string) {
-	if data, err := json.Marshal(v); err != nil {
-		log.Error(err.Error())
-		return
-	} else {
-		strJson = string(data)
-	}
-	return
-}
-
-func (e *Engine) JsonUnmarshal(strJson string, v interface{}) (err error) {
-	err = json.Unmarshal([]byte(strJson), v)
 	return
 }
 

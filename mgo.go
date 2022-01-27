@@ -78,11 +78,11 @@ func (m *MgoExecutor) txBegin() (tx Executor, err error) {
 	return
 }
 
-func (m *MgoExecutor) TxGet(e *Engine, dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
+func (m *MgoExecutor) txGet(e *Engine, dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
 	return
 }
 
-func (m *MgoExecutor) TxExec(e *Engine, strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
+func (m *MgoExecutor) txExec(e *Engine, strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
 	return
 }
 

@@ -219,7 +219,7 @@ func (m *SqlxExecutor) txBegin() (tx Executor, err error) {
 	}, nil
 }
 
-func (m *SqlxExecutor) TxGet(e *Engine, dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
+func (m *SqlxExecutor) txGet(e *Engine, dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
 	var rows *sql.Rows
 	rows, err = m.tx.Query(strQuery)
 	if err != nil {
@@ -242,7 +242,7 @@ func (m *SqlxExecutor) TxGet(e *Engine, dest interface{}, strQuery string, args 
 	return
 }
 
-func (m *SqlxExecutor) TxExec(e *Engine, strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
+func (m *SqlxExecutor) txExec(e *Engine, strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
 	var result sql.Result
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("TxExec [%s]", strQuery))
@@ -333,7 +333,7 @@ func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64
 		return
 	}
 	var count int64
-	if count, err = db.TxGet(e, &lastInsertId, query); err != nil {
+	if count, err = db.txGet(e, &lastInsertId, query); err != nil {
 		log.Errorf("TxGet [%v] error [%v]", query, err.Error())
 		_ = db.txRollback()
 		return
@@ -353,7 +353,7 @@ func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64
 			DATABASE_KEY_NAME_SET, e.getOnConflictDo(),
 			DATABASE_KEY_NAME_WHERE, e.GetPkName(), lastInsertId)
 		log.Debugf("%v", strUpdates)
-		if _, _, err = db.TxExec(e, strUpdates); err != nil {
+		if _, _, err = db.txExec(e, strUpdates); err != nil {
 			log.Errorf("TxExec [%v] error [%v]", strSQL, err.Error())
 			_ = db.txRollback()
 			return

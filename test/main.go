@@ -130,7 +130,7 @@ func Direct(e *sqlca.Engine) {
 	//RawQueryIntoModelSlice(e)
 	//RawQueryIntoMap(e)
 	//RawExec(e)
-	TxWrapper(e)
+	//TxWrapper(e)
 	//CustomTag(e)
 	//BuiltInTypesUpdate(e)
 	//DuplicateUpdateGetId(e)
@@ -139,8 +139,8 @@ func Direct(e *sqlca.Engine) {
 	//UpdateByMap(e)
 	//NearBy(e)
 	//MySqlJsonQuery(e)
-	CustomizeUpsert(e)
-	//JoinQuery(e)
+	//CustomizeUpsert(e)
+	JoinQuery(e)
 	//NilPointerQuery(e)
 	//JsonStructQuery(e)
 	//BuiltInSliceQuery(e)
@@ -792,7 +792,7 @@ func JoinQuery(e *sqlca.Engine) {
 		//LeftJoin("classes b").
 		//RightJoin("classes b").
 		On("a.id=b.user_id").
-		Where("a.id <= 9").
+		//Where("a.id <= 9").
 		Query()
 	if err != nil {
 		log.Errorf(err.Error())

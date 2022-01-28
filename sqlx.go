@@ -13,7 +13,7 @@ type SqlxExecutor struct {
 	tx *sql.Tx
 }
 
-func newSqlxExecutor(strDriverName, strDSN string) (Executor, error) {
+func newSqlxExecutor(strDriverName, strDSN string) (executor, error) {
 	var err error
 	var db *sqlx.DB
 	if db, err = sqlx.Open(strDriverName, strDSN); err != nil {
@@ -207,7 +207,7 @@ func (m *SqlxExecutor) Delete(e *Engine, strSQL string) (rowsAffected int64, err
 	return
 }
 
-func (m *SqlxExecutor) txBegin() (tx Executor, err error) {
+func (m *SqlxExecutor) txBegin() (tx executor, err error) {
 	m.tx, err = m.db.Begin()
 	if err != nil {
 		log.Errorf(err.Error())
@@ -326,7 +326,7 @@ func (m *SqlxExecutor) mssqlQueryInsert(e *Engine, strSQL string) (lastInsertId 
 
 func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64, err error) {
 
-	var db Executor
+	var db executor
 	var query = e.makeSqlxQueryPrimaryKey()
 	if db, err = m.txBegin(); err != nil {
 		log.Errorf("txBegin error [%v]", err.Error())

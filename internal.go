@@ -14,18 +14,18 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func (e *Engine) appendMaster(db Executor) {
+func (e *Engine) appendMaster(db executor) {
 	e.dbMasters = append(e.dbMasters, db)
 	log.Debugf("db masters [%v]", len(e.dbMasters))
 }
 
-func (e *Engine) appendSlave(db Executor) {
+func (e *Engine) appendSlave(db executor) {
 	e.dbSlaves = append(e.dbSlaves, db)
 	log.Debugf("db slaves [%v]", len(e.dbSlaves))
 }
 
 // get slave db instance if use Slave() method to query, if not exist return a master db instance
-func (e *Engine) getQueryDB() (db Executor) {
+func (e *Engine) getQueryDB() (db executor) {
 	if e.slave {
 		db = e.getSlave()
 		if db != nil {
@@ -36,7 +36,7 @@ func (e *Engine) getQueryDB() (db Executor) {
 }
 
 // get a master db instance
-func (e *Engine) getMaster() Executor {
+func (e *Engine) getMaster() executor {
 
 	n := len(e.dbMasters)
 	if n > 0 {
@@ -46,7 +46,7 @@ func (e *Engine) getMaster() Executor {
 }
 
 // get a slave db instance
-func (e *Engine) getSlave() Executor {
+func (e *Engine) getSlave() executor {
 	n := len(e.dbSlaves)
 	if n > 0 {
 		return e.dbSlaves[rand.Intn(n)]

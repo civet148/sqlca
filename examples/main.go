@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v2"
+	"github.com/civet148/sqlca/v3"
 	"time"
 	//_ "github.com/mattn/go-sqlite3" //import go sqlite3 if you want
 )
@@ -52,6 +52,7 @@ var urls = []string{
 	//"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4",
 	//"postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable",
 	//"mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false",
+	//"mongodb://root:123456@127.0.0.1:27017/test?authSource=admin",
 }
 
 //func (u *UserData) Scan(src interface{}) (err error) {

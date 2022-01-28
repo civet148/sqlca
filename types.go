@@ -29,6 +29,7 @@ const (
 	DRIVER_NAME_POSTGRES = "postgres"
 	DRIVER_NAME_SQLITE   = "sqlite3"
 	DRIVER_NAME_MSSQL    = "mssql"
+	DRIVER_NAME_MONGODB  = "mongodb"
 	DRIVER_NAME_REDIS    = "redis"
 )
 
@@ -73,11 +74,12 @@ const (
 type AdapterType int
 
 const (
-	ORDER_BY_ASC                  = "asc"
-	ORDER_BY_DESC                 = "desc"
-	DEFAULT_CAHCE_EXPIRE_SECONDS  = 24 * 60 * 60
-	DEFAULT_PRIMARY_KEY_NAME      = "id"
-	DEFAULT_SLOW_QUERY_ALERT_TIME = 500 //milliseconds
+	ORDER_BY_ASC                     = "asc"
+	ORDER_BY_DESC                    = "desc"
+	DEFAULT_CAHCE_EXPIRE_SECONDS     = 24 * 60 * 60
+	DEFAULT_PRIMARY_KEY_NAME         = "id"
+	DEFAULT_MONGODB_PRIMARY_KEY_NAME = "_id"
+	DEFAULT_SLOW_QUERY_ALERT_TIME    = 500 //milliseconds
 )
 
 const (
@@ -85,6 +87,7 @@ const (
 	AdapterType_Postgres AdapterType = 2  //postgresql
 	AdapterType_Sqlite   AdapterType = 3  //sqlite
 	AdapterType_Mssql    AdapterType = 4  //mssql server
+	AdapterType_MongoDB  AdapterType = 5  //mongodb
 	AdapterCache_Redis   AdapterType = 11 //redis
 )
 
@@ -119,6 +122,8 @@ func (a AdapterType) DriverName() string {
 		return DRIVER_NAME_SQLITE
 	case AdapterType_Mssql:
 		return DRIVER_NAME_MSSQL
+	case AdapterType_MongoDB:
+		return DRIVER_NAME_MONGODB
 	case AdapterCache_Redis:
 		return DRIVER_NAME_REDIS
 	default:
@@ -131,6 +136,7 @@ var adapterNames = map[string]AdapterType{
 	DRIVER_NAME_POSTGRES: AdapterType_Postgres,
 	DRIVER_NAME_SQLITE:   AdapterType_Sqlite,
 	DRIVER_NAME_MSSQL:    AdapterType_Mssql,
+	DRIVER_NAME_MONGODB:  AdapterType_MongoDB,
 	DRIVER_NAME_REDIS:    AdapterCache_Redis,
 }
 

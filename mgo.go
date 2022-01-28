@@ -6,7 +6,7 @@ type MgoExecutor struct {
 
 }
 
-func NewMgoExecutor(strUrl string, options ...interface{}) (Executor, error) {
+func newMgoExecutor(strUrl string, options ...interface{}) (executor, error) {
 	return &MgoExecutor{
 	}, nil
 }
@@ -74,7 +74,7 @@ func (m *MgoExecutor) Delete(e *Engine, strSQL string) (rowsAffected int64, err 
 	return
 }
 
-func (m *MgoExecutor) txBegin() (tx Executor, err error) {
+func (m *MgoExecutor) txBegin() (tx executor, err error) {
 	return
 }
 

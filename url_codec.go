@@ -291,6 +291,14 @@ func (e *Engine) parseMssqlUrl(strUrl string) (parameter dsnParameter) {
 	return
 }
 
+func (e *Engine) parseMongoUrl(strUrl string) (parameter dsnParameter) {
+	ui := ParseUrl(strUrl)
+	parameter.parseUrlInfo(ui)
+	e.setDatabaseName(parseDatabaseName(ui.Path))
+	parameter.strDSN = strUrl
+	return
+}
+
 func buildMssqlDSN(strIP, strPort, strUser, strPassword, strDatabase string, queries map[string]string) (strDSN string) {
 	var isWindowsAuth bool
 	var dsnArgs []string

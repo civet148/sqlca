@@ -2,7 +2,7 @@ package sqlca
 
 import "time"
 
-type Executor interface {
+type executor interface {
 	Ping() (err error)
 	SetMaxOpenConns(n int)
 	SetMaxIdleConns(n int)
@@ -18,7 +18,7 @@ type Executor interface {
 	Upsert(e *Engine, strSQL string) (lastInsertId int64, err error)
 	Delete(e *Engine, strSQL string) (rowsAffected int64, err error)
 	//tx methods
-	txBegin() (Executor, error)
+	txBegin() (executor, error)
 	txGet(e *Engine, dest interface{}, strQuery string, args ...interface{}) (count int64, err error)
 	txExec(e *Engine, strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error)
 	txRollback() error

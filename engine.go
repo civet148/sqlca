@@ -37,9 +37,9 @@ type nearby struct {
 type Engine struct {
 	dsn             dsnDriver              // driver name and parameters
 	slave           bool                   // use slave to query ?
-	dbMasters       []Executor             // DB instance masters
-	dbSlaves        []Executor             // DB instance slaves
-	tx              Executor                //DB tx instance
+	dbMasters       []executor             // DB instance masters
+	dbSlaves        []executor             // DB instance slaves
+	tx              executor               // DB tx instance
 	adapterType     AdapterType            // what's adapter of sqlx
 	adapterCache    AdapterType            // what's adapter of cache
 	modelType       ModelType              // model type
@@ -126,7 +126,9 @@ func NewEngine(args ...interface{}) *Engine {
 			e.Open(strOpenUrl, options)
 		}
 	}
-
+	if e.adapterType == AdapterType_MongoDB {
+		e.strPkName = DEFAULT_MONGODB_PRIMARY_KEY_NAME
+	}
 	return e
 }
 
@@ -143,13 +145,15 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 		driver.parameter = e.parseSqliteUrl(strUrl)
 	case AdapterType_Mssql:
 		driver.parameter = e.parseMssqlUrl(strUrl)
+	case AdapterType_MongoDB:
+		driver.parameter = e.parseMongoUrl(strUrl)
 	default:
 		panic(fmt.Sprintf("unknown adapter [%s]", adapterType))
 	}
 	return
 }
 
-// open a database or cache connection pool
+// Open open a database or cache connection pool
 // strUrl:
 //
 //  1. data source name
@@ -157,15 +161,10 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 // 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false&max=100&idle=1")
 // 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false&max=100&idle=1")
 // 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false&max=100&idle=1")
+//     [mongodb]  Open("mongodb://root:123456@127.0.0.1:27017,127.0.0.1:27018/test?authSource=admin&replicaSet=myRepl")
 // 	   [sqlite]   Open("sqlite:///var/lib/test.db")
-//
-//  2. cache config
-//     [redis-alone]    Open("redis://123456@127.0.0.1:6379/cluster?db=0")
-//     [redis-cluster]  Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
-//
 // options:
 //        1. specify master or slave, MySQL/Postgres (Options)
-//        2. cache data expire seconds, just for redis (Integer)
 func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 
 	var err error
@@ -181,7 +180,7 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 	}
 	var dsn = &e.dsn
 	var opt *Options
-	var db Executor
+	var db executor
 	//var db *sqlx.DB
 	var parameter = &dsn.parameter
 
@@ -204,13 +203,21 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 	switch adapter {
 	case AdapterType_MySQL, AdapterType_Postgres, AdapterType_Sqlite, AdapterType_Mssql:
 		if db, err = newSqlxExecutor(dsn.strDriverName, parameter.strDSN); err != nil {
-		//if db, err = sqlx.Open(dsn.strDriverName, parameter.strDSN); err != nil {
 			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
 			return nil
 		}
 		if err = db.Ping(); err != nil {
 			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
 			panic(err.Error())
+			return nil
+		}
+	case AdapterType_MongoDB:
+		if db, err = newMgoExecutor(dsn.strDriverName, parameter.strDSN); err != nil {
+			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
+			return nil
+		}
+		if err = db.Ping(); err != nil {
+			log.Panic("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
 			return nil
 		}
 	default:

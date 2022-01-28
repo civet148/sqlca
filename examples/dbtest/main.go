@@ -66,12 +66,12 @@ var urls = []string{
 
 func main() {
 
-	//e.Open("root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4") // open with raw mysql DSN
-	//e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", &sqlca.Options{Max: 20, Idle: 2})             //MySQL master
-	//e.Open("mysql://root:123456@127.0.0.1:3307/test?charset=utf8mb4", sqlca.Options{Max: 20, Idle: 5, Slave: true}) //MySQL slave
-	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable") //postgres
-	//e.Open("sqlite:///var/lib/test.db") //sqlite3
-	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
+	//sqlca.NewEngine("root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4") // open with raw mysql DSN
+	//sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", &sqlca.Options{Max: 20, Idle: 2})             //MySQL master
+	//sqlca.NewEngine("mysql://root:123456@127.0.0.1:3307/test?charset=utf8mb4", sqlca.Options{Max: 20, Idle: 5, Slave: true}) //MySQL slave
+	//sqlca.NewEngine("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable") //postgres
+	//sqlca.NewEngine("sqlite:///var/lib/test.db") //sqlite3
+	//sqlca.NewEngine("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 
 	//connect database directly
 	for _, url := range urls {
@@ -113,42 +113,42 @@ func SSHTunnel(e *sqlca.Engine) {
 //connect database directly
 func Direct(e *sqlca.Engine) {
 
-	//OrmInsertByModel(e)
-	//OrmUpsertByModel(e)
-	//OrmUpdateByModel(e)
-	//OrmQueryIntoModel(e)
-	//OrmQueryExcludeIntoModel(e)
-	//OrmQueryIntoModelSlice(e)
-	//OrmUpdateIndexToCache(e)
-	//OrmSelectMultiTable(e)
-	//OrmDeleteFromTable(e)
-	//OrmInCondition(e)
-	//OrmFind(e)
-	//OrmWhereRequire(e)
-	//OrmToSQL(e)
-	//OrmGroupByHaving(e)
-	//RawQueryIntoModel(e)
-	//RawQueryIntoModelSlice(e)
-	//RawQueryIntoMap(e)
-	//RawExec(e)
-	//TxWrapper(e)
-	//CustomTag(e)
-	//BuiltInTypesUpdate(e)
-	//DuplicateUpdateGetId(e)
-	//Count(e)
-	//CaseWhen(e)
-	//UpdateByMap(e)
-	//NearBy(e)
-	//MySqlJsonQuery(e)
-	//CustomizeUpsert(e)
+	OrmInsertByModel(e)
+	OrmUpsertByModel(e)
+	OrmUpdateByModel(e)
+	OrmQueryIntoModel(e)
+	OrmQueryExcludeIntoModel(e)
+	OrmQueryIntoModelSlice(e)
+	OrmUpdateIndexToCache(e)
+	OrmSelectMultiTable(e)
+	OrmDeleteFromTable(e)
+	OrmInCondition(e)
+	OrmFind(e)
+	OrmWhereRequire(e)
+	OrmToSQL(e)
+	OrmGroupByHaving(e)
+	RawQueryIntoModel(e)
+	RawQueryIntoModelSlice(e)
+	RawQueryIntoMap(e)
+	RawExec(e)
+	TxWrapper(e)
+	CustomTag(e)
+	BuiltInTypesUpdate(e)
+	DuplicateUpdateGetId(e)
+	Count(e)
+	CaseWhen(e)
+	UpdateByMap(e)
+	NearBy(e)
+	MySqlJsonQuery(e)
+	CustomizeUpsert(e)
 	JoinQuery(e)
-	//NilPointerQuery(e)
-	//JsonStructQuery(e)
-	//BuiltInSliceQuery(e)
-	//QueryJSON(e)
-	//BoolConvert(e)
-	//QueryEx(e)
-	//OrmQueryToDecimal(e)
+	NilPointerQuery(e)
+	JsonStructQuery(e)
+	BuiltInSliceQuery(e)
+	QueryJSON(e)
+	BoolConvert(e)
+	QueryEx(e)
+	OrmQueryToDecimal(e)
 }
 
 func OrmQueryToDecimal(e *sqlca.Engine) {

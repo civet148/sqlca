@@ -13,5 +13,6 @@ require (
 	github.com/lib/pq v1.2.0
 	github.com/shopspring/decimal v1.2.0
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
-	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
+	go.mongodb.org/mongo-driver v1.8.2
+	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
 )

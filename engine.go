@@ -87,7 +87,7 @@ func init() {
 
 // args[0] data source name url
 // args[1] options
-// if length of args is 0, must call Open method manual
+// if length of args is 0, must call open method manual
 func NewEngine(args ...interface{}) *Engine {
 
 	e := &Engine{
@@ -106,7 +106,7 @@ func NewEngine(args ...interface{}) *Engine {
 	} else if argc > 0 {
 		if argc == 1 {
 			if strOpenUrl, ok = args[0].(string); ok {
-				e.Open(strOpenUrl)
+				e.open(strOpenUrl)
 			}
 		} else {
 			var v1 Options
@@ -120,10 +120,10 @@ func NewEngine(args ...interface{}) *Engine {
 					options = v2
 				} else {
 					strOpenUrl = fmt.Sprintf(args[0].(string), args[1:]...) //legacy version compatible
-					return e.Open(strOpenUrl)
+					return e.open(strOpenUrl)
 				}
 			}
-			e.Open(strOpenUrl, options)
+			e.open(strOpenUrl, options)
 		}
 	}
 	if e.adapterType == AdapterType_MongoDB {
@@ -153,19 +153,19 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 	return
 }
 
-// Open open a database or cache connection pool
+// open open a database or cache connection pool
 // strUrl:
 //
 //  1. data source name
 //
-// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false&max=100&idle=1")
-// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false&max=100&idle=1")
-// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false&max=100&idle=1")
-//     [mongodb]  Open("mongodb://root:123456@127.0.0.1:27017,127.0.0.1:27018/test?authSource=admin&replicaSet=myRepl")
-// 	   [sqlite]   Open("sqlite:///var/lib/test.db")
+// 	   [mysql]    open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false&max=100&idle=1")
+// 	   [postgres] open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false&max=100&idle=1")
+// 	   [mssql]    open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false&max=100&idle=1")
+//     [mongodb]  open("mongodb://root:123456@127.0.0.1:27017,127.0.0.1:27018/test?authSource=admin&replicaSet=myRepl")
+// 	   [sqlite]   open("sqlite:///var/lib/test.db")
 // options:
 //        1. specify master or slave, MySQL/Postgres (Options)
-func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
+func (e *Engine) open(strUrl string, options ...interface{}) *Engine {
 
 	var err error
 	var adapter AdapterType

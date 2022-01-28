@@ -3,9 +3,8 @@ package sqlca
 import (
 	"database/sql/driver"
 	"fmt"
-	//"go.mongodb.org/mongo-driver/bson/bsontype"
 	"github.com/shopspring/decimal"
-	//"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
 )
 
 type Decimal struct {
@@ -286,26 +285,26 @@ func (d Decimal) MarshalBinary() (data []byte, err error) {
 	return d.dec.MarshalBinary()
 }
 
-//
-//// MarshalBSON implements the bson.Marshaler interface.
-//func (d Decimal) MarshalBSON() ([]byte, error) {
-//	return d.dec.MarshalJSON()
-//}
-//
-//func (d *Decimal) UnmarshalBSON(data []byte) error {
-//	return d.dec.UnmarshalJSON(data)
-//}
-//
+
 // MarshalBSON implements the bson.Marshaler interface.
-//func (d Decimal) MarshalBSONValue() (bsontype.Type, []byte, error) {
-//	return bsontype.String, []byte(d.dec.String()), nil
-//}
-//
-//// UnmarshalBSON implements the bson.Unmarshaler interface.
-//func (d *Decimal) UnmarshalBSONValue(_ bsontype.Type, data []byte) error {
-//	return d.dec.UnmarshalJSON(data)
-//}
-//
+func (d Decimal) MarshalBSON() ([]byte, error) {
+	return d.dec.MarshalJSON()
+}
+
+func (d *Decimal) UnmarshalBSON(data []byte) error {
+	return d.dec.UnmarshalJSON(data)
+}
+
+//MarshalBSON implements the bson.Marshaler interface.
+func (d Decimal) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	return bsontype.String, []byte(d.dec.String()), nil
+}
+
+// UnmarshalBSON implements the bson.Unmarshaler interface.
+func (d *Decimal) UnmarshalBSONValue(_ bsontype.Type, data []byte) error {
+	return d.dec.UnmarshalJSON(data)
+}
+
 //// GetBSON implements the bson.Getter interface (mgo.v2)
 //func (d Decimal) GetBSON() (interface{}, error) {
 //	return d.dec.String(), nil

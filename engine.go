@@ -1091,3 +1091,38 @@ func (e *Engine) NoVerbose() *Engine {
 	e.noVerbose = true
 	return e
 }
+
+func (e *Engine) Like(strColumn, strSub string) *Engine {
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL:
+		e.And("LOCATE('%s', %s)", strSub, strColumn)
+	default:
+		e.And("%s LIKE '%%%s%%'", strColumn, strSub)
+	}
+	return e
+}
+
+func (e *Engine) Equal(strColumn string, value interface{}) *Engine {
+	e.And("%s='%v'", strColumn, value)
+	return e
+}
+
+func (e *Engine) GraterThan(strColumn string, value interface{}) *Engine {
+	e.And("%s>'%v'", strColumn, value)
+	return e
+}
+
+func (e *Engine) GraterEqual(strColumn string, value interface{}) *Engine {
+	e.And("%s>='%v'", strColumn, value)
+	return e
+}
+
+func (e *Engine) LessThan(strColumn string, value interface{}) *Engine {
+	e.And("%s<'%v'", strColumn, value)
+	return e
+}
+
+func (e *Engine) LessEqual(strColumn string, value interface{}) *Engine {
+	e.And("%s<='%v'", strColumn, value)
+	return e
+}

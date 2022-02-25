@@ -151,6 +151,7 @@ func Direct(e *sqlca.Engine) {
 	BoolConvert(e)
 	QueryEx(e)
 	OrmQueryToDecimal(e)
+	OrmQueryLike(e)
 }
 
 func OrmQueryToDecimal(e *sqlca.Engine) {
@@ -1030,4 +1031,13 @@ func BoolConvert(e *sqlca.Engine) {
 	}
 	e.Model(user).Table(TABLE_NAME_USERS).Upsert()
 	log.Info("user upsert [%+v] ", user)
+}
+
+func OrmQueryLike(e *sqlca.Engine) {
+	var users []*UserDO
+	if _, err := e.Model(&users).Table(TABLE_NAME_USERS).Like("name", "oh").Query(); err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	log.Infof("users %+v", users)
 }

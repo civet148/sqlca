@@ -1101,3 +1101,28 @@ func (e *Engine) Like(strColumn, strSub string) *Engine {
 	}
 	return e
 }
+
+func (e *Engine) Equal(strColumn string, value interface{}) *Engine {
+	e.And("%s='%v'", strColumn, value)
+	return e
+}
+
+func (e *Engine) GraterThan(strColumn string, value interface{}) *Engine {
+	e.And("%s>'%v'", strColumn, value)
+	return e
+}
+
+func (e *Engine) GraterEqual(strColumn string, value interface{}) *Engine {
+	e.And("%s>='%v'", strColumn, value)
+	return e
+}
+
+func (e *Engine) LessThan(strColumn string, value interface{}) *Engine {
+	e.And("%s<'%v'", strColumn, value)
+	return e
+}
+
+func (e *Engine) LessEqual(strColumn string, value interface{}) *Engine {
+	e.And("%s<='%v'", strColumn, value)
+	return e
+}

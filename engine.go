@@ -1091,3 +1091,13 @@ func (e *Engine) NoVerbose() *Engine {
 	e.noVerbose = true
 	return e
 }
+
+func (e *Engine) Like(strColumn, strSub string) *Engine {
+	switch e.adapterSqlx {
+	case AdapterSqlx_MySQL:
+		e.And("LOCATE('%s', %s)", strSub, strColumn)
+	default:
+		e.And("%s LIKE '%%%s%%'", strColumn, strSub)
+	}
+	return e
+}

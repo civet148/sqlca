@@ -10,53 +10,30 @@ func main() {
 }
 
 func TestSqlParse() {
-	strSQL := "SELECT miner, date, SUM(to_decimal(win_reward)) as total_reward, COUNT(1) AS total_count " +
-		" FROM miner_reward  WHERE miner='0x45a36a8e118c37e4c47ef4ab827a7c9e579e11e2' AND date >= '2021-12-01' AND date <= '2022-01-31' " +
-		" GROUP BY miner, date"
-
+	strSQL := "SELECT `miner`, `date`, SUM(to_decimal(miner_reward.win_reward)) as total_reward, COUNT(1) AS total_count " +
+		" FROM `miner_reward` mr  WHERE miner='0x45a36a8e118c37e4c47ef4ab827a7c9e579e11e2' AND (date >= '2021-12-01' AND date <= '2022-01-31') and ok=true" +
+		" GROUP BY miner, date ORDER by date DESC"
+	log.Infof("SQL [%s]", strSQL)
 	stmt, err := sqlparser.Parse(strSQL)
 	if err != nil {
 		log.Errorf("SQL parse error [%s]", err.Error())
 		return
 	}
 	log.Json(stmt)
+	//sqlparser.Walk(func(node sqlparser.SQLNode) (ok bool, err error) {
+	//	log.Infof("--------------------------------------------------------------------------------------------")
+	//	if node != nil {
+	//		log.Infof("sql node [%#v]", node)
+	//		log.Json(node)
+	//	}
+	//	return true, nil
+	//}, stmt)
+	buf := sqlparser.NewTrackedBuffer(Formatter)
+	buf.Myprintf("%v", stmt)
+	//log.Infof("SQL [%s]", buf.String())
+	//parser.ParseMongo(strSQL)
+}
 
-	switch stmt.(type) {
-	case *sqlparser.Select:
-		log.Infof("Select")
-	case *sqlparser.Insert:
-		log.Infof("Insert")
-	case *sqlparser.Update:
-		log.Infof("Update")
-	case *sqlparser.Delete:
-		log.Infof("Delete")
-	case *sqlparser.Union:
-		log.Infof("Union")
-	case *sqlparser.Begin:
-		log.Infof("Begin")
-	case *sqlparser.Rollback:
-		log.Infof("Rollback")
-	case *sqlparser.Commit:
-		log.Infof("Commit")
-	case *sqlparser.Set:
-		log.Infof("Set")
-	case *sqlparser.DDL:
-		log.Infof("DDL")
-	case *sqlparser.DBDDL:
-		log.Infof("DBDDL")
-	case *sqlparser.Use:
-		log.Infof("Use")
-	case *sqlparser.Show:
-		log.Infof("Show")
-	case *sqlparser.OtherRead:
-		log.Infof("OtherRead")
-	case *sqlparser.OtherAdmin:
-		log.Infof("OtherAdmin")
-	case *sqlparser.ParenSelect:
-		log.Infof("ParenSelect")
-	case *sqlparser.Stream:
-		log.Infof("Stream")
-	default:
-		log.Infof("Unknown")
-	}
+func Formatter(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
+	log.Infof("buffer [%s] node [%#v]", buf.String(), node)
 }

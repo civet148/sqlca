@@ -111,7 +111,6 @@ func SSHTunnel(e *sqlca.Engine) {
 
 //connect database directly
 func Direct(e *sqlca.Engine) {
-
 	OrmInsertByModel(e)
 	OrmUpsertByModel(e)
 	OrmUpdateByModel(e)
@@ -715,10 +714,20 @@ func CustomTag(e *sqlca.Engine) {
 }
 
 func BuiltInTypesUpdate(e *sqlca.Engine) {
+	//UPDATE users SET `sex`='1',`disable`='0' WHERE `id`='1'
+	_, err := e.Model(1, 0).
+		Table("users").
+		Select("sex", "disable").
+		Id(1).
+		Update()
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
 
-	var sex = 3
-	//var disable=4
-	if rows, err := e.Model(&sex).Table(TABLE_NAME_USERS).Id(2).Select("sex", "disable").Update(); err != nil {
+	//UPDATE users SET `sex`='2',`disable`='1' WHERE `id`='2'
+	var sex = 2
+	if rows, err := e.Model(&sex, 1).Table(TABLE_NAME_USERS).Id(2).Select("sex", "disable").Update(); err != nil {
 		log.Error(err.Error())
 	} else {
 		log.Debugf("built-in type update ok, affected rows [%v]", rows)

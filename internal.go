@@ -757,9 +757,16 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 		for i, k := range strColumns {
 			if i < count {
 				v := args[i]
+				typ := reflect.TypeOf(v)
 				val := reflect.ValueOf(v)
-				//log.Debugf("columns[%v] name [%v] value [%v]", i, k, val.Elem().Interface())
-				c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(k), e.getQuoteColumnValue(val.Elem().Interface())) // column name format to `date`='1583055138',...
+				var value interface{}
+				kind := typ.Kind()
+				if kind != reflect.Interface && kind != reflect.Ptr {
+					value = val.Interface()
+				} else {
+					value = val.Elem().Interface()
+				}
+				c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(k), e.getQuoteColumnValue(value))
 				cols = append(cols, c)
 			}
 		}
@@ -995,7 +1002,7 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 		strCustomer := e.getCustomWhere()
 		if strCustomer == "" {
 			//where condition required when update or delete
-			if e.operType != OperType_Update && e.operType != OperType_Delete && len(e.joins)==0 {
+			if e.operType != OperType_Update && e.operType != OperType_Delete && len(e.joins) == 0 {
 				strWhere += "1=1"
 			} else {
 				if len(e.joins) > 0 {

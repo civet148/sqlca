@@ -87,10 +87,7 @@ func init() {
 	log.SetLevel(log.LEVEL_INFO)
 }
 
-// args[0] data source name url
-// args[1] options
-// if length of args is 0, must call Open method manual
-func NewEngine(args ...interface{}) *Engine {
+func NewEngine(args ...interface{}) (*Engine, error) {
 
 	e := &Engine{
 		strPkName:     DEFAULT_PRIMARY_KEY_NAME,
@@ -104,7 +101,7 @@ func NewEngine(args ...interface{}) *Engine {
 	var strOpenUrl string
 	var argc = len(args)
 	if argc == 0 {
-		return e
+		return e, nil
 	} else if argc > 0 {
 		if argc == 1 {
 			if strOpenUrl, ok = args[0].(string); ok {
@@ -129,7 +126,7 @@ func NewEngine(args ...interface{}) *Engine {
 		}
 	}
 
-	return e
+	return e, nil
 }
 
 // get data base driver name and data source name
@@ -168,7 +165,7 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 // options:
 //        1. specify master or slave, MySQL/Postgres (Options)
 //        2. cache data expire seconds, just for redis (Integer)
-func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
+func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
 
 	var err error
 	var adapter AdapterType
@@ -203,13 +200,12 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 		}
 
 		if db, err = sqlx.Open(dsn.strDriverName, parameter.strDSN); err != nil {
-			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
-			return nil
+			//log.Errorf("open database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
+			return nil, err
 		}
 		if err = db.Ping(); err != nil {
-			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
-			panic(err.Error())
-			return nil
+			//log.Errorf("ping database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
+			return nil, err
 		}
 
 		if opt != nil {
@@ -217,7 +213,7 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 			dsn.SetIdle(opt.Idle)
 			dsn.SetSlave(opt.Slave)
 		}
-		log.Debugf("dsn parameter [%+v]", dsn.parameter)
+		//log.Debugf("dsn parameter [%+v]", dsn.parameter)
 		if parameter.max != 0 {
 			db.SetMaxOpenConns(parameter.max)
 		}
@@ -231,11 +227,11 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 			e.appendMaster(db)
 		}
 	default:
-		log.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
-		return nil
+		err = fmt.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
+		return nil, err
 	}
-	log.Infof("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
-	return e
+	log.Debugf("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
+	return e, nil
 }
 
 // attach from a exist sqlx db instance
@@ -463,7 +459,9 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 
 	db := e.getQueryDB()
 	if rows, err = db.Query(strSql); err != nil {
-		log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		if !e.noVerbose {
+			log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		}
 		return
 	}
 
@@ -490,7 +488,9 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	var rowsQuery, rowsCount *sql.Rows
 	dbQuery := e.getQueryDB()
 	if rowsQuery, err = dbQuery.Query(strSql); err != nil {
-		log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		if !e.noVerbose {
+			log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		}
 		return
 	}
 
@@ -502,7 +502,9 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	strCountSql := e.makeSqlxQueryCount()
 	dbCount := e.getQueryDB()
 	if rowsCount, err = dbCount.Query(strCountSql); err != nil {
-		log.Errorf("query [%v] error [%v]", strCountSql, err.Error())
+		if !e.noVerbose {
+			log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		}
 		return
 	}
 
@@ -558,7 +560,9 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 			db = e.getMaster()
 			r, err = db.Exec(strSql)
 			if err != nil {
-				log.Errorf("error %v model %+v", err, e.model)
+				if !e.noVerbose {
+					log.Errorf("error %s model %+v", err, e.model)
+				}
 				return
 			}
 
@@ -608,12 +612,16 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 			var r sql.Result
 			r, err = db.Exec(strSql)
 			if err != nil {
-				log.Errorf("error %v model %+v", err, e.model)
+				if !e.noVerbose {
+					log.Errorf("error %v model %+v", err, e.model)
+				}
 				return
 			}
 			lastInsertId, err = r.LastInsertId()
 			if err != nil {
-				log.Errorf("get last insert id error %v model %+v", err, e.model)
+				if !e.noVerbose {
+					log.Errorf("get last insert id error %v model %+v", err, e.model)
+				}
 				return
 			}
 		}
@@ -644,12 +652,16 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	db := e.getMaster()
 	r, err = db.Exec(strSql)
 	if err != nil {
-		log.Errorf("error %v model %+v", err, e.model)
+		if !e.noVerbose {
+			log.Errorf("error %v model %+v", err, e.model)
+		}
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSql, e.model)
+		if !e.noVerbose {
+			log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSql, e.model)
+		}
 		return
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSql)
@@ -668,7 +680,9 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	db := e.getMaster()
 	r, err = db.Exec(strSql)
 	if err != nil {
-		log.Errorf("error %v model %+v", err, e.model)
+		if !e.noVerbose {
+			log.Errorf("error %v model %+v", err, e.model)
+		}
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
@@ -697,7 +711,9 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 
 	db := e.getQueryDB()
 	if rows, err = db.Queryx(strQuery); err != nil {
-		log.Errorf("query [%v] error [%v]", strQuery, err.Error())
+		if !e.noVerbose {
+			log.Errorf("query [%v] error [%v]", strQuery, err.Error())
+		}
 		return
 	}
 
@@ -721,7 +737,9 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 	log.Debugf("query [%v]", strQuery)
 	db := e.getQueryDB()
 	if rows, err = db.Queryx(strQuery); err != nil {
-		log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
+		if !e.noVerbose {
+			log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
+		}
 		return
 	}
 
@@ -749,13 +767,17 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	log.Debugf("query [%v]", strQuery)
 	db := e.getMaster()
 	if r, err = db.Exec(strQuery); err != nil {
-		log.Errorf("error [%v] model [%+v]", err, e.model)
+		if !e.noVerbose {
+			log.Errorf("error [%v] model [%+v]", err, e.model)
+		}
 		return
 	}
 
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v]", err.Error(), strQuery)
+		if !e.noVerbose {
+			log.Errorf("get rows affected error [%v] query [%v]", err.Error(), strQuery)
+		}
 		return
 	}
 	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
@@ -787,7 +809,9 @@ func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (
 
 	rows, err = e.tx.Query(strQuery)
 	if err != nil {
-		log.Errorf("TxGet sql [%v] args %v query error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		if !e.noVerbose {
+			log.Errorf("TxGet sql [%v] args %v query error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		}
 		e.autoRollback()
 		return
 	}
@@ -796,7 +820,9 @@ func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (
 
 	defer rows.Close()
 	if count, err = e.fetchRows(rows); err != nil {
-		log.Errorf("TxGet sql [%v] args %v fetch row error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		if !e.noVerbose {
+			log.Errorf("TxGet sql [%v] args %v fetch row error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		}
 		e.autoRollback()
 		return
 	}
@@ -815,7 +841,9 @@ func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, row
 	result, err = e.tx.Exec(strQuery)
 
 	if err != nil {
-		log.Errorf("TxExec exec query [%v] args %+v error [%+v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		if !e.noVerbose {
+			log.Errorf("TxExec exec query [%v] args %+v error [%+v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		}
 		e.autoRollback()
 		return
 	}
@@ -896,12 +924,16 @@ func (e *Engine) TxHandle(handler TxHandler) (err error) {
 	c := e.Counter()
 	defer c.Stop("TxHandle")
 	if tx, err = e.TxBegin(); err != nil {
-		log.Errorf("transaction begin error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("transaction begin error [%v]", err.Error())
+		}
 		return
 	}
 	if err = handler.OnTransaction(tx); err != nil {
 		_ = tx.TxRollback()
-		log.Warnf("transaction rollback by handler error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Warnf("transaction rollback by handler error [%v]", err.Error())
+		}
 		return
 	}
 	return tx.TxCommit()
@@ -914,12 +946,16 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	c := e.Counter()
 	defer c.Stop("TxFunc")
 	if tx, err = e.TxBegin(); err != nil {
-		log.Errorf("transaction begin error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("transaction begin error [%v]", err.Error())
+		}
 		return
 	}
 	if err = fn(tx); err != nil {
 		_ = tx.TxRollback()
-		log.Errorf("transaction rollback by handler error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("transaction rollback by handler error [%v]", err.Error())
+		}
 		return
 	}
 	return tx.TxCommit()
@@ -932,12 +968,16 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 	c := e.Counter()
 	defer c.Stop("TxFuncContext")
 	if tx, err = e.TxBegin(); err != nil {
-		log.Errorf("transaction begin error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("transaction begin error [%v]", err.Error())
+		}
 		return
 	}
 	if err = fn(ctx, tx); err != nil {
 		_ = tx.TxRollback()
-		log.Warnf("transaction rollback by handler error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Warnf("transaction rollback by handler error [%v]", err.Error())
+		}
 		return
 	}
 	return tx.TxCommit()
@@ -954,7 +994,9 @@ func (e *Engine) QueryJson() (s string, err error) {
 	if count != 0 && e.model != nil {
 		var data []byte
 		if data, err = json.Marshal(e.model); err != nil {
-			log.Errorf(err.Error())
+			if !e.noVerbose {
+				log.Errorf(err.Error())
+			}
 			return
 		}
 		s = string(data)
@@ -1023,7 +1065,6 @@ func (e *Engine) GeoHash(lng, lat float64, precision int) (strGeoHash string, st
 func (e *Engine) JsonMarshal(v interface{}) (strJson string) {
 	if data, err := json.Marshal(v); err != nil {
 		log.Error(err.Error())
-		return
 	} else {
 		strJson = string(data)
 	}

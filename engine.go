@@ -87,10 +87,7 @@ func init() {
 	log.SetLevel(log.LEVEL_INFO)
 }
 
-// args[0] data source name url
-// args[1] options
-// if length of args is 0, must call Open method manual
-func NewEngine(args ...interface{}) *Engine {
+func NewEngine(args ...interface{}) (*Engine, error) {
 
 	e := &Engine{
 		strPkName:     DEFAULT_PRIMARY_KEY_NAME,
@@ -104,7 +101,7 @@ func NewEngine(args ...interface{}) *Engine {
 	var strOpenUrl string
 	var argc = len(args)
 	if argc == 0 {
-		return e
+		return e, nil
 	} else if argc > 0 {
 		if argc == 1 {
 			if strOpenUrl, ok = args[0].(string); ok {
@@ -129,7 +126,7 @@ func NewEngine(args ...interface{}) *Engine {
 		}
 	}
 
-	return e
+	return e, nil
 }
 
 // get data base driver name and data source name
@@ -168,7 +165,7 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 // options:
 //        1. specify master or slave, MySQL/Postgres (Options)
 //        2. cache data expire seconds, just for redis (Integer)
-func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
+func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
 
 	var err error
 	var adapter AdapterType
@@ -203,13 +200,12 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 		}
 
 		if db, err = sqlx.Open(dsn.strDriverName, parameter.strDSN); err != nil {
-			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
-			return nil
+			//log.Errorf("open database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
+			return nil, err
 		}
 		if err = db.Ping(); err != nil {
-			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
-			panic(err.Error())
-			return nil
+			//log.Errorf("ping database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
+			return nil, err
 		}
 
 		if opt != nil {
@@ -217,7 +213,7 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 			dsn.SetIdle(opt.Idle)
 			dsn.SetSlave(opt.Slave)
 		}
-		log.Debugf("dsn parameter [%+v]", dsn.parameter)
+		//log.Debugf("dsn parameter [%+v]", dsn.parameter)
 		if parameter.max != 0 {
 			db.SetMaxOpenConns(parameter.max)
 		}
@@ -231,11 +227,11 @@ func (e *Engine) Open(strUrl string, options ...interface{}) *Engine {
 			e.appendMaster(db)
 		}
 	default:
-		log.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
-		return nil
+		err = fmt.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
+		return nil, err
 	}
-	log.Infof("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
-	return e
+	log.Debugf("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
+	return e, nil
 }
 
 // attach from a exist sqlx db instance

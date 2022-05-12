@@ -355,6 +355,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		strDatabaseName: e.strDatabaseName,
 		dbTags:          e.dbTags,
 		bForce:          e.bForce,
+		noVerbose:       e.noVerbose,
 		bAutoRollback:   e.bAutoRollback,
 		slowQueryOn:     e.slowQueryOn,
 		slowQueryTime:   e.slowQueryTime,

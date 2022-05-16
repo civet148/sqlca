@@ -259,6 +259,7 @@ func (e *Engine) getMaster() *sqlx.DB {
 	if n > 0 {
 		return e.dbMasters[rand.Intn(n)]
 	}
+	log.Errorf("db instance not found")
 	return nil
 }
 

@@ -105,7 +105,10 @@ func NewEngine(args ...interface{}) (*Engine, error) {
 	} else if argc > 0 {
 		if argc == 1 {
 			if strOpenUrl, ok = args[0].(string); ok {
-				e.Open(strOpenUrl)
+				_, err := e.Open(strOpenUrl)
+				if err != nil {
+					return nil, err
+				}
 			}
 		} else {
 			var v1 Options
@@ -122,7 +125,10 @@ func NewEngine(args ...interface{}) (*Engine, error) {
 					return e.Open(strOpenUrl)
 				}
 			}
-			e.Open(strOpenUrl, options)
+			_, err := e.Open(strOpenUrl, options)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

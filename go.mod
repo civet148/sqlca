@@ -3,7 +3,7 @@ module github.com/civet148/sqlca/v2
 go 1.13
 
 require (
-	github.com/civet148/gotools v1.1.3
+	github.com/civet148/gotools v1.4.0
 	github.com/civet148/log v1.1.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e
 	github.com/elliotchance/sshtunnel v1.2.0
@@ -12,5 +12,5 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.2.0
 	github.com/shopspring/decimal v1.2.0
-	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )

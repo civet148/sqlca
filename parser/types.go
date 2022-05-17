@@ -40,107 +40,107 @@ func (t MgoType) String() string {
 
 /*----------------------------------------------------------------------------------------------------*/
 
-type sqlType int
+type SqlType int
 
 const (
-	sqlType_Other       sqlType = 0
-	sqlType_Select      sqlType = 1
-	sqlType_Insert      sqlType = 2
-	sqlType_Update      sqlType = 3
-	sqlType_Delete      sqlType = 4
-	sqlType_Union       sqlType = 5
-	sqlType_Begin       sqlType = 6
-	sqlType_Rollback    sqlType = 7
-	sqlType_Commit      sqlType = 8
-	sqlType_Set         sqlType = 9
-	sqlType_DDL         sqlType = 10
-	sqlType_DBDDL       sqlType = 11
-	sqlType_Use         sqlType = 12
-	sqlType_Show        sqlType = 13
-	sqlType_OtherRead   sqlType = 14
-	sqlType_OtherAdmin  sqlType = 15
-	sqlType_ParenSelect sqlType = 16
-	sqlType_Stream      sqlType = 17
+	SqlType_Other       SqlType = 0
+	SqlType_Select      SqlType = 1
+	SqlType_Insert      SqlType = 2
+	SqlType_Update      SqlType = 3
+	SqlType_Delete      SqlType = 4
+	SqlType_Union       SqlType = 5
+	SqlType_Begin       SqlType = 6
+	SqlType_Rollback    SqlType = 7
+	SqlType_Commit      SqlType = 8
+	SqlType_Set         SqlType = 9
+	SqlType_DDL         SqlType = 10
+	SqlType_DBDDL       SqlType = 11
+	SqlType_Use         SqlType = 12
+	SqlType_Show        SqlType = 13
+	SqlType_OtherRead   SqlType = 14
+	SqlType_OtherAdmin  SqlType = 15
+	SqlType_ParenSelect SqlType = 16
+	SqlType_Stream      SqlType = 17
 )
 
-var sqltypes = map[sqlType]string{
-	sqlType_Other:       "sqlType_Other",
-	sqlType_Select:      "sqlType_Select",
-	sqlType_Insert:      "sqlType_Insert",
-	sqlType_Update:      "sqlType_Update",
-	sqlType_Delete:      "sqlType_Delete",
-	sqlType_Union:       "sqlType_Union",
-	sqlType_Begin:       "sqlType_Begin",
-	sqlType_Rollback:    "sqlType_Rollback",
-	sqlType_Commit:      "sqlType_Commit",
-	sqlType_Set:         "sqlType_Set",
-	sqlType_DDL:         "sqlType_DDL",
-	sqlType_DBDDL:       "sqlType_DBDDL",
-	sqlType_Use:         "sqlType_Use",
-	sqlType_Show:        "sqlType_Show",
-	sqlType_OtherRead:   "sqlType_OtherRead",
-	sqlType_OtherAdmin:  "sqlType_OtherAdmin",
-	sqlType_ParenSelect: "sqlType_ParenSelect",
-	sqlType_Stream:      "sqlType_Stream",
+var sqltypes = map[SqlType]string{
+	SqlType_Other:       "SqlType_Other",
+	SqlType_Select:      "SqlType_Select",
+	SqlType_Insert:      "SqlType_Insert",
+	SqlType_Update:      "SqlType_Update",
+	SqlType_Delete:      "SqlType_Delete",
+	SqlType_Union:       "SqlType_Union",
+	SqlType_Begin:       "SqlType_Begin",
+	SqlType_Rollback:    "SqlType_Rollback",
+	SqlType_Commit:      "SqlType_Commit",
+	SqlType_Set:         "SqlType_Set",
+	SqlType_DDL:         "SqlType_DDL",
+	SqlType_DBDDL:       "SqlType_DBDDL",
+	SqlType_Use:         "SqlType_Use",
+	SqlType_Show:        "SqlType_Show",
+	SqlType_OtherRead:   "SqlType_OtherRead",
+	SqlType_OtherAdmin:  "SqlType_OtherAdmin",
+	SqlType_ParenSelect: "SqlType_ParenSelect",
+	SqlType_Stream:      "SqlType_Stream",
 }
 
-func (t sqlType) IsValid() bool {
+func (t SqlType) IsValid() bool {
 	if _, ok := sqltypes[t]; ok {
 		return true
 	}
 	return false
 }
 
-func (t sqlType) GoString() string {
+func (t SqlType) GoString() string {
 	return t.String()
 }
 
-func (t sqlType) String() string {
+func (t SqlType) String() string {
 	if strName, ok := sqltypes[t]; ok {
 		return strName
 	}
-	return fmt.Sprintf("sqlType_Unknown<%d>", t)
+	return fmt.Sprintf("SqlType_Unknown<%d>", t)
 }
 
-func StatementSqlType(stmt sqlparser.Statement) (typ sqlType) {
+func StatementSqlType(stmt sqlparser.Statement) (typ SqlType) {
 
 	switch stmt.(type) {
 	case *sqlparser.Select:
-		typ = sqlType_Select
+		typ = SqlType_Select
 	case *sqlparser.Insert:
-		typ = sqlType_Insert
+		typ = SqlType_Insert
 	case *sqlparser.Update:
-		typ = sqlType_Update
+		typ = SqlType_Update
 	case *sqlparser.Delete:
-		typ = sqlType_Delete
+		typ = SqlType_Delete
 	case *sqlparser.Union:
-		typ = sqlType_Union
+		typ = SqlType_Union
 	case *sqlparser.Begin:
-		typ = sqlType_Begin
+		typ = SqlType_Begin
 	case *sqlparser.Rollback:
-		typ = sqlType_Rollback
+		typ = SqlType_Rollback
 	case *sqlparser.Commit:
-		typ = sqlType_Commit
+		typ = SqlType_Commit
 	case *sqlparser.Set:
-		typ = sqlType_Set
+		typ = SqlType_Set
 	case *sqlparser.DDL:
-		typ = sqlType_DDL
+		typ = SqlType_DDL
 	case *sqlparser.DBDDL:
-		typ = sqlType_DBDDL
+		typ = SqlType_DBDDL
 	case *sqlparser.Use:
-		typ = sqlType_Use
+		typ = SqlType_Use
 	case *sqlparser.Show:
-		typ = sqlType_Show
+		typ = SqlType_Show
 	case *sqlparser.OtherRead:
-		typ = sqlType_OtherRead
+		typ = SqlType_OtherRead
 	case *sqlparser.OtherAdmin:
-		typ = sqlType_OtherAdmin
+		typ = SqlType_OtherAdmin
 	case *sqlparser.ParenSelect:
-		typ = sqlType_ParenSelect
+		typ = SqlType_ParenSelect
 	case *sqlparser.Stream:
-		typ = sqlType_Stream
+		typ = SqlType_Stream
 	default:
-		typ = sqlType_Other
+		typ = SqlType_Other
 	}
 	return
 }

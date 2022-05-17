@@ -8,7 +8,7 @@ import (
 )
 
 type Result struct {
-	SqlType    sqlType             `json:"sql_type"`
+	SqlType    SqlType             `json:"sql_type"`
 	MogType    MgoType             `json:"mog_type"`
 	SQL        string              `json:"sql"`
 	Stmt       sqlparser.Statement `json:"stmt"`
@@ -19,7 +19,7 @@ type Result struct {
 	Projection bson.M              `json:"projection"`
 }
 
-func newResult(sqltype sqlType, strSQL string, stmt sqlparser.Statement) (r *Result, err error) {
+func newResult(sqltype SqlType, strSQL string, stmt sqlparser.Statement) (r *Result, err error) {
 	if !sqltype.IsValid() {
 		log.Panic("sql type [%s] not valid, SQL [%s]", sqltype, strSQL)
 	}

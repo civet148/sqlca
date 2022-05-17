@@ -75,7 +75,11 @@ func main() {
 
 	//connect database directly
 	for _, url := range urls {
-		e := sqlca.NewEngine(url)
+		e, err := sqlca.NewEngine(url)
+		if err != nil {
+			log.Errorf(err.Error())
+			continue
+		}
 		e.Debug(true) //debug on
 		//e.SetLogFile("sqlca.log")
 		e.SlowQuery(true, 0)

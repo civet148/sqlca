@@ -88,7 +88,7 @@ func init() {
 // args[0] data source name url
 // args[1] options
 // if length of args is 0, must call open method manual
-func NewEngine(args ...interface{}) *Engine {
+func NewEngine(args ...interface{}) (*Engine, error) {
 
 	e := &Engine{
 		strPkName:     DEFAULT_PRIMARY_KEY_NAME,
@@ -101,12 +101,20 @@ func NewEngine(args ...interface{}) *Engine {
 	var ok bool
 	var strOpenUrl string
 	var argc = len(args)
+
+	if e.adapterType == AdapterType_MongoDB {
+		e.SetPkName(DEFAULT_MONGODB_PRIMARY_KEY_NAME)
+	}
+
 	if argc == 0 {
-		return e
+		return e, nil
 	} else if argc > 0 {
 		if argc == 1 {
 			if strOpenUrl, ok = args[0].(string); ok {
-				e.open(strOpenUrl)
+				 _, err := e.open(strOpenUrl)
+				if err != nil {
+					return nil, err
+				}
 			}
 		} else {
 			var v1 Options
@@ -123,13 +131,13 @@ func NewEngine(args ...interface{}) *Engine {
 					return e.open(strOpenUrl)
 				}
 			}
-			e.open(strOpenUrl, options)
+			_, err := e.open(strOpenUrl, options)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	if e.adapterType == AdapterType_MongoDB {
-		e.strPkName = DEFAULT_MONGODB_PRIMARY_KEY_NAME
-	}
-	return e
+	return e, nil
 }
 
 // get data base driver name and data source name
@@ -165,7 +173,7 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 // 	   [sqlite]   open("sqlite:///var/lib/test.db")
 // options:
 //        1. specify master or slave, MySQL/Postgres (Options)
-func (e *Engine) open(strUrl string, options ...interface{}) *Engine {
+func (e *Engine) open(strUrl string, options ...interface{}) (*Engine, error) {
 
 	var err error
 	var adapter AdapterType
@@ -203,26 +211,25 @@ func (e *Engine) open(strUrl string, options ...interface{}) *Engine {
 	switch adapter {
 	case AdapterType_MySQL, AdapterType_Postgres, AdapterType_Sqlite, AdapterType_Mssql:
 		if db, err = newSqlxExecutor(dsn.strDriverName, parameter.strDSN); err != nil {
-			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
-			return nil
+			err = fmt.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
+			return nil, err
 		}
 		if err = db.Ping(); err != nil {
-			log.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
-			panic(err.Error())
-			return nil
+			err = fmt.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
+			return nil, err
 		}
 	case AdapterType_MongoDB:
 		if db, err = newMgoExecutor(dsn.strDriverName, parameter.strDSN); err != nil {
-			log.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
-			return nil
+			err = fmt.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
+			return nil, err
 		}
 		if err = db.Ping(); err != nil {
-			log.Panic("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
-			return nil
+			err = fmt.Errorf("ping url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
+			return nil, err
 		}
 	default:
-		log.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
-		return nil
+		err = fmt.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
+		return nil, err
 	}
 
 	if opt != nil {
@@ -244,7 +251,7 @@ func (e *Engine) open(strUrl string, options ...interface{}) *Engine {
 		e.appendMaster(db)
 	}
 	log.Infof("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
-	return e
+	return e, nil
 }
 
 // set log file
@@ -463,7 +470,9 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 
 	db := e.getQueryDB()
 	if rowsAffected, err = db.Query(e, strSql); err != nil {
-		log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		if !e.noVerbose {
+			log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		}
 		return
 	}
 	return
@@ -571,7 +580,9 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 		{
 			lastInsertId, err = e.defaultUpsert(strSql)
 			if err != nil {
-				log.Errorf("get last insert id error %v model %+v", err, e.model)
+				if !e.noVerbose {
+					log.Errorf("get last insert id error %v model %+v", err, e.model)
+				}
 				return
 			}
 		}
@@ -654,7 +665,9 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 
 	e.setOperType(OperType_ExecRaw)
 	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
+	if !e.noVerbose {
+		log.Debugf("query [%v]", strQuery)
+	}
 	db := e.getMaster()
 	return db.Exec(e, strQuery)
 }
@@ -706,14 +719,18 @@ func (e *Engine) Ping() (err error) {
 
 	for _, m := range e.dbMasters {
 		if err = m.Ping(); err != nil {
-			log.Errorf("ping master database error [%v]", err.Error())
+			if !e.noVerbose {
+				log.Errorf("ping master database error [%v]", err.Error())
+			}
 			return
 		}
 	}
 
 	for _, s := range e.dbSlaves {
 		if err = s.Ping(); err != nil {
-			log.Errorf("ping slave database error [%v]", err.Error())
+			if !e.noVerbose {
+				log.Errorf("ping slave database error [%v]", err.Error())
+			}
 			return
 		}
 	}
@@ -727,14 +744,20 @@ func (e *Engine) SetReadOnly(columns ...string) {
 
 func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
 	if e.tx == nil {
-		log.Panic("tx object is nil, this function must be called in TxFunc wrapper method")
+		if !e.noVerbose {
+			log.Errorf("tx object is nil, this function must be called in TxFunc wrapper method")
+		}
+		return 0, fmt.Errorf("get: tx object is nil")
 	}
 	return e.tx.txGet(e, dest, strQuery, args...)
 }
 
 func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
 	if e.tx == nil {
-		log.Panic("tx object is nil, this function must be called in TxFunc wrapper method")
+		if !e.noVerbose {
+			log.Errorf("tx object is nil, this function must be called in TxFunc wrapper method")
+			return 0, 0, fmt.Errorf("exec: tx object is nil")
+		}
 	}
 	return e.tx.txExec(e, strQuery, args...)
 }
@@ -754,7 +777,9 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	tx := txe.tx
 	if err = fn(txe); err != nil {
 		_ = tx.txRollback()
-		log.Errorf("transaction rollback by handler error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("transaction rollback by handler error [%v]", err.Error())
+		}
 		return
 	}
 	return tx.txCommit()
@@ -773,12 +798,16 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 	}
 	tx := txe.tx
 	if tx, err = tx.txBegin(); err != nil {
-		log.Errorf("transaction begin error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("transaction begin error [%v]", err.Error())
+		}
 		return
 	}
 	if err = fn(ctx, txe); err != nil {
 		_ = tx.txRollback()
-		log.Errorf("transaction rollback by handler error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("transaction rollback by handler error [%v]", err.Error())
+		}
 		return
 	}
 	return tx.txCommit()
@@ -789,13 +818,17 @@ func (e *Engine) QueryJson() (s string, err error) {
 	var count int64
 	count, err = e.Query()
 	if err != nil {
-		log.Errorf(err.Error())
+		if !e.noVerbose {
+			log.Errorf(err.Error())
+		}
 		return
 	}
 	if count != 0 && e.model != nil {
 		var data []byte
 		if data, err = json.Marshal(e.model); err != nil {
-			log.Errorf(err.Error())
+			if !e.noVerbose {
+				log.Errorf(err.Error())
+			}
 			return
 		}
 		s = string(data)

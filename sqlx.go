@@ -17,12 +17,10 @@ func newSqlxExecutor(strDriverName, strDSN string) (executor, error) {
 	var err error
 	var db *sqlx.DB
 	if db, err = sqlx.Open(strDriverName, strDSN); err != nil {
-		log.Errorf("open driver name [%v] DSN [%v] error [%v]", strDriverName, strDSN, err.Error())
+		err = fmt.Errorf("open driver name [%v] DSN [%v] error [%v]", strDriverName, strDSN, err.Error())
 		return nil, err
 	}
 	if err = db.Ping(); err != nil {
-		log.Errorf("ping driver name [%v] DSN [%v] error [%v]", strDriverName, strDSN, err.Error())
-		panic(err.Error())
 		return nil, err
 	}
 	return &SqlxExecutor{
@@ -57,7 +55,9 @@ func (m *SqlxExecutor) Exec(e *Engine, strSQL string) (rowsAffected, lastInsertI
 func (m *SqlxExecutor) Query(e *Engine, strSQL string) (count int64, err error) {
 	var rows *sql.Rows
 	if rows, err = m.db.Query(strSQL); err != nil {
-		log.Errorf("query [%v] error [%v]", strSQL, err.Error())
+		if !e.noVerbose {
+			log.Errorf("query [%v] error [%v]", strSQL, err.Error())
+		}
 		return
 	}
 	defer rows.Close()
@@ -67,7 +67,9 @@ func (m *SqlxExecutor) Query(e *Engine, strSQL string) (count int64, err error) 
 func (m *SqlxExecutor) QueryEx(e *Engine, strSQL string) (rowsAffected, total int64, err error) {
 	var rowsQuery, rowsCount *sql.Rows
 	if rowsQuery, err = m.db.Query(strSQL); err != nil {
-		log.Errorf("query [%v] error [%v]", strSQL, err.Error())
+		if !e.noVerbose {
+			log.Errorf("query [%v] error [%v]", strSQL, err.Error())
+		}
 		return
 	}
 
@@ -78,7 +80,9 @@ func (m *SqlxExecutor) QueryEx(e *Engine, strSQL string) (rowsAffected, total in
 
 	strCountSql := e.makeSqlxQueryCount()
 	if rowsCount, err = m.db.Query(strCountSql); err != nil {
-		log.Errorf("query [%v] error [%v]", strCountSql, err.Error())
+		if !e.noVerbose {
+			log.Errorf("query [%v] error [%v]", strCountSql, err.Error())
+		}
 		return
 	}
 
@@ -93,7 +97,9 @@ func (m *SqlxExecutor) QueryRaw(e *Engine, strSQL string) (rowsAffected int64, e
 	var rows *sqlx.Rows
 	log.Debugf("query [%v]", strSQL)
 	if rows, err = m.db.Queryx(strSQL); err != nil {
-		log.Errorf("query [%v] error [%v]", strSQL, err.Error())
+		if !e.noVerbose {
+			log.Errorf("query [%v] error [%v]", strSQL, err.Error())
+		}
 		return
 	}
 	defer rows.Close()
@@ -103,7 +109,9 @@ func (m *SqlxExecutor) QueryRaw(e *Engine, strSQL string) (rowsAffected int64, e
 func (m *SqlxExecutor) QueryMap(e *Engine, strSQL string) (rowsAffected int64, err error) {
 	var rows *sqlx.Rows
 	if rows, err = m.db.Queryx(strSQL); err != nil {
-		log.Errorf("SQL [%v] query error [%v]", strSQL, err.Error())
+		if !e.noVerbose {
+			log.Errorf("SQL [%v] query error [%v]", strSQL, err.Error())
+		}
 		return
 	}
 
@@ -136,7 +144,9 @@ func (m *SqlxExecutor) Insert(e *Engine, strSQL string) (lastInsertId int64, err
 			var r sql.Result
 			r, err = m.db.Exec(strSQL)
 			if err != nil {
-				log.Errorf("error %v model %+v", err, e.model)
+				if !e.noVerbose {
+					log.Errorf("error %v model %+v", err, e.model)
+				}
 				return
 			}
 
@@ -150,12 +160,16 @@ func (m *SqlxExecutor) Update(e *Engine, strSQL string) (rowsAffected int64, err
 	var r sql.Result
 	r, err = m.db.Exec(strSQL)
 	if err != nil {
-		log.Errorf("error %v model %+v", err, e.model)
+		if !e.noVerbose {
+			log.Errorf("error %v model %+v", err, e.model)
+		}
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSQL, e.model)
+		if !e.noVerbose {
+			log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSQL, e.model)
+		}
 		return
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSQL)
@@ -178,12 +192,16 @@ func (m *SqlxExecutor) Upsert(e *Engine, strSQL string) (lastInsertId int64, err
 			var r sql.Result
 			r, err = m.db.Exec(strSQL)
 			if err != nil {
-				log.Errorf("error %v model %+v", err, e.model)
+				if !e.noVerbose {
+					log.Errorf("error %v model %+v", err, e.model)
+				}
 				return
 			}
 			lastInsertId, err = r.LastInsertId()
 			if err != nil {
-				log.Errorf("get last insert id error %v model %+v", err, e.model)
+				if !e.noVerbose {
+					log.Errorf("get last insert id error %v model %+v", err, e.model)
+				}
 				return
 			}
 		}
@@ -195,12 +213,16 @@ func (m *SqlxExecutor) Delete(e *Engine, strSQL string) (rowsAffected int64, err
 	var r sql.Result
 	r, err = m.db.Exec(strSQL)
 	if err != nil {
-		log.Errorf("error %v model %+v", err, e.model)
+		if !e.noVerbose {
+			log.Errorf("error %v model %+v", err, e.model)
+		}
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSQL, e.model)
+		if !e.noVerbose {
+			log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSQL, e.model)
+		}
 		return
 	}
 	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSQL)
@@ -210,7 +232,6 @@ func (m *SqlxExecutor) Delete(e *Engine, strSQL string) (rowsAffected int64, err
 func (m *SqlxExecutor) txBegin() (tx executor, err error) {
 	m.tx, err = m.db.Begin()
 	if err != nil {
-		log.Errorf(err.Error())
 		return nil, err
 	}
 	return &SqlxExecutor{
@@ -223,20 +244,16 @@ func (m *SqlxExecutor) txGet(e *Engine, dest interface{}, strQuery string, args 
 	var rows *sql.Rows
 	rows, err = m.tx.Query(strQuery)
 	if err != nil {
-		log.Errorf("TxGet sql [%v] args %v query error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		if err = m.tx.Rollback(); err != nil {
-			log.Errorf(err.Error())
-		}
+		err = fmt.Errorf("TxGet sql [%v] args %v query error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		_ = m.tx.Rollback()
 		return 0, err
 	}
 	e.setModel(dest)
 
 	defer rows.Close()
 	if count, err = e.fetchRows(rows); err != nil {
-		log.Errorf("TxGet sql [%v] args %v fetch row error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		if err = m.tx.Rollback(); err != nil {
-			log.Errorf(err.Error())
-		}
+		err = fmt.Errorf("TxGet sql [%v] args %v fetch row error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		_ = m.tx.Rollback()
 		return
 	}
 	return
@@ -247,15 +264,12 @@ func (m *SqlxExecutor) txExec(e *Engine, strQuery string, args ...interface{}) (
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("TxExec [%s]", strQuery))
 	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
 
 	result, err = m.tx.Exec(strQuery)
 
 	if err != nil {
-		log.Errorf("TxExec exec query [%v] args %+v error [%+v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		if err = m.tx.Rollback(); err != nil {
-			log.Errorf(err.Error())
-		}
+		err = fmt.Errorf("TxExec exec query [%v] args %+v error [%+v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
+		_ = m.tx.Rollback()
 		return 0, 0, err
 	}
 	lastInsertId, _ = result.LastInsertId()
@@ -274,15 +288,19 @@ func (m *SqlxExecutor) txCommit() (err error) {
 func (m *SqlxExecutor) postgresQueryInsert(e *Engine, strSQL string) (lastInsertId int64, err error) {
 	var rows *sql.Rows
 	strSQL += fmt.Sprintf(" RETURNING \"%v\"", e.GetPkName())
-	log.Debugf("[%v]", strSQL)
+
 	if rows, err = m.db.Query(strSQL); err != nil {
-		log.Errorf("tx.Query error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("tx.Query error [%v]", err.Error())
+		}
 		return
 	}
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Warnf("rows.Scan warning [%v]", err.Error())
+			if !e.noVerbose {
+				log.Warnf("rows.Scan warning [%v]", err.Error())
+			}
 			return
 		}
 	}
@@ -291,15 +309,18 @@ func (m *SqlxExecutor) postgresQueryInsert(e *Engine, strSQL string) (lastInsert
 
 func (m *SqlxExecutor) postgresQueryUpsert(e *Engine, strSQL string) (lastInsertId int64, err error) {
 	var rows *sql.Rows
-	log.Debugf("[%v]", strSQL)
 	if rows, err = m.db.Query(strSQL); err != nil {
-		log.Errorf("tx.Query error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("tx.Query error [%v]", err.Error())
+		}
 		return
 	}
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Warnf("rows.Scan warning [%v]", err.Error())
+			if !e.noVerbose {
+				log.Warnf("rows.Scan warning [%v]", err.Error())
+			}
 			return
 		}
 	}
@@ -309,15 +330,18 @@ func (m *SqlxExecutor) postgresQueryUpsert(e *Engine, strSQL string) (lastInsert
 func (m *SqlxExecutor) mssqlQueryInsert(e *Engine, strSQL string) (lastInsertId int64, err error) {
 	var rows *sql.Rows
 	strSQL += " SELECT SCOPE_IDENTITY() AS last_insert_id"
-	log.Debugf("[%v]", strSQL)
 	if rows, err = m.db.Query(strSQL); err != nil {
-		log.Errorf("tx.Query error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("tx.Query error [%v]", err.Error())
+		}
 		return
 	}
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Warnf("rows.Scan warning [%v]", err.Error())
+			if !e.noVerbose {
+				log.Warnf("rows.Scan warning [%v]", err.Error())
+			}
 			return
 		}
 	}
@@ -329,12 +353,16 @@ func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64
 	var db executor
 	var query = e.makeSqlxQueryPrimaryKey()
 	if db, err = m.txBegin(); err != nil {
-		log.Errorf("txBegin error [%v]", err.Error())
+		if !e.noVerbose {
+			log.Errorf("txBegin error [%v]", err.Error())
+		}
 		return
 	}
 	var count int64
 	if count, err = db.txGet(e, &lastInsertId, query); err != nil {
-		log.Errorf("TxGet [%v] error [%v]", query, err.Error())
+		if !e.noVerbose {
+			log.Errorf("TxGet [%v] error [%v]", query, err.Error())
+		}
 		_ = db.txRollback()
 		return
 	}
@@ -342,7 +370,9 @@ func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64
 		// INSERT INTO users(...) values(...)  SELECT SCOPE_IDENTITY() AS last_insert_id
 		//if _, _, err = db.TxExec(strSQL); err != nil
 		if lastInsertId, err = e.mssqlQueryInsert(strSQL); err != nil {
-			log.Errorf("mssqlQueryInsert [%v] error [%v]", strSQL, err.Error())
+			if !e.noVerbose {
+				log.Errorf("mssqlQueryInsert [%v] error [%v]", strSQL, err.Error())
+			}
 			_ = db.txRollback()
 			return
 		}
@@ -352,16 +382,19 @@ func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64
 			DATABASE_KEY_NAME_UPDATE, e.getTableName(),
 			DATABASE_KEY_NAME_SET, e.getOnConflictDo(),
 			DATABASE_KEY_NAME_WHERE, e.GetPkName(), lastInsertId)
-		log.Debugf("%v", strUpdates)
 		if _, _, err = db.txExec(e, strUpdates); err != nil {
-			log.Errorf("TxExec [%v] error [%v]", strSQL, err.Error())
+			if !e.noVerbose {
+				log.Errorf("TxExec [%v] error [%v]", strSQL, err.Error())
+			}
 			_ = db.txRollback()
 			return
 		}
 	}
 
 	if err = db.txCommit(); err != nil {
-		log.Errorf("TxCommit [%v] error [%v]", strSQL, err.Error())
+		if !e.noVerbose {
+			log.Errorf("TxCommit [%v] error [%v]", strSQL, err.Error())
+		}
 		return
 	}
 	return

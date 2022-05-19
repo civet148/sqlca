@@ -28,7 +28,7 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 - Case...when syntax 
 - Decimal, `sqlca.Decimal` instead of float64 for high precision calculation
 - Where condition required when UPDATE/DELETE 
-- [db2go](cmd/db2go) command line tool generate table schema output to .go or .proto file
+- [db2go](http://github.com/civet148/db2go) command line tool generate table schema output to .go or .proto file
 - Custom sql.Scanner implement fetching 
 - SSH tunnel
 - Query results marshal to json string (QueryJson)
@@ -36,8 +36,8 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 
 
 # tests
-[mysql schema](test/test.sql)
+[mysql schema](./examples/dbtest/test.sql)
 
-[test cases](test/main.go)
+[test cases](./examples/dbtest/main.go)
 
 

@@ -1,20 +1,54 @@
 package sqlca
 
-import "time"
+import (
+	"context"
+	"github.com/civet148/log"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"time"
+)
+
+const (
+	defaultTimeoutSeconds = 3 //seconds
+)
 
 type MgoExecutor struct {
-
+	client *mongo.Client
+	db     *mongo.Database
 }
 
-func newMgoExecutor(strUrl string, options ...interface{}) (executor, error) {
+func newMgoExecutor(strDatabaseName, strDSN string) (executor, error) {
+
+	if strDatabaseName == "" {
+		return nil, log.Errorf("database name require")
+	}
+	ctx, cancel := newContextTimeout(defaultTimeoutSeconds)
+	defer cancel()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(strDSN))
+	if err != nil {
+		log.Errorf("connect %s error [%s]", strDSN, err)
+		return nil, err
+	}
+	err = client.Ping(ctx, readpref.Primary())
+	if err != nil {
+		log.Errorf("[%s] ping error [%s]", strDSN, err)
+		return nil, err
+	}
+
 	return &MgoExecutor{
+		client: client,
+		db:     client.Database(strDatabaseName),
 	}, nil
+}
+
+func newContextTimeout(timeout int) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 }
 
 func (m *MgoExecutor) Ping() (err error) {
 	return nil
 }
-
 
 func (m *MgoExecutor) SetMaxOpenConns(n int) {
 
@@ -36,7 +70,7 @@ func (m *MgoExecutor) Exec(e *Engine, strSQL string) (rowsAffected, lastInsertId
 	return
 }
 
-func (m *MgoExecutor) Query(e *Engine, strSQL string) (count int64, err error){
+func (m *MgoExecutor) Query(e *Engine, strSQL string) (count int64, err error) {
 	return
 }
 
@@ -70,8 +104,13 @@ func (m *MgoExecutor) Upsert(e *Engine, strSQL string) (lastInsertId int64, err 
 
 func (m *MgoExecutor) Delete(e *Engine, strSQL string) (rowsAffected int64, err error) {
 
-
 	return
+}
+
+func (m *MgoExecutor) Close() error {
+	ctx, cancel := newContextTimeout(3)
+	defer cancel()
+	return m.client.Disconnect(ctx)
 }
 
 func (m *MgoExecutor) txBegin() (tx executor, err error) {

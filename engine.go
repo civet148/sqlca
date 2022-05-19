@@ -102,10 +102,6 @@ func NewEngine(args ...interface{}) (*Engine, error) {
 	var strOpenUrl string
 	var argc = len(args)
 
-	if e.adapterType == AdapterType_MongoDB {
-		e.SetPkName(DEFAULT_MONGODB_PRIMARY_KEY_NAME)
-	}
-
 	if argc == 0 {
 		return e, nil
 	} else if argc > 0 {
@@ -193,7 +189,6 @@ func (e *Engine) open(strUrl string, options ...interface{}) (*Engine, error) {
 	var parameter = &dsn.parameter
 
 	e.adapterType = adapter
-
 	if len(options) != 0 {
 
 		if v, ok := options[0].(*Options); ok {
@@ -219,7 +214,8 @@ func (e *Engine) open(strUrl string, options ...interface{}) (*Engine, error) {
 			return nil, err
 		}
 	case AdapterType_MongoDB:
-		if db, err = newMgoExecutor(dsn.strDriverName, parameter.strDSN); err != nil {
+		e.SetPkName(DEFAULT_MONGODB_PRIMARY_KEY_NAME)
+		if db, err = newMgoExecutor(dsn.parameter.db, parameter.strDSN); err != nil {
 			err = fmt.Errorf("open url [%v] driver name [%v] DSN [%v] error [%v]", strUrl, dsn.strDriverName, parameter.strDSN, err.Error())
 			return nil, err
 		}

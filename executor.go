@@ -17,7 +17,8 @@ type executor interface {
 	Insert(e *Engine, strSQL string) (lastInsertId int64, err error)
 	Upsert(e *Engine, strSQL string) (lastInsertId int64, err error)
 	Delete(e *Engine, strSQL string) (rowsAffected int64, err error)
-	//tx methods
+	Close() error
+	//internal tx methods
 	txBegin() (executor, error)
 	txGet(e *Engine, dest interface{}, strQuery string, args ...interface{}) (count int64, err error)
 	txExec(e *Engine, strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error)

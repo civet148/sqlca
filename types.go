@@ -88,7 +88,6 @@ const (
 	AdapterType_Sqlite   AdapterType = 3  //sqlite
 	AdapterType_Mssql    AdapterType = 4  //mssql server
 	AdapterType_MongoDB  AdapterType = 5  //mongodb
-	AdapterCache_Redis   AdapterType = 11 //redis
 )
 
 func (a AdapterType) GoString() string {
@@ -106,8 +105,8 @@ func (a AdapterType) String() string {
 		return "AdapterType_Sqlite"
 	case AdapterType_Mssql:
 		return "AdapterType_Mssql"
-	case AdapterCache_Redis:
-		return "AdapterCache_Redis"
+	case AdapterType_MongoDB:
+		return "AdapterType_MongoDB"
 	}
 	return "Adapter_Unknown"
 }
@@ -124,8 +123,6 @@ func (a AdapterType) DriverName() string {
 		return DRIVER_NAME_MSSQL
 	case AdapterType_MongoDB:
 		return DRIVER_NAME_MONGODB
-	case AdapterCache_Redis:
-		return DRIVER_NAME_REDIS
 	default:
 	}
 	return "unknown"
@@ -137,7 +134,6 @@ var adapterNames = map[string]AdapterType{
 	DRIVER_NAME_SQLITE:   AdapterType_Sqlite,
 	DRIVER_NAME_MSSQL:    AdapterType_Mssql,
 	DRIVER_NAME_MONGODB:  AdapterType_MongoDB,
-	DRIVER_NAME_REDIS:    AdapterCache_Redis,
 }
 
 func getAdapterType(name string) AdapterType {

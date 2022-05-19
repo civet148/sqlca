@@ -13,7 +13,7 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 * 支持插入时如有主键或唯一索引冲突改为更新（upsert）
 * 支持结构体成员自定义tag（内建支持db、protobuf、json）
 * 支持基本事务和封装事务
-* 命令行工具db2go支持生成数据表结构到.go文件和.proto文件
+* 命令行工具[db2go](http://github.com/civet148/db2go) 支持生成数据表结构到.go文件和.proto文件
 * 支持通过sqlca标签指定某些字段为readonly，指定readonly的字段在orm插入和更新时将被忽略
 * 支持INNER/LEFT/RIGHT JOIN
 * 支持传入结构体指针地址引用自动分配内存并赋值
@@ -28,6 +28,6 @@ a enhancement database and cache tool based on sqlx and redigogo which based on 
 
 # 测试案例
 
-[数据库表结构](/test/test.sql)
+[数据库表结构](./examples/dbtest/test.sql)
 
-[测试代码](test/main.go)
+[测试代码](./examples/dbtest/main.go)

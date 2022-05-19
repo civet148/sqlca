@@ -723,7 +723,7 @@ func (e *Engine) handleSpecialChars(strIn string) (strOut string) {
 	case AdapterType_Mssql:
 		strIn = strings.Replace(strIn, `'`, `''`, -1)
 	case AdapterType_Sqlite:
-	case AdapterCache_Redis:
+	case AdapterType_MongoDB:
 	}
 
 	return strIn

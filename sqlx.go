@@ -399,3 +399,7 @@ func (m *SqlxExecutor) mssqlUpsert(e *Engine, strSQL string) (lastInsertId int64
 	}
 	return
 }
+
+func (m *SqlxExecutor) Close() error {
+	return m.db.Close()
+}

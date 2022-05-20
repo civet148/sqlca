@@ -15,43 +15,41 @@ func init() {
 }
 
 func (e *Engine) appendMaster(db executor) {
-	e.dbMasters = append(e.dbMasters, db)
-	log.Debugf("db masters [%v]", len(e.dbMasters))
+	e.dbWriters = append(e.dbWriters, db)
 }
 
 func (e *Engine) appendSlave(db executor) {
-	e.dbSlaves = append(e.dbSlaves, db)
-	log.Debugf("db slaves [%v]", len(e.dbSlaves))
+	e.dbReaders = append(e.dbReaders, db)
 }
 
 // get slave db instance if use Slave() method to query, if not exist return a master db instance
 func (e *Engine) getQueryDB() (db executor) {
 	if e.slave {
-		db = e.getSlave()
+		db = e.getReadDB()
 		if db != nil {
 			return
 		}
 	}
-	return e.getMaster()
+	return e.getWriteDB()
 }
 
-// get a master db instance
-func (e *Engine) getMaster() executor {
+// get a read/write db instance
+func (e *Engine) getWriteDB() executor {
 
-	n := len(e.dbMasters)
+	n := len(e.dbWriters)
 	if n > 0 {
-		return e.dbMasters[rand.Intn(n)]
+		return e.dbWriters[rand.Intn(n)]
 	}
 	return nil
 }
 
-// get a slave db instance
-func (e *Engine) getSlave() executor {
-	n := len(e.dbSlaves)
+// get a read only db instance
+func (e *Engine) getReadDB() executor {
+	n := len(e.dbReaders)
 	if n > 0 {
-		return e.dbSlaves[rand.Intn(n)]
+		return e.dbReaders[rand.Intn(n)]
 	}
-	return e.getMaster()
+	return e.getWriteDB()
 }
 
 func (e *Engine) setModel(models ...interface{}) *Engine {
@@ -129,8 +127,8 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 
 	engine := &Engine{
 		dsn:             e.dsn,
-		dbMasters:       e.dbMasters,
-		dbSlaves:        e.dbSlaves,
+		dbWriters:       e.dbWriters,
+		dbReaders:       e.dbReaders,
 		adapterType:     e.adapterType,
 		adapterCache:    e.adapterCache,
 		strPkName:       e.strPkName,
@@ -151,7 +149,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 func (e *Engine) txBegin() (txe *Engine, err error) {
 
 	txe = e.clone()
-	db := e.getMaster()
+	db := e.getWriteDB()
 	if txe.tx, err = db.txBegin(); err != nil {
 		log.Errorf("newTx error [%+v]", err.Error())
 		return nil, err
@@ -161,32 +159,32 @@ func (e *Engine) txBegin() (txe *Engine, err error) {
 }
 
 func (e *Engine) defaultInsert(strSQL string) (lastInsertId int64, err error) {
-	db := e.getMaster()
+	db := e.getWriteDB()
 	return db.Insert(e, strSQL)
 }
 
 func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err error) {
-	db := e.getMaster()
+	db := e.getWriteDB()
 	return db.Insert(e, strSQL)
 }
 
 func (e *Engine) defaultUpsert(strSQL string) (lastInsertId int64, err error) {
-	db := e.getMaster()
+	db := e.getWriteDB()
 	return db.Upsert(e, strSQL)
 }
 
 func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err error) {
-	db := e.getMaster()
+	db := e.getWriteDB()
 	return db.Upsert(e, strSQL)
 }
 
 func (e *Engine) mssqlQueryInsert(strSQL string) (lastInsertId int64, err error) {
-	db := e.getMaster()
+	db := e.getWriteDB()
 	return db.Insert(e, strSQL)
 }
 
 func (e *Engine) mssqlUpsert(strSQL string) (lastInsertId int64, err error) {
-	db := e.getMaster()
+	db := e.getWriteDB()
 	return db.Upsert(e, strSQL)
 }
 

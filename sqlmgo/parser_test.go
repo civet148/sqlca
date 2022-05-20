@@ -1,4 +1,4 @@
-package parser
+package sqlmgo
 
 import (
 	"github.com/civet148/log"
@@ -10,7 +10,7 @@ func TestParseMongo(t *testing.T) {
 		" FROM `miner_reward` mr  WHERE miner='0x45a36a8e118c37e4c47ef4ab827a7c9e579e11e2' AND (date >= '2021-12-01' AND date <= '2022-01-31') and ok=true" +
 		" GROUP BY miner, date ORDER by date DESC"
 
-	_, err := ParseMongo(strSQL)
+	_, err := ParseSQL(strSQL)
 	if err != nil {
 		log.Errorf(err.Error())
 	}

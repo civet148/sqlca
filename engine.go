@@ -37,8 +37,8 @@ type nearby struct {
 type Engine struct {
 	dsn             dsnDriver              // driver name and parameters
 	slave           bool                   // use slave to query ?
-	dbMasters       []executor             // DB instance masters
-	dbSlaves        []executor             // DB instance slaves
+	dbWriters       []executor             // DB instance for read/write
+	dbReaders       []executor             // DB instance for read only
 	tx              executor               // DB tx instance
 	adapterType     AdapterType            // what's adapter of sqlx
 	adapterCache    AdapterType            // what's adapter of cache
@@ -107,7 +107,7 @@ func NewEngine(args ...interface{}) (*Engine, error) {
 	} else if argc > 0 {
 		if argc == 1 {
 			if strOpenUrl, ok = args[0].(string); ok {
-				 _, err := e.open(strOpenUrl)
+				_, err := e.open(strOpenUrl)
 				if err != nil {
 					return nil, err
 				}
@@ -605,7 +605,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Update [%s]", strSql))
 
-	db := e.getMaster()
+	db := e.getWriteDB()
 	return db.Update(e, strSql)
 }
 
@@ -616,7 +616,7 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	defer e.cleanWhereCondition()
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Delete [%s]", strSql))
-	db := e.getMaster()
+	db := e.getWriteDB()
 	return db.Delete(e, strSql)
 }
 
@@ -664,7 +664,7 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	if !e.noVerbose {
 		log.Debugf("query [%v]", strQuery)
 	}
-	db := e.getMaster()
+	db := e.getWriteDB()
 	return db.Exec(e, strQuery)
 }
 
@@ -713,7 +713,7 @@ func (e *Engine) SetCustomTag(tagNames ...string) *Engine {
 // ping database
 func (e *Engine) Ping() (err error) {
 
-	for _, m := range e.dbMasters {
+	for _, m := range e.dbWriters {
 		if err = m.Ping(); err != nil {
 			if !e.noVerbose {
 				log.Errorf("ping master database error [%v]", err.Error())
@@ -722,7 +722,7 @@ func (e *Engine) Ping() (err error) {
 		}
 	}
 
-	for _, s := range e.dbSlaves {
+	for _, s := range e.dbReaders {
 		if err = s.Ping(); err != nil {
 			if !e.noVerbose {
 				log.Errorf("ping slave database error [%v]", err.Error())
@@ -980,4 +980,14 @@ func (e *Engine) LessThan(strColumn string, value interface{}) *Engine {
 func (e *Engine) LessEqual(strColumn string, value interface{}) *Engine {
 	e.And("%s<='%v'", strColumn, value)
 	return e
+}
+
+func (e *Engine) Close() {
+
+	for _, db := range e.dbReaders {
+		db.Close()
+	}
+	for _, db := range e.dbWriters {
+		db.Close()
+	}
 }

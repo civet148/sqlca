@@ -1,4 +1,4 @@
-package parser
+package sqlmgo
 
 import (
 	"github.com/civet148/log"
@@ -38,133 +38,142 @@ func newResult(sqltype SqlType, strSQL string, stmt sqlparser.Statement) (r *Res
 }
 
 func (r *Result) walkSqlNode() (*Result, error) {
+
+	err := sqlparser.Walk(func(node sqlparser.SQLNode) (ok bool, err error) {
+		log.Json(node)
+		return true, nil
+	})
+	return r, err
+}
+
+func (r *Result) printSqlNode() (*Result, error) {
 	err := sqlparser.Walk(func(node sqlparser.SQLNode) (ok bool, err error) {
 		log.Infof("--------------------------------------------------------------------------------------------")
 		var strNodeType string
 		switch node.(type) {
 		case sqlparser.Comments:
-			r.handleComments(node)
+			printSqlNodeComments(node)
 		case sqlparser.Columns:
-			r.handleColumns(node)
+			printSqlNodeColumns(node)
 		case sqlparser.TableExprs:
-			r.handleTableExprs(node)
+			printSqlNodeTableExprs(node)
 		case sqlparser.SelectExprs:
-			r.handleSelectExprs(node)
+			printSqlNodeSelectExprs(node)
 		case sqlparser.TableNames:
-			r.handleTableNames(node)
+			printSqlNodeTableNames(node)
 		case sqlparser.GroupBy:
-			r.handleGroupBy(node)
+			printSqlNodeGroupBy(node)
 		case sqlparser.OrderBy:
-			r.handleOrderBy(node)
+			printSqlNodeOrderBy(node)
 		case sqlparser.ColIdent:
-			r.handleColIdent(node)
+			printSqlNodeColIdent(node)
 		case sqlparser.TableName:
-			r.handleTableName(node)
+			printSqlNodeTableName(node)
 		case sqlparser.TableIdent:
-			r.handleTableIdent(node)
+			printSqlNodeTableIdent(node)
 		case *sqlparser.StarExpr:
-			r.handleStarExpr(node)
+			printSqlNodeStarExpr(node)
 		case *sqlparser.Limit:
-			r.handleLimit(node)
+			printSqlNodeLimit(node)
 		case *sqlparser.Order:
-			r.handleOrder(node)
+			printSqlNodeOrder(node)
 		case *sqlparser.Where:
-			r.handleWhere(node)
+			printSqlNodeWhere(node)
 		case *sqlparser.Update:
-			r.handleUpdate(node)
+			printSqlNodeUpdate(node)
 		case *sqlparser.Select:
-			r.handleSelect(node)
+			printSqlNodeSelect(node)
 		case *sqlparser.ParenSelect:
-			r.handleParenSelect(node)
+			printSqlNodeParenSelect(node)
 		case *sqlparser.ParenExpr:
-			r.handleParenExpr(node)
+			printSqlNodeParenExpr(node)
 		case *sqlparser.ParenTableExpr:
-			r.handleParenTableExpr(node)
+			printSqlNodeParenTableExpr(node)
 		case *sqlparser.GroupConcatExpr:
-			r.handleGroupConcatExpr(node)
+			printSqlNodeGroupConcatExpr(node)
 		case *sqlparser.SQLVal:
-			r.handleSQLVal(node)
+			printSqlNodeSQLVal(node)
 		case *sqlparser.AliasedExpr:
-			r.handleAliasedExpr(node)
+			printSqlNodeAliasedExpr(node)
 		case *sqlparser.AliasedTableExpr:
-			r.handleAliasedTableExpr(node)
+			printSqlNodeAliasedTableExpr(node)
 		case *sqlparser.AndExpr:
-			r.handleAndExpr(node)
+			printSqlNodeAndExpr(node)
 		case *sqlparser.BinaryExpr:
-			r.handleBinaryExpr(node)
+			printSqlNodeBinaryExpr(node)
 		case *sqlparser.CollateExpr:
-			r.handleCollateExpr(node)
+			printSqlNodeCollateExpr(node)
 		case *sqlparser.ColName:
-			r.handleColName(node)
+			printSqlNodeColName(node)
 		case *sqlparser.Delete:
-			r.handleDelete(node)
+			printSqlNodeDelete(node)
 		case *sqlparser.Insert:
-			r.handleInsert(node)
+			printSqlNodeInsert(node)
 		case *sqlparser.IndexDefinition:
-			r.handleIndexDefinition(node)
+			printSqlNodeIndexDefinition(node)
 		case *sqlparser.IndexHints:
-			r.handleIndexHints(node)
+			printSqlNodeIndexHints(node)
 		case *sqlparser.IndexInfo:
-			r.handleIndexInfo(node)
+			printSqlNodeIndexInfo(node)
 		case *sqlparser.FuncExpr:
-			r.handleFuncExpr(node)
+			printSqlNodeFuncExpr(node)
 		case *sqlparser.Begin:
-			r.handleBegin(node)
+			printSqlNodeBegin(node)
 		case sqlparser.BoolVal:
-			r.handleBoolVal(node)
+			printSqlNodeBoolVal(node)
 		case *sqlparser.ComparisonExpr:
-			r.handleComparisonExpr(node)
+			printSqlNodeComparisonExpr(node)
 		case *sqlparser.CaseExpr:
-			r.handleCaseExpr(node)
+			printSqlNodeCaseExpr(node)
 		case *sqlparser.When:
-			r.handleWhen(node)
+			printSqlNodeWhen(node)
 		case *sqlparser.MatchExpr:
-			r.handleMatchExpr(node)
+			printSqlNodeMatchExpr(node)
 		case *sqlparser.ListArg:
-			r.handleListArg(node)
+			printSqlNodeListArg(node)
 		case *sqlparser.Show:
-			r.handleShow(node)
+			printSqlNodeShow(node)
 		case *sqlparser.ShowFilter:
-			r.handleShowFilter(node)
+			printSqlNodeShowFilter(node)
 		case *sqlparser.Union:
-			r.handleUnion(node)
+			printSqlNodeUnion(node)
 		case *sqlparser.ColumnDefinition:
-			r.handleColumnDefinition(node)
+			printSqlNodeColumnDefinition(node)
 		case *sqlparser.ColumnType:
-			r.handleColumnType(node)
+			printSqlNodeColumnType(node)
 		case *sqlparser.Commit:
-			r.handleCommit(node)
+			printSqlNodeCommit(node)
 		case *sqlparser.ConvertExpr:
-			r.handleConvertExpr(node)
+			printSqlNodeConvertExpr(node)
 		case *sqlparser.ConvertType:
-			r.handleConvertType(node)
+			printSqlNodeConvertType(node)
 		case *sqlparser.ConvertUsingExpr:
-			r.handleConvertUsingExpr(node)
+			printSqlNodeConvertUsingExpr(node)
 		case *sqlparser.ExistsExpr:
-			r.handleExistsExpr(node)
+			printSqlNodeExistsExpr(node)
 		case *sqlparser.DBDDL:
-			r.handleDBDDL(node)
+			printSqlNodeDBDDL(node)
 		case *sqlparser.DDL:
-			r.handleDDL(node)
+			printSqlNodeDDL(node)
 		case *sqlparser.IntervalExpr:
-			r.handleIntervalExpr(node)
+			printSqlNodeIntervalExpr(node)
 		case *sqlparser.JoinCondition:
-			r.handleJoinCondition(node)
+			printSqlNodeJoinCondition(node)
 		case *sqlparser.JoinTableExpr:
-			r.handleJoinTableExpr(node)
+			printSqlNodeJoinTableExpr(node)
 		case *sqlparser.Set:
-			r.handleSet(node)
+			printSqlNodeSet(node)
 		case *sqlparser.SetExpr:
-			r.handleSetExpr(node)
+			printSqlNodeSetExpr(node)
 		case *sqlparser.SetExprs:
-			r.handleSetExprs(node)
+			printSqlNodeSetExprs(node)
 		case *sqlparser.Default:
-			r.handleDefault(node)
+			printSqlNodeDefault(node)
 		default:
 			strNodeType = reflect.TypeOf(node).Name()
 			log.Errorf("unknown sql node type [%s]", strNodeType)
+			log.Json(node)
 		}
-		log.Json(node)
 		return true, nil
 	}, r.Stmt)
 	if err != nil {

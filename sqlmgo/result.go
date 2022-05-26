@@ -32,14 +32,33 @@ func newResult(sqltype SqlType, strSQL string, stmt sqlparser.Statement) (r *Res
 }
 
 func (r *Result) formatSqlNode() (*Result, error) {
+	r.MogType = MgoType_Other
 	buf := sqlparser.NewTrackedBuffer(r.formatter)
-	buf.Myprintf("%v", r.Stmt)
-	log.Infof("buffer [%s]", buf.String())
+	_ = sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
+		switch node.(type) {
+		case sqlparser.GroupBy:
+			groupby := node.(sqlparser.GroupBy)
+			if len(groupby) != 0 {
+				r.MogType = MgoType_GroupBy
+			}
+		case *sqlparser.Insert:
+			r.MogType = MgoType_Insert
+		case *sqlparser.Delete:
+			r.MogType = MgoType_Delete
+		case *sqlparser.Update:
+			r.MogType = MgoType_Update
+		case *sqlparser.Select:
+			r.MogType = MgoType_Query
+		}
+		return true, nil
+	}, r.Stmt)
+	log.Infof("mongo type [%v]", r.MogType.String())
+	_ = buf
+	//buf.Myprintf("%v", r.Stmt)
 	return r, nil
 }
 
 func (r *Result) formatter(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
-	log.Infof("node [%#v]", node)
 	switch node.(type) {
 	case sqlparser.Comments:
 		r.formatSqlNodeComments(buf, node.(sqlparser.Comments))
@@ -132,7 +151,7 @@ func (r *Result) formatter(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode)
 	case *sqlparser.ColumnType:
 		r.formatSqlNodeColumnType(buf, node.(*sqlparser.ColumnType))
 	case *sqlparser.Commit:
-		r.formatSqlNodeCommit(buf, node.( *sqlparser.Commit))
+		r.formatSqlNodeCommit(buf, node.(*sqlparser.Commit))
 	case *sqlparser.ConvertExpr:
 		r.formatSqlNodeConvertExpr(buf, node.(*sqlparser.ConvertExpr))
 	case *sqlparser.ConvertType:

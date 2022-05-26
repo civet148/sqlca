@@ -5,26 +5,20 @@ import (
 	"github.com/xwb1989/sqlparser"
 )
 
-
-
 func (r *Result) formatSqlNodeSelect(buf *sqlparser.TrackedBuffer, node *sqlparser.Select) {
 	log.Json(node)
-	projection := sqlparser.NewTrackedBuffer(r.formatter)
-	projection.Myprintf("{%v}", node.SelectExprs)
-	//buf.Myprintf("%v", node.From)
-	//buf.Myprintf("%v", node.Where)
-	//buf.Myprintf("%v", node.OrderBy)
-	//buf.Myprintf("%v", node.GroupBy)
-	//buf.Myprintf("%v", node.Limit)
-	//buf.Myprintf("%v", node.Having)
-	log.Infof("projection [%s]", projection.String())
+	_ = r.handleSqlNodeSelect(node)
+	//_ = r.handleSqlNodeFrom(node)
+	//_ = r.handleSqlNodeWhere(node)
+	//_ = r.handleSqlNodeGroupBy(node)
+	//_ = r.handleSqlNodeOrderBy(node)
+	//_ = r.handleSqlNodeLimit(node)
 }
 
 func (r *Result) formatSqlNodeUpdate(buf *sqlparser.TrackedBuffer, node *sqlparser.Update) {
 	log.Json(node)
 
 }
-
 
 func (r *Result) formatSqlNodeDelete(buf *sqlparser.TrackedBuffer, node *sqlparser.Delete) {
 	log.Json(node)
@@ -38,17 +32,19 @@ func (r *Result) formatSqlNodeInsert(buf *sqlparser.TrackedBuffer, node *sqlpars
 
 func (r *Result) formatSqlNodeComments(buf *sqlparser.TrackedBuffer, node sqlparser.Comments) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeColumns(buf *sqlparser.TrackedBuffer, node sqlparser.Columns) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeTableExprs(buf *sqlparser.TrackedBuffer, node sqlparser.TableExprs) {
 	log.Json(node)
-	
+	for _, expr := range node {
+		buf.Myprintf("%v", expr)
+	}
 }
 
 func (r *Result) formatSqlNodeSelectExprs(buf *sqlparser.TrackedBuffer, node sqlparser.SelectExprs) {
@@ -62,78 +58,81 @@ func (r *Result) formatSqlNodeSelectExprs(buf *sqlparser.TrackedBuffer, node sql
 
 func (r *Result) formatSqlNodeTableNames(buf *sqlparser.TrackedBuffer, node sqlparser.TableNames) {
 	log.Json(node)
-	
+	var prefix string
+	for _, n := range node {
+		buf.Myprintf("%v", prefix, n.Name)
+		prefix = ", "
+	}
 }
 
 func (r *Result) formatSqlNodeGroupBy(buf *sqlparser.TrackedBuffer, node sqlparser.GroupBy) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeOrderBy(buf *sqlparser.TrackedBuffer, node sqlparser.OrderBy) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeColIdent(buf *sqlparser.TrackedBuffer, node sqlparser.ColIdent) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeTableName(buf *sqlparser.TrackedBuffer, node sqlparser.TableName) {
 	log.Json(node)
-	
+	buf.Myprintf("%v", node.Name)
 }
 
 func (r *Result) formatSqlNodeTableIdent(buf *sqlparser.TrackedBuffer, node sqlparser.TableIdent) {
 	log.Json(node)
-	
+	buf.Myprintf("%s", node.String())
 }
 
 func (r *Result) formatSqlNodeStarExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.StarExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeLimit(buf *sqlparser.TrackedBuffer, node *sqlparser.Limit) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeOrder(buf *sqlparser.TrackedBuffer, node *sqlparser.Order) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeWhere(buf *sqlparser.TrackedBuffer, node *sqlparser.Where) {
 	log.Json(node)
-	
+	buf.Myprintf("%v", node.Expr)
 }
-
 
 func (r *Result) formatSqlNodeParenSelect(buf *sqlparser.TrackedBuffer, node *sqlparser.ParenSelect) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeParenExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ParenExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeParenTableExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ParenTableExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeGroupConcatExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.GroupConcatExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeSQLVal(buf *sqlparser.TrackedBuffer, node *sqlparser.SQLVal) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeAliasedExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.AliasedExpr) {
@@ -143,29 +142,30 @@ func (r *Result) formatSqlNodeAliasedExpr(buf *sqlparser.TrackedBuffer, node *sq
 
 func (r *Result) formatSqlNodeAliasedTableExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.AliasedTableExpr) {
 	log.Json(node)
-	
+	buf.Myprintf("%v", node.Expr)
 }
 
 func (r *Result) formatSqlNodeAndExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.AndExpr) {
 	log.Json(node)
-	
+	buf.Myprintf("%v", node.Left)
+	buf.Myprintf("%v", node.Right)
 }
 
 func (r *Result) formatSqlNodeBinaryExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.BinaryExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeCollateExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.CollateExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeColName(buf *sqlparser.TrackedBuffer, node *sqlparser.ColName) {
 	log.Json(node)
 
 	qualifier := node.Qualifier.Qualifier.String()
-		name := node.Qualifier.Name.String()
+	name := node.Qualifier.Name.String()
 	if qualifier != "" || name != "" {
 		if qualifier != "" {
 			name = qualifier + "." + name
@@ -179,12 +179,12 @@ func (r *Result) formatSqlNodeColName(buf *sqlparser.TrackedBuffer, node *sqlpar
 
 func (r *Result) formatSqlNodeIndexDefinition(buf *sqlparser.TrackedBuffer, node *sqlparser.IndexDefinition) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeIndexHints(buf *sqlparser.TrackedBuffer, node *sqlparser.IndexHints) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeIndexInfo(buf *sqlparser.TrackedBuffer, node *sqlparser.IndexInfo) {
@@ -197,130 +197,132 @@ func (r *Result) formatSqlNodeFuncExpr(buf *sqlparser.TrackedBuffer, node *sqlpa
 
 func (r *Result) formatSqlNodeBegin(buf *sqlparser.TrackedBuffer, node *sqlparser.Begin) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeBoolVal(buf *sqlparser.TrackedBuffer, node sqlparser.BoolVal) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeComparisonExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ComparisonExpr) {
 	log.Json(node)
-	
+	buf.Myprintf("%v", node.Left)
+	buf.Myprintf("%s", node.Operator)
+	buf.Myprintf("%v", node.Right)
 }
 
 func (r *Result) formatSqlNodeCaseExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.CaseExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeWhen(buf *sqlparser.TrackedBuffer, node *sqlparser.When) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeMatchExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.MatchExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeListArg(buf *sqlparser.TrackedBuffer, node *sqlparser.ListArg) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeShow(buf *sqlparser.TrackedBuffer, node *sqlparser.Show) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeShowFilter(buf *sqlparser.TrackedBuffer, node *sqlparser.ShowFilter) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeUnion(buf *sqlparser.TrackedBuffer, node *sqlparser.Union) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeColumnDefinition(buf *sqlparser.TrackedBuffer, node *sqlparser.ColumnDefinition) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeColumnType(buf *sqlparser.TrackedBuffer, node *sqlparser.ColumnType) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeCommit(buf *sqlparser.TrackedBuffer, node *sqlparser.Commit) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeConvertExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ConvertExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeConvertType(buf *sqlparser.TrackedBuffer, node *sqlparser.ConvertType) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeConvertUsingExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ConvertUsingExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeExistsExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ExistsExpr) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeDBDDL(buf *sqlparser.TrackedBuffer, node *sqlparser.DBDDL) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeDDL(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeIntervalExpr(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeJoinCondition(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeJoinTableExpr(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeSet(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeSetExpr(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeSetExprs(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
 	log.Json(node)
-	
+
 }
 
 func (r *Result) formatSqlNodeDefault(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode) {
 	log.Json(node)
-	
+
 }

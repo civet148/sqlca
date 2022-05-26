@@ -8,6 +8,7 @@ import (
 )
 
 type Result struct {
+	subType   subType             `json:"-"`
 	SqlType   SqlType             `json:"sql_type"`
 	MogType   MgoType             `json:"mog_type"`
 	SQL       string              `json:"sql"`
@@ -52,9 +53,9 @@ func (r *Result) formatSqlNode() (*Result, error) {
 		}
 		return true, nil
 	}, r.Stmt)
-	log.Infof("mongo type [%v]", r.MogType.String())
+	log.Debugf("mongo type [%v]", r.MogType.String())
 	_ = buf
-	//buf.Myprintf("%v", r.Stmt)
+	buf.Myprintf("%v", r.Stmt)
 	return r, nil
 }
 

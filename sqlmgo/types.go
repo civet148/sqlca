@@ -174,3 +174,56 @@ func getSqlType(stmt sqlparser.Statement) (typ SqlType) {
 	}
 	return
 }
+
+/*----------------------------------------------------------------------------------------------------*/
+
+type subType int
+
+const (
+	subType_Select  subType = 0
+	subType_From    subType = 1
+	subType_Where   subType = 2
+	subType_GroupBy subType = 3
+	subType_OrderBy subType = 4
+	subType_Update  subType = 5
+	subType_Delete  subType = 6
+	subType_Insert  subType = 7
+	subType_Limit   subType = 8
+)
+
+var subTypes = map[subType]string{
+	subType_Select:  "subType_Select",
+	subType_From:    "subType_From",
+	subType_Where:   "subType_Where",
+	subType_GroupBy: "subType_GroupBy",
+	subType_OrderBy: "subType_OrderBy",
+	subType_Update:  "subType_Update",
+	subType_Delete:  "subType_Delete",
+	subType_Insert:  "subType_Insert",
+	subType_Limit:   "subType_Limit",
+}
+
+func (t subType) GoString() string {
+	return t.String()
+}
+
+func (t subType) String() string {
+	if strName, ok := subTypes[t]; ok {
+		return strName
+	}
+	return fmt.Sprintf("MgoType_Unknown<%d>", t)
+}
+
+func (t *subType) UnmarshalText(text []byte) error {
+	for k, v := range subTypes {
+		if v == string(text) {
+			*t = k
+			break
+		}
+	}
+	return nil
+}
+
+func (t *subType) MarshalText() (text []byte, err error) {
+	return []byte(t.String()), nil
+}

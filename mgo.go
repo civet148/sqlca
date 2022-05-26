@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	defaultTimeoutSeconds = 3 //seconds
+	defaultTimeoutSeconds = 3
+	defaultReadWriteTimeoutSeconds = 30*60
 )
 
 type MgoExecutor struct {
@@ -71,6 +72,22 @@ func (m *MgoExecutor) Exec(e *Engine, strSQL string) (rowsAffected, lastInsertId
 }
 
 func (m *MgoExecutor) Query(e *Engine, strSQL string) (count int64, err error) {
+	ctx, cancel := newContextTimeout(defaultReadWriteTimeoutSeconds)
+	defer cancel()
+	var cursor *mongo.Cursor
+	type User struct {
+		Name string `bson:"name"`
+		Sex string `bson:"sex"`
+		Age uint8 `bson:"age"`
+	}
+	cursor, err = m.db.Collection("user").Find(ctx, nil)
+	if err != nil {
+		return 0, log.Errorf("find error [%s]", err)
+	}
+	var user []User
+ 	if err = cursor.All(ctx, &user); err != nil {
+		return 0, log.Errorf("cursor all error [%s]", err)
+	}
 	return
 }
 
@@ -131,4 +148,10 @@ func (m *MgoExecutor) txRollback() (err error) {
 
 func (m *MgoExecutor) txCommit() (err error) {
 	return
+}
+
+//------------------------------------------------------------------------------------------------------
+
+func (m *MgoExecutor) collection(strName string, opts...*options.CollectionOptions) *mongo.Collection {
+	return m.db.Collection(strName, opts...)
 }

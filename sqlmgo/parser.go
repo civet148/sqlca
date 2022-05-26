@@ -12,6 +12,6 @@ func ParseSQL(strSQL string) (r *Result, err error) {
 		log.Panic("SQL parse error [%s]", err.Error())
 		return nil, err
 	}
-	typ := StatementSqlType(stmt)
+	typ := getSqlType(stmt)
 	return newResult(typ, strSQL, stmt)
 }

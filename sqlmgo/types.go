@@ -8,23 +8,25 @@ import (
 type MgoType int
 
 const (
-	MgoType_Other       MgoType = 0
-	MgoType_QuerySingle MgoType = 1
-	MgoType_QueryGroup  MgoType = 2
-	MgoType_QueryUnion  MgoType = 3
-	MgoType_Insert      MgoType = 4
-	MgoType_Update      MgoType = 5
-	MgoType_Delete      MgoType = 6
+	MgoType_Other   MgoType = 0
+	MgoType_Query   MgoType = 1
+	MgoType_GroupBy MgoType = 2
+	MgoType_Union   MgoType = 3
+	MgoType_Insert  MgoType = 4
+	MgoType_Update  MgoType = 5
+	MgoType_Delete  MgoType = 6
+	MgoType_Upsert  MgoType = 7
 )
 
 var mgotypes = map[MgoType]string{
-	MgoType_Other:       "MgoType_Other",
-	MgoType_QuerySingle: "MgoType_QuerySingle",
-	MgoType_QueryGroup:  "MgoType_QueryGroup",
-	MgoType_QueryUnion:  "MgoType_QueryUnion",
-	MgoType_Insert:      "MgoType_Insert",
-	MgoType_Update:      "MgoType_Update",
-	MgoType_Delete:      "MgoType_Delete",
+	MgoType_Other:   "MgoType_Other",
+	MgoType_Query:   "MgoType_Query",
+	MgoType_GroupBy: "MgoType_GroupBy",
+	MgoType_Union:   "MgoType_Union",
+	MgoType_Insert:  "MgoType_Insert",
+	MgoType_Update:  "MgoType_Update",
+	MgoType_Delete:  "MgoType_Delete",
+	MgoType_Upsert:  "MgoType_Upsert",
 }
 
 func (t MgoType) GoString() string {
@@ -36,6 +38,20 @@ func (t MgoType) String() string {
 		return strName
 	}
 	return fmt.Sprintf("MgoType_Unknown<%d>", t)
+}
+
+func (t *MgoType) UnmarshalText(text []byte) error {
+	for k, v := range mgotypes {
+		if v == string(text) {
+			*t = k
+			break
+		}
+	}
+	return nil
+}
+
+func (t *MgoType) MarshalText() (text []byte, err error) {
+	return []byte(t.String()), nil
 }
 
 /*----------------------------------------------------------------------------------------------------*/
@@ -102,7 +118,21 @@ func (t SqlType) String() string {
 	return fmt.Sprintf("SqlType_Unknown<%d>", t)
 }
 
-func StatementSqlType(stmt sqlparser.Statement) (typ SqlType) {
+func (t *SqlType) UnmarshalText(text []byte) error {
+	for k, v := range sqltypes {
+		if v == string(text) {
+			*t = k
+			break
+		}
+	}
+	return nil
+}
+
+func (t *SqlType) MarshalText() (text []byte, err error) {
+	return []byte(t.String()), nil
+}
+
+func getSqlType(stmt sqlparser.Statement) (typ SqlType) {
 
 	switch stmt.(type) {
 	case *sqlparser.Select:

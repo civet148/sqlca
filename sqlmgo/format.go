@@ -241,7 +241,7 @@ func (r *Result) formatSqlNodeBegin(buf *sqlparser.TrackedBuffer, node *sqlparse
 
 func (r *Result) formatSqlNodeBoolVal(buf *sqlparser.TrackedBuffer, node sqlparser.BoolVal) {
 	log.Json(node)
-
+	buf.Myprintf("%s", fmt.Sprintf("%v", node))
 }
 
 func (r *Result) formatSqlNodeComparisonExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ComparisonExpr) {

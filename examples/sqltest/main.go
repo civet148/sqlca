@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	strSelect = "SELECT `age`, sex, balance, data.weight.kg FROM user WHERE sex>=10 and weight != 0 and created_time > '2022-05-22 10:00:00' ORDER BY created_time, id DESC"
+	strSelect = "SELECT `age`, sex, balance, data.weight.kg FROM user WHERE sex>=10 and weight != 0 and created_time > '2022-05-22 10:00:00' and ok=true ORDER BY created_time, id DESC"
 	strGourpBy = "SELECT `miner`, `date`, SUM(to_decimal(miner_reward.win_reward)) as total_reward, COUNT(1) AS total_count " +
 		" FROM `miner_reward` mr  WHERE miner='0x45a36a8e118c37e4c47ef4ab827a7c9e579e11e2' AND (date >= '2021-12-01' OR date <= '2022-01-31') and deleted=0 and ok=true" +
 		" GROUP BY miner, date ORDER by date, created_time DESC LIMIT 2,4"

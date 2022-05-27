@@ -1,18 +1,21 @@
 package sqlmgo
 
 import (
+	"fmt"
 	"github.com/civet148/log"
 	"github.com/xwb1989/sqlparser"
 )
 
 func (r *Result) formatSqlNodeSelect(buf *sqlparser.TrackedBuffer, node *sqlparser.Select) {
 	log.Json(node)
-	_ = r.handleSqlNodeSelect(node)
+	//_ = r.handleSqlNodeSelectExprs(node)
 	//_ = r.handleSqlNodeFrom(node)
-	//_ = r.handleSqlNodeWhere(node)
+	_ = r.handleSqlNodeWhere(node)
 	//_ = r.handleSqlNodeGroupBy(node)
 	//_ = r.handleSqlNodeOrderBy(node)
 	//_ = r.handleSqlNodeLimit(node)
+	//_ = r.handleSqlNodeHaving(node)
+	//_ = r.handleSqlNodeDistinct(node)
 }
 
 func (r *Result) formatSqlNodeUpdate(buf *sqlparser.TrackedBuffer, node *sqlparser.Update) {
@@ -132,7 +135,23 @@ func (r *Result) formatSqlNodeGroupConcatExpr(buf *sqlparser.TrackedBuffer, node
 
 func (r *Result) formatSqlNodeSQLVal(buf *sqlparser.TrackedBuffer, node *sqlparser.SQLVal) {
 	log.Json(node)
-
+	pv, err := sqlparser.NewPlanValue(node)
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	v := pv.Value.ToString()
+	switch node.Type {
+	case sqlparser.StrVal:
+		v = fmt.Sprintf("\"%s\"", v)
+	//case sqlparser.IntVal:
+	//case sqlparser.FloatVal:
+	//case sqlparser.HexNum:
+	//case sqlparser.HexVal:
+	//case sqlparser.ValArg:
+	//case sqlparser.BitVal:
+	}
+	buf.Myprintf("%s", v)
 }
 
 func (r *Result) formatSqlNodeAliasedExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.AliasedExpr) {
@@ -148,6 +167,7 @@ func (r *Result) formatSqlNodeAliasedTableExpr(buf *sqlparser.TrackedBuffer, nod
 func (r *Result) formatSqlNodeAndExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.AndExpr) {
 	log.Json(node)
 	buf.Myprintf("%v", node.Left)
+	buf.Myprintf(",")
 	buf.Myprintf("%v", node.Right)
 }
 
@@ -163,18 +183,37 @@ func (r *Result) formatSqlNodeCollateExpr(buf *sqlparser.TrackedBuffer, node *sq
 
 func (r *Result) formatSqlNodeColName(buf *sqlparser.TrackedBuffer, node *sqlparser.ColName) {
 	log.Json(node)
-
-	qualifier := node.Qualifier.Qualifier.String()
-	name := node.Qualifier.Name.String()
-	if qualifier != "" || name != "" {
-		if qualifier != "" {
-			name = qualifier + "." + name
+	switch r.subType {
+	case subType_SelectExprs:
+		{
+			qualifier := node.Qualifier.Qualifier.String()
+			name := node.Qualifier.Name.String()
+			if qualifier != "" || name != "" {
+				if qualifier != "" {
+					name = qualifier + "." + name
+				}
+				buf.Myprintf("\"%s.%s\":1", name, node.Name.String())
+			} else {
+				buf.Myprintf("\"%s\":1", node.Name.String())
+			}
 		}
-		buf.Myprintf("\"%s.%s\":1", name, node.Name.String())
-	} else {
-		buf.Myprintf("\"%s\":1", node.Name.String())
-	}
+	case subType_From:
+	case subType_Where:
+		{
+			buf.Myprintf("\"%s\"", node.Name.String())
+		}
+	case subType_GroupBy:
+		{
+			buf.Myprintf("\"$%s\":\"$%s\"", node.Name.String(), node.Name.String())
+		}
 
+	case subType_OrderBy:
+	case subType_Update:
+	case subType_Delete:
+	case subType_Insert:
+	case subType_Limit:
+	case subType_Having:
+	}
 }
 
 func (r *Result) formatSqlNodeIndexDefinition(buf *sqlparser.TrackedBuffer, node *sqlparser.IndexDefinition) {
@@ -208,8 +247,8 @@ func (r *Result) formatSqlNodeBoolVal(buf *sqlparser.TrackedBuffer, node sqlpars
 func (r *Result) formatSqlNodeComparisonExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ComparisonExpr) {
 	log.Json(node)
 	buf.Myprintf("%v", node.Left)
-	buf.Myprintf("%s", node.Operator)
-	buf.Myprintf("%v", node.Right)
+	buf.Myprintf(":{\"%s\"", ConvertOperator(node.Operator))
+	buf.Myprintf(":%v}", node.Right)
 }
 
 func (r *Result) formatSqlNodeCaseExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.CaseExpr) {

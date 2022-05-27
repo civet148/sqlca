@@ -180,27 +180,29 @@ func getSqlType(stmt sqlparser.Statement) (typ SqlType) {
 type subType int
 
 const (
-	subType_Select  subType = 0
-	subType_From    subType = 1
-	subType_Where   subType = 2
-	subType_GroupBy subType = 3
-	subType_OrderBy subType = 4
-	subType_Update  subType = 5
-	subType_Delete  subType = 6
-	subType_Insert  subType = 7
-	subType_Limit   subType = 8
+	subType_SelectExprs subType = 0
+	subType_From        subType = 1
+	subType_Where       subType = 2
+	subType_GroupBy     subType = 3
+	subType_OrderBy     subType = 4
+	subType_Update      subType = 5
+	subType_Delete      subType = 6
+	subType_Insert      subType = 7
+	subType_Limit       subType = 8
+	subType_Having      subType = 9
 )
 
 var subTypes = map[subType]string{
-	subType_Select:  "subType_Select",
-	subType_From:    "subType_From",
-	subType_Where:   "subType_Where",
-	subType_GroupBy: "subType_GroupBy",
-	subType_OrderBy: "subType_OrderBy",
-	subType_Update:  "subType_Update",
-	subType_Delete:  "subType_Delete",
-	subType_Insert:  "subType_Insert",
-	subType_Limit:   "subType_Limit",
+	subType_SelectExprs: "subType_SelectExprs",
+	subType_From:        "subType_From",
+	subType_Where:       "subType_Where",
+	subType_GroupBy:     "subType_GroupBy",
+	subType_OrderBy:     "subType_OrderBy",
+	subType_Update:      "subType_Update",
+	subType_Delete:      "subType_Delete",
+	subType_Insert:      "subType_Insert",
+	subType_Limit:       "subType_Limit",
+	subType_Having:      "subType_Having",
 }
 
 func (t subType) GoString() string {

@@ -15,8 +15,8 @@ github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5P
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/civet148/gotools v1.4.0 h1:lgf+RXGY/ApfUiczd49lxOewNToOOaZjWjfZUNr2UVE=
 github.com/civet148/gotools v1.4.0/go.mod h1:SfbUhBkKsnCIZ+1Ac94sQ2yTCbwkRKgVjDgGxrwPYmw=
-github.com/civet148/log v1.1.0 h1:VRGFYD9ytkWzAIBpw2ALwJF/+ocYP32JNl9C6QSW614=
-github.com/civet148/log v1.1.0/go.mod h1:fR/TOocpVvjAKFXzx/tf+LUpntHmfVekz126r5wmgME=
+github.com/civet148/log v1.1.3 h1:ClKaD8pgImkli+Ove21GjeydI77i9gurrAkSl4rRZrk=
+github.com/civet148/log v1.1.3/go.mod h1:goUIYRED4uhCzlF5mcwHrkJ+nPXJIPwcaB6IJSuiEW0=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -37,6 +37,8 @@ github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFP
 github.com/eclipse/paho.mqtt.golang v1.2.0/go.mod h1:H9keYFcgq3Qr5OUJm/JZI/i6U7joQ8SYLhZwfeOo6Ts=
 github.com/elliotchance/sshtunnel v1.2.0 h1:w+ZIzpwvLD/O4VrU80ASdWGL0FO1GxillHPoZn9jhAg=
 github.com/elliotchance/sshtunnel v1.2.0/go.mod h1:gRPilFGawrilzilJ+4ySFZxu/qoNZN++GQQ1HVFrVJk=
+github.com/fatih/color v1.12.0 h1:mRhaKNwANqRgUBGKmnI5ZxEk7QXmjQeCcuYFMX2bfcc=
+github.com/fatih/color v1.12.0/go.mod h1:ELkj/draVOlAH/xkhN6mQ50Qd0MPOk5AAr3maGEBuJM=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/frankban/quicktest v1.4.1/go.mod h1:36zfPVQyHxymz4cH7wlDmVwDrJuljRB60qkgn7rorfQ=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=

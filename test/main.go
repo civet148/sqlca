@@ -618,18 +618,37 @@ func TxWrapper(e *sqlca.Engine) {
 	_ = e.TxFunc(func(tx *sqlca.Engine) error {
 		//query results into a struct object or slice
 		var err error
-		var dos []UserDO
-		_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1 LIMIT 1")
+		var dos UserDO
+		_, err = tx.Model(&dos).
+			Table("users").
+			Equal("disable", 1).
+			Limit(1).
+			Query()
+		//_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1 LIMIT 1")
 		if err != nil {
 			log.Errorf("TxGet error %v", err.Error())
 			return err
 		}
-		for _, do := range dos {
-			log.Infof("struct user data object [%+v]", do)
-		}
-		_, _, err = tx.TxExec("UPDATE users SET disable=0 LIMIT 1")
+		//UPDATE users SET disable=0 WHERE id='xx'
+		_, err = tx.Model(0).
+			Table("users").
+			Id(dos.Id).
+			Select("disable").
+			Where("disable=1").
+			Limit(1).
+			Update()
 		if err != nil {
-			log.Errorf("TxExec error %v", err.Error())
+
+			return log.Errorf("tx update error %v", err.Error())
+		}
+		log.Infof("user id [%d] update disable to 0 ready", dos.Id)
+		//DELETE FROM users WHERE id='xx'
+		_, err = tx.Model(nil).
+			Table("users").
+			Id(dos.Id).
+			Delete()
+		if err != nil {
+			log.Errorf("tx delete error %v", err.Error())
 			return err
 		}
 		return nil

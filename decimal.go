@@ -3,9 +3,16 @@ package sqlca
 import (
 	"database/sql/driver"
 	"fmt"
+	"math/big"
+
 	//"go.mongodb.org/mongo-driver/bson/bsontype"
 	"github.com/shopspring/decimal"
 	//"gopkg.in/mgo.v2/bson"
+)
+
+const(
+	ether = "1000000000000000000"
+	btc = "100000000"
 )
 
 type Decimal struct {
@@ -54,6 +61,35 @@ func NewDecimal(v interface{}) (d Decimal) {
 		panic("type not support yet")
 	}
 	return
+}
+
+func (d Decimal) BigInt() (b *big.Int, ok bool) {
+	b = new(big.Int)
+	return b.SetString(d.String(), 10)
+}
+
+func (d Decimal) Amount2Ether() Decimal {
+	return d.Mul(NewDecimal(ether))
+}
+
+func (d Decimal) Ether2Amount() Decimal {
+	return  d.Div(NewDecimal(ether))
+}
+
+func (d Decimal) Amount2Btc() Decimal {
+	return d.Mul(NewDecimal(btc))
+}
+
+func (d Decimal) Btc2Amount() Decimal {
+	return  d.Div(NewDecimal(btc))
+}
+
+func (d Decimal) Amount2Coin(prec string) Decimal {
+	return d.Mul(NewDecimal(prec))
+}
+
+func (d Decimal) Coin2Amount(prec string) Decimal {
+	return  d.Div(NewDecimal(prec))
 }
 
 func (d *Decimal) FromString(v string) {

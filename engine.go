@@ -455,9 +455,11 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	assert(e.strTableName, "table name not found")
 	defer e.cleanWhereCondition()
 
-	e.setOperType(OperType_Query)
+	if e.operType == OperType_Tx {
+		return e.TxGet(e.model, e.ToSQL(OperType_Query))
+	}
 
-	strSql := e.makeSQL()
+	strSql := e.makeSQL(OperType_Query)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
 
@@ -485,46 +487,55 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	assert(e.strTableName, "table name not found")
 	defer e.cleanWhereCondition()
 
-	e.setOperType(OperType_Query)
-
-	strSql := e.makeSQL()
+	strSql := e.makeSQL(OperType_Query)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
 
-	var rowsQuery, rowsCount *sql.Rows
-	dbQuery := e.getQueryDB()
-	if rowsQuery, err = dbQuery.Query(strSql); err != nil {
-		if !e.noVerbose {
-			log.Errorf("query [%v] error [%v]", strSql, err.Error())
+	if e.operType == OperType_Tx {
+		var ignore int64
+		strCountSql := e.makeSqlxQueryCount()
+		total, err = e.TxGet(&ignore, strCountSql)
+		if err != nil {
+			return 0, 0, err
 		}
-		return
-	}
-
-	defer rowsQuery.Close()
-	if rowsAffected, err = e.fetchRows(rowsQuery); err != nil {
-		return
-	}
-
-	strCountSql := e.makeSqlxQueryCount()
-	dbCount := e.getQueryDB()
-	if rowsCount, err = dbCount.Query(strCountSql); err != nil {
-		if !e.noVerbose {
-			log.Errorf("query [%v] error [%v]", strSql, err.Error())
+		rowsAffected, err = e.TxGet(e.model, strSql)
+		if err != nil {
+			return 0, 0, err
 		}
-		return
-	}
+	} else {
+		var rowsQuery, rowsCount *sql.Rows
+		dbQuery := e.getQueryDB()
+		if rowsQuery, err = dbQuery.Query(strSql); err != nil {
+			if !e.noVerbose {
+				log.Errorf("query [%v] error [%v]", strSql, err.Error())
+			}
+			return
+		}
 
-	defer rowsCount.Close()
-	for rowsCount.Next() {
-		total++
+		defer rowsQuery.Close()
+		if rowsAffected, err = e.fetchRows(rowsQuery); err != nil {
+			return
+		}
+
+		strCountSql := e.makeSqlxQueryCount()
+		dbCount := e.getQueryDB()
+		if rowsCount, err = dbCount.Query(strCountSql); err != nil {
+			if !e.noVerbose {
+				log.Errorf("query [%v] error [%v]", strSql, err.Error())
+			}
+			return
+		}
+
+		defer rowsCount.Close()
+		for rowsCount.Next() {
+			total++
+		}
 	}
 	return
 }
 
 // orm find with customer conditions (map[string]interface{})
 func (e *Engine) Find(conditions map[string]interface{}) (rowsAffected int64, err error) {
-	assert(len(conditions), "find condition is nil")
-	e.setOperType(OperType_Query)
 	for k, v := range conditions {
 		e.And("%v=%v", e.getQuoteColumnName(k), e.getQuoteColumnValue(v))
 	}
@@ -539,43 +550,27 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	assert(e.strTableName, "table name not found")
 	defer e.cleanWhereCondition()
 
-	e.setOperType(OperType_Insert)
 	var strSql string
-	strSql = e.makeSQL()
+	strSql = e.makeSQL(OperType_Insert)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Insert [%s]", strSql))
 
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
 		{
-			if e.isPkInteger() && e.isPkValueNil() {
-				lastInsertId, err = e.mssqlQueryInsert(strSql)
-			}
+			strSql = e.mssqlQueryInsert(strSql)
 		}
 	case AdapterSqlx_Postgres:
 		{
-			if e.isPkInteger() && e.isPkValueNil() {
-				lastInsertId, err = e.postgresQueryInsert(strSql)
-			}
-		}
-	default:
-		{
-			var r sql.Result
-			var db *sqlx.DB
-
-			db = e.getMaster()
-			r, err = db.Exec(strSql)
-			if err != nil {
-				if !e.noVerbose {
-					log.Errorf("error %s model %+v", err, e.model)
-				}
-				return
-			}
-
-			lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
+			strSql = e.postgresQueryInsert(strSql)
 		}
 	}
 
+	if e.operType == OperType_Tx {
+		lastInsertId, _, err = e.TxExec(strSql)
+	} else {
+		lastInsertId, _, err = e.mysqlExec(strSql)
+	}
 	return
 }
 
@@ -597,39 +592,29 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 
 	defer e.cleanWhereCondition()
 
-	e.setOperType(OperType_Upsert)
 	var strSql string
-	strSql = e.makeSQL()
+	strSql = e.makeSQL(OperType_Upsert)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Upsert [%s]", strSql))
-	db := e.getMaster()
 
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
 		{
+			if e.operType == OperType_Tx {
+				return 0, log.Errorf("MSSQL can not use upsert on tx mode")
+			}
 			lastInsertId, err = e.mssqlUpsert(e.makeSqlxInsert())
 		}
 	case AdapterSqlx_Postgres:
 		{
+			if e.operType == OperType_Tx {
+				return 0, log.Errorf("Postgres can not use upsert on tx mode")
+			}
 			lastInsertId, err = e.postgresQueryUpsert(strSql)
 		}
 	default:
 		{
-			var r sql.Result
-			r, err = db.Exec(strSql)
-			if err != nil {
-				if !e.noVerbose {
-					log.Errorf("error %v model %+v", err, e.model)
-				}
-				return
-			}
-			lastInsertId, err = r.LastInsertId()
-			if err != nil {
-				if !e.noVerbose {
-					log.Errorf("get last insert id error %v model %+v", err, e.model)
-				}
-				return
-			}
+			lastInsertId, err = e.mysqlQueryUpsert(strSql)
 		}
 	}
 
@@ -644,16 +629,17 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	assert(e.getSelectColumns(), "update columns is not set, please call Select method")
-
-	e.setOperType(OperType_Update)
 	defer e.cleanWhereCondition()
-
-	var r sql.Result
 	var strSql string
-	strSql = e.makeSQL()
-
+	strSql = e.makeSQL(OperType_Update)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Update [%s]", strSql))
+
+	if e.operType == OperType_Tx {
+		_, rowsAffected, err = e.TxExec(strSql)
+		return
+	}
+	var r sql.Result
 
 	db := e.getMaster()
 	r, err = db.Exec(strSql)
@@ -676,12 +662,16 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 
 // orm delete record(s) from db and cache
 func (e *Engine) Delete() (rowsAffected int64, err error) {
-	e.setOperType(OperType_Delete)
-	strSql := e.makeSQL()
+
+	strSql := e.makeSQL(OperType_Delete)
 	defer e.cleanWhereCondition()
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Delete [%s]", strSql))
 
+	if e.operType == OperType_Tx {
+		_, rowsAffected, err = e.TxExec(strSql)
+		return
+	}
 	var r sql.Result
 	db := e.getMaster()
 	r, err = db.Exec(strSql)
@@ -707,13 +697,15 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 
 	assert(strQuery, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strQuery))
-	e.setOperType(OperType_QueryRaw)
 
 	var rows *sqlx.Rows
 	strQuery = e.formatString(strQuery, args...)
 	log.Debugf("query [%v]", strQuery)
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strQuery))
+	if e.operType == OperType_Tx {
+		return e.TxGet(e.model, strQuery)
+	}
 
 	db := e.getQueryDB()
 	if rows, err = db.Queryx(strQuery); err != nil {
@@ -733,14 +725,17 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
 	assert(strQuery, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
+	strQuery = e.formatString(strQuery, args...)
+	log.Debugf("query [%v]", strQuery)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strQuery))
 
-	e.setOperType(OperType_QueryMap)
+	if e.operType == OperType_Tx {
+		return e.TxGet(e.model, strQuery)
+	}
+
 	var rows *sqlx.Rows
 
-	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
 	db := e.getQueryDB()
 	if rows, err = db.Queryx(strQuery); err != nil {
 		if !e.noVerbose {
@@ -763,14 +758,17 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
 
 	assert(strQuery, "query sql string is nil")
+	strQuery = e.formatString(strQuery, args...)
+	if e.operType == OperType_Tx {
+		return e.TxExec(strQuery)
+	}
+
+	var r sql.Result
+
+	log.Debugf("exec [%v]", strQuery)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("ExecRaw [%s]", strQuery))
 
-	e.setOperType(OperType_ExecRaw)
-
-	var r sql.Result
-	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
 	db := e.getMaster()
 	if r, err = db.Exec(strQuery); err != nil {
 		if !e.noVerbose {
@@ -808,10 +806,10 @@ func (e *Engine) TxBegin() (*Engine, error) {
 func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
 	assert(e.tx, "TxGet tx instance is nil, please call TxBegin to create a tx instance")
 	var rows *sql.Rows
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("TxGet [%s]", strQuery))
 	strQuery = e.formatString(strQuery, args...)
 	log.Debugf("TxGet query [%v]", strQuery)
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("TxGet [%s]", strQuery))
 
 	rows, err = e.tx.Query(strQuery)
 	if err != nil {
@@ -957,6 +955,7 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 		}
 		return
 	}
+
 	if err = fn(tx); err != nil {
 		_ = tx.TxRollback()
 		if !e.noVerbose {

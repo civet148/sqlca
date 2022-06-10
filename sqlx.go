@@ -360,6 +360,8 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		bAutoRollback:   e.bAutoRollback,
 		slowQueryOn:     e.slowQueryOn,
 		slowQueryTime:   e.slowQueryTime,
+		tx:              e.tx,
+		operType:        e.operType,
 	}
 
 	engine.setModel(models...)
@@ -378,19 +380,33 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 	return
 }
 
-func (e *Engine) postgresQueryInsert(strSQL string) (lastInsertId int64, err error) {
-	var rows *sql.Rows
+func (e *Engine) postgresQueryInsert(strSQL string) string {
 	strSQL += fmt.Sprintf(" RETURNING \"%v\"", e.GetPkName())
-	log.Debugf("[%v]", strSQL)
-	db := e.getMaster()
-	if rows, err = db.Query(strSQL); err != nil {
-		log.Errorf("tx.Query error [%v]", err.Error())
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Warnf("rows.Scan warning [%v]", err.Error())
+	return strSQL
+}
+
+func (e *Engine) mysqlQueryUpsert(strSQL string) (lastInsertId int64, err error) {
+
+	if e.operType == OperType_Tx {
+		lastInsertId, _, err = e.TxExec(strSQL)
+		if err != nil {
+			return 0, log.Errorf("upsert error [%s]", err)
+		}
+	} else {
+		var r sql.Result
+		db := e.getMaster()
+		r, err = db.Exec(strSQL)
+		if err != nil {
+			if !e.noVerbose {
+				log.Errorf("error %v model %+v", err, e.model)
+			}
+			return
+		}
+		lastInsertId, err = r.LastInsertId()
+		if err != nil {
+			if !e.noVerbose {
+				log.Errorf("get last insert id error %v model %+v", err, e.model)
+			}
 			return
 		}
 	}
@@ -415,23 +431,26 @@ func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err err
 	return
 }
 
-func (e *Engine) mssqlQueryInsert(strSQL string) (lastInsertId int64, err error) {
-	var rows *sql.Rows
-	strSQL += " SELECT SCOPE_IDENTITY() AS last_insert_id"
-	log.Debugf("[%v]", strSQL)
-	db := e.getMaster()
-	if rows, err = db.Query(strSQL); err != nil {
-		log.Errorf("tx.Query error [%v]", err.Error())
+func (e *Engine) mysqlExec(strSQL string) (lastInsertId, rowsAffected int64, err error)  {
+	var r sql.Result
+	var db *sqlx.DB
+	db = e.getMaster()
+	r, err = db.Exec(strSQL)
+	if err != nil {
+		if !e.noVerbose {
+			err = log.Errorf("exec sql [%s] error [%s]", strSQL, err)
+		}
 		return
 	}
-	defer rows.Close()
-	for rows.Next() {
-		if err = rows.Scan(&lastInsertId); err != nil {
-			log.Warnf("rows.Scan warning [%v]", err.Error())
-			return
-		}
-	}
+	rowsAffected, _ = r.RowsAffected()
+	lastInsertId, _ = r.LastInsertId()
 	return
+}
+
+func (e *Engine) mssqlQueryInsert(strSQL string) string {
+	strSQL += " SELECT SCOPE_IDENTITY() AS last_insert_id"
+	log.Debugf("[%v]", strSQL)
+	return strSQL
 }
 
 func (e *Engine) mssqlUpsert(strSQL string) (lastInsertId int64, err error) {
@@ -451,7 +470,8 @@ func (e *Engine) mssqlUpsert(strSQL string) (lastInsertId int64, err error) {
 	if count == 0 {
 		// INSERT INTO users(...) values(...)  SELECT SCOPE_IDENTITY() AS last_insert_id
 		//if _, _, err = db.TxExec(strSQL); err != nil
-		if lastInsertId, err = e.mssqlQueryInsert(strSQL); err != nil {
+		strSQL = e.mssqlQueryInsert(strSQL)
+		if lastInsertId, _, err = db.TxExec(strSQL); err != nil {
 			log.Errorf("mssqlQueryInsert [%v] error [%v]", strSQL, err.Error())
 			_ = db.TxRollback()
 			return
@@ -462,7 +482,6 @@ func (e *Engine) mssqlUpsert(strSQL string) (lastInsertId int64, err error) {
 			DATABASE_KEY_NAME_UPDATE, e.getTableName(),
 			DATABASE_KEY_NAME_SET, e.getOnConflictDo(),
 			DATABASE_KEY_NAME_WHERE, e.GetPkName(), lastInsertId)
-		log.Debugf("%v", strUpdates)
 		if _, _, err = db.TxExec(strUpdates); err != nil {
 			log.Errorf("TxExec [%v] error [%v]", strSQL, err.Error())
 			_ = db.TxRollback()
@@ -1222,9 +1241,9 @@ func (e *Engine) getCaller(skip int) (strFunc string) {
 	return
 }
 
-func (e *Engine) makeSQL() (strSql string) {
+func (e *Engine) makeSQL(operType OperType) (strSql string) {
 
-	switch e.operType {
+	switch operType {
 	case OperType_Query:
 		strSql = e.makeSqlxQuery()
 	case OperType_Update:
@@ -1279,7 +1298,7 @@ func (e *Engine) makeNotCondition(cond condition) (strCondition string) {
 	return
 }
 
-func (e *Engine) makeWhereCondition() (strWhere string) {
+func (e *Engine) makeWhereCondition(operType OperType) (strWhere string) {
 
 	if !e.isPkValueNil() {
 		strWhere += e.getPkWhere()
@@ -1289,7 +1308,7 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 		strCustomer := e.getCustomWhere()
 		if strCustomer == "" {
 			//where condition required when update or delete
-			if e.operType != OperType_Update && e.operType != OperType_Delete && len(e.joins) == 0 {
+			if operType != OperType_Update && operType != OperType_Delete && len(e.joins) == 0 {
 				strWhere += "1=1"
 			} else {
 				if len(e.joins) > 0 {
@@ -1327,7 +1346,7 @@ func (e *Engine) makeWhereCondition() (strWhere string) {
 }
 
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
-	strWhere := e.makeWhereCondition()
+	strWhere := e.makeWhereCondition(OperType_Query)
 
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
@@ -1344,7 +1363,7 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 }
 
 func (e *Engine) makeSqlxQueryCount() (strSqlx string) {
-	strWhere := e.makeWhereCondition()
+	strWhere := e.makeWhereCondition(OperType_Query)
 
 	switch e.adapterSqlx {
 	case AdapterSqlx_Mssql:
@@ -1365,7 +1384,7 @@ func (e *Engine) makeSqlxForUpdate() (strSqlx string) {
 
 func (e *Engine) makeSqlxUpdate() (strSqlx string) {
 
-	strWhere := e.makeWhereCondition()
+	strWhere := e.makeWhereCondition(OperType_Update)
 	strSqlx = fmt.Sprintf("%v %v %v %v %v %v",
 		DATABASE_KEY_NAME_UPDATE, e.getTableName(), DATABASE_KEY_NAME_SET,
 		e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), strWhere, e.getLimit())
@@ -1389,7 +1408,7 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 }
 
 func (e *Engine) makeSqlxDelete() (strSqlx string) {
-	strWhere := e.makeWhereCondition()
+	strWhere := e.makeWhereCondition(OperType_Delete)
 	if strWhere == "" {
 		panic("no condition to delete records") //删除必须加条件,WHERE条件可设置为1=1(确保不是人为疏忽)
 	}

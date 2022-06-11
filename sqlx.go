@@ -1311,7 +1311,7 @@ func (e *Engine) makeWhereCondition(operType OperType) (strWhere string) {
 			if operType != OperType_Update && operType != OperType_Delete && len(e.joins) == 0 {
 				strWhere += "1=1"
 			} else {
-				if len(e.joins) > 0 {
+				if len(e.joins) > 0 || len(e.andConditions) != 0{
 					strWhere += "1=1"
 				}
 			}

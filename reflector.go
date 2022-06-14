@@ -586,8 +586,12 @@ func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, 
 		vp := val.Addr()
 		if strings.TrimSpace(v) != "" {
 			if err = json.Unmarshal([]byte(v), vp.Interface()); err != nil {
-				log.Errorf("json.Unmarshal [%s] error [%s]", v, err)
-				return
+				return log.Errorf("json.Unmarshal [%s] error [%s]", v, err)
+			}
+		} else {
+			//if struct field is a slice type and content is nil make space for it
+			if field.Type.Kind() == reflect.Slice {
+				val.Set(reflect.MakeSlice(field.Type, 0, 0))
 			}
 		}
 	}

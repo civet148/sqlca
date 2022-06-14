@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v2"
+	"github.com/civet148/sqlca/v2/models"
 	"time"
 	//_ "github.com/mattn/go-sqlite3" //import go sqlite3 if you want
 )
@@ -11,41 +12,6 @@ const (
 	TABLE_NAME_USERS = "users"
 )
 
-type UserData struct {
-	Age    int32 `db:"age" json:"age"`
-	Height int32 `db:"height" json:"height"`
-	Female bool  `db:"female" json:"female"`
-}
-
-type CardInfo struct {
-	CardType  int     `db:"card_type"`
-	Available float64 `db:"available"`
-	BankCard  string  `db:"bank_card"`
-}
-
-type UserDO struct {
-	Id        int32         `db:"id"`
-	Name      string        `db:"name"`
-	Phone     string        `db:"phone"`
-	Sex       int8          `db:"sex"`
-	Email     string        `db:"email"`
-	Disable   bool          `db:"disable"`
-	Balance   sqlca.Decimal `db:"balance"`
-	CreatedAt string        `db:"created_at" sqlca:"readonly"`
-	UpdatedAt string        `db:"updated_at" sqlca:"readonly"`
-	IgnoreMe  string        `db:"-"`
-	SexName   string        `db:"sex_name" sqlca:"readonly"`
-	ExtraData []*CardInfo   `db:"extra_data"`
-}
-
-type ClassDo struct {
-	Id        int32  `db:"id"`
-	UserId    int32  `db:"user_id"`
-	ClassNo   string `db:"class_no"`
-	CreatedAt string `db:"created_at" sqlca:"readonly"`
-	UpdatedAt string `db:"updated_at" sqlca:"readonly"`
-	IgnoreMe  string `db:"-"`
-}
 
 var urls = []string{
 	"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //raw mysql DSN (default 'mysql' if scheme is not specified)
@@ -105,7 +71,7 @@ func main() {
 }
 
 func SSHTunnel(e *sqlca.Engine) {
-	var users []UserDO
+	var users []models.UsersDO
 	if _, err := e.Model(&users).Table(TABLE_NAME_USERS).Limit(10).Query(); err != nil {
 		log.Error(err.Error())
 		return
@@ -115,46 +81,46 @@ func SSHTunnel(e *sqlca.Engine) {
 
 //connect database directly
 func Direct(e *sqlca.Engine) {
-	//OrmInsertByModel(e)
-	//OrmUpsertByModel(e)
-	//OrmUpdateByModel(e)
-	//OrmQueryIntoModel(e)
-	//OrmQueryExcludeIntoModel(e)
-	//OrmQueryIntoModelSlice(e)
-	//OrmUpdateIndexToCache(e)
-	//OrmSelectMultiTable(e)
-	//OrmDeleteFromTable(e)
-	//OrmInCondition(e)
-	//OrmFind(e)
-	//OrmWhereRequire(e)
-	//OrmToSQL(e)
-	//OrmGroupByHaving(e)
-	//RawQueryIntoModel(e)
-	//RawQueryIntoModelSlice(e)
-	//RawQueryIntoMap(e)
-	//RawExec(e)
-	//TxGetExec(e)
-	//TxRollback(e)
-	//TxForUpdate(e)
+	OrmInsertByModel(e)
+	OrmUpsertByModel(e)
+	OrmUpdateByModel(e)
+	OrmQueryIntoModel(e)
+	OrmQueryExcludeIntoModel(e)
+	OrmQueryIntoModelSlice(e)
+	OrmUpdateIndexToCache(e)
+	OrmSelectMultiTable(e)
+	OrmDeleteFromTable(e)
+	OrmInCondition(e)
+	OrmFind(e)
+	OrmWhereRequire(e)
+	OrmToSQL(e)
+	OrmGroupByHaving(e)
+	RawQueryIntoModel(e)
+	RawQueryIntoModelSlice(e)
+	RawQueryIntoMap(e)
+	RawExec(e)
+	TxGetExec(e)
+	TxRollback(e)
+	TxForUpdate(e)
 	TxWrapper(e)
-	//CustomTag(e)
-	//BuiltInTypesUpdate(e)
-	//DuplicateUpdateGetId(e)
-	//Count(e)
-	//CaseWhen(e)
-	//UpdateByMap(e)
-	//NearBy(e)
-	//MySqlJsonQuery(e)
-	//CustomizeUpsert(e)
-	//JoinQuery(e)
-	//NilPointerQuery(e)
-	//JsonStructQuery(e)
-	//BuiltInSliceQuery(e)
-	//QueryJSON(e)
-	//BoolConvert(e)
-	//QueryEx(e)
-	//OrmQueryToDecimal(e)
-	//OrmQueryLike(e)
+	CustomTag(e)
+	BuiltInTypesUpdate(e)
+	DuplicateUpdateGetId(e)
+	Count(e)
+	CaseWhen(e)
+	UpdateByMap(e)
+	NearBy(e)
+	MySqlJsonQuery(e)
+	CustomizeUpsert(e)
+	JoinQuery(e)
+	NilPointerQuery(e)
+	JsonStructQuery(e)
+	BuiltInSliceQuery(e)
+	QueryJSON(e)
+	BoolConvert(e)
+	QueryEx(e)
+	OrmQueryToDecimal(e)
+	OrmQueryLike(e)
 }
 
 func OrmQueryToDecimal(e *sqlca.Engine) {
@@ -171,9 +137,9 @@ func OrmInsertByModel(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
-	var users = make([]UserDO, 0)
+	var users = make([]models.UsersDO, 0)
 	for i := 0; i < 3; i++ {
-		users = append(users, UserDO{
+		users = append(users, models.UsersDO{
 			//Id:    0,
 			Name:      "lory",
 			Phone:     "+8618682371690",
@@ -183,7 +149,7 @@ func OrmInsertByModel(e *sqlca.Engine) {
 			Disable:   true,
 			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
 			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-			ExtraData: []*CardInfo{
+			ExtraData: []*models.CardInfo{
 				{
 					CardType:  1,
 					Available: 23.003,
@@ -212,7 +178,7 @@ func OrmUpsertByModel(e *sqlca.Engine) {
 
 	log.Enter()
 	defer log.Leave()
-	user := UserDO{
+	user := models.UsersDO{
 		Id:    1,
 		Name:  "lory",
 		Phone: "8618688888888",
@@ -236,7 +202,7 @@ func OrmUpdateByModel(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	user := UserDO{
+	user := models.UsersDO{
 		Id:        1,
 		Name:      "john",
 		Phone:     "8618699999999",
@@ -259,7 +225,7 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	user := &UserDO{}
+	user := &models.UsersDO{}
 
 	// select * from users where id=1
 	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(15).Query(); err != nil {
@@ -270,7 +236,7 @@ func OrmQueryIntoModel(e *sqlca.Engine) {
 	}
 
 	type UserInfo struct {
-		Users []*UserDO `json:"users" db:"users"`
+		Users []*models.UsersDO `json:"users" db:"users"`
 	}
 }
 
@@ -278,7 +244,7 @@ func OrmQueryExcludeIntoModel(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	user := &UserDO{}
+	user := &models.UsersDO{}
 
 	// select * from users where id=1 ..exclude email and disable
 	if rowsAffected, err := e.Model(user).Table(TABLE_NAME_USERS).Id(1).Exclude("email", "disable").Query(); err != nil {
@@ -292,7 +258,7 @@ func OrmQueryIntoModelSlice(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	var users []*UserDO
+	var users []*models.UsersDO
 
 	//SQL: select id, name, phone from users limit 3
 	//e.Model(&user).Table(TABLE_NAME_USERS).Select("id", "name", "phone").Limit(3).Query();
@@ -316,7 +282,7 @@ func RawQueryIntoModel(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	user := UserDO{}
+	user := models.UsersDO{}
 
 	//SQL: select * from users where id=1
 	if rowsAffected, err := e.Model(&user).QueryRaw("select * from users where id=?", 1); err != nil {
@@ -331,7 +297,7 @@ func RawQueryIntoModelSlice(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	var users []UserDO
+	var users []models.UsersDO
 
 	//SQL: select * from users where id < 5
 	if rowsAffected, err := e.Model(&users).QueryRaw("select * from %v where id < %v", TABLE_NAME_USERS, 5); err != nil {
@@ -372,7 +338,7 @@ func OrmUpdateIndexToCache(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	user := UserDO{
+	user := models.UsersDO{
 		Id:    1,
 		Name:  "john3",
 		Phone: "8615011111114",
@@ -425,7 +391,7 @@ func OrmDeleteFromTable(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	user := UserDO{
+	user := models.UsersDO{
 		Id: 1000,
 	}
 	//delete from data model
@@ -454,7 +420,7 @@ func OrmInCondition(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	var users []UserDO
+	var users []models.UsersDO
 	//SQL: select * from users where id > 2 and id in (1,3,6,7) and disable in (0,1)
 	if rows, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
@@ -474,7 +440,7 @@ func OrmFind(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 
-	var users []UserDO
+	var users []models.UsersDO
 	if rows, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
 		Find(map[string]interface{}{
@@ -489,7 +455,7 @@ func OrmFind(e *sqlca.Engine) {
 
 func OrmWhereRequire(e *sqlca.Engine) {
 
-	var user = UserDO{
+	var user = models.UsersDO{
 		Disable: true,
 	}
 	if _, err := e.Model(&user).Table(TABLE_NAME_USERS).Update(); err != nil { // expect return error
@@ -501,7 +467,7 @@ func OrmWhereRequire(e *sqlca.Engine) {
 }
 
 func OrmToSQL(e *sqlca.Engine) {
-	user := UserDO{
+	user := models.UsersDO{
 		Id:    1,
 		Name:  "john3",
 		Phone: "8615011111114",
@@ -516,7 +482,7 @@ func OrmToSQL(e *sqlca.Engine) {
 }
 
 func OrmGroupByHaving(e *sqlca.Engine) {
-	var users []UserDO
+	var users []models.UsersDO
 	rows, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
 		GroupBy("id", "name").
@@ -570,7 +536,7 @@ func TxGetExec(e *sqlca.Engine) {
 	log.Infof("user id [%v] disabled, last insert id [%v] rows affected [%v]", UserId, lastInsertId, rowsAffected)
 
 	//query results into a struct object or slice
-	var dos []UserDO
+	var dos []models.UsersDO
 	_, err = tx.TxGet(&dos, "SELECT * FROM users WHERE disable=1 LIMIT 5")
 	if err != nil {
 		log.Errorf("TxGet error %v", err.Error())
@@ -618,7 +584,7 @@ func TxWrapper(e *sqlca.Engine) {
 	_ = e.TxFunc(func(tx *sqlca.Engine) error {
 		//query results into a struct object or slice
 		var err error
-		var dos UserDO
+		var dos models.UsersDO
 		_, err = tx.Model(&dos).
 			Table("users").
 			Equal("disable", 1).
@@ -783,7 +749,7 @@ func Count(e *sqlca.Engine) {
 
 func CaseWhen(e *sqlca.Engine) {
 
-	var users []UserDO
+	var users []models.UsersDO
 	if _, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
 		Select("id", "name", "phone", "sex").
@@ -908,7 +874,7 @@ func MySqlJsonQuery(e *sqlca.Engine) {
 
 func CustomizeUpsert(e *sqlca.Engine) {
 
-	var do = UserDO{
+	var do = models.UsersDO{
 		Id:      1,
 		Name:    "customize upsert",
 		Phone:   "8617923930922",
@@ -977,7 +943,7 @@ func JoinQuery(e *sqlca.Engine) {
 }
 
 func NilPointerQuery(e *sqlca.Engine) {
-	var user *UserDO //nil pointer of UserDO （pass pointer address to query)
+	var user *models.UsersDO //nil pointer of UserDO （pass pointer address to query)
 	c, err := e.Model(&user).
 		Select("a.*").
 		Table("users a").
@@ -993,7 +959,7 @@ func NilPointerQuery(e *sqlca.Engine) {
 //query result returns json string
 func QueryJSON(e *sqlca.Engine) {
 
-	var users []UserDO
+	var users []models.UsersDO
 	strJsonResults, err := e.Model(&users).Table(TABLE_NAME_USERS).Limit(10).QueryJson()
 	if err != nil {
 		log.Error(err.Error())
@@ -1004,7 +970,7 @@ func QueryJSON(e *sqlca.Engine) {
 
 func QueryEx(e *sqlca.Engine) {
 
-	var users []UserDO
+	var users []models.UsersDO
 	rows, total, err := e.Model(&users).Table(TABLE_NAME_USERS).Limit(2).QueryEx()
 	if err != nil {
 		log.Error(err.Error())
@@ -1018,17 +984,17 @@ func JsonStructQuery(e *sqlca.Engine) {
 	type JsonsDO struct {
 		Id       int32     `db:"id"`
 		Name     string    `db:"name"`
-		UserData *UserData `db:"user_data"` //column 'user_data' is a json string in table, eg. {"age": 18, "female": false, "height": 178}
-		//UserData []*UserData  `db:"user_data"` //column 'user_data' is a json string in table, eg. [{"age":18, "female":false, "height":178},{"age":28, "female":true, "height": 162}]
+		//UserData *models.UserData `db:"user_data"` //column 'user_data' is a json string in table, eg. {"age": 18, "female": false, "height": 178}
+		UserData []*models.UserData  `db:"user_data"` //column 'user_data' is a json string in table, eg. [{"age":18, "female":false, "height":178},{"age":28, "female":true, "height": 162}]
 	}
-	var do *JsonsDO
+	var dos []*JsonsDO
 	/* -- SELECT  id, name, user_data FROM jsons  WHERE id='1' --
 
 	    id  name       sex   user_data                                                                                     created_at           updated_at
 	------  ------  ------  ----------------------------------------------------------------------------------------  -------------------  ---------------------
 	     1  jhon         1  {"age": 18, "female": false, "height": 178}                                               2020-10-24 11:35:11    2020-11-17 14:35:16
 	*/
-	_, err := e.Model(&do).
+	_, err := e.Model(&dos).
 		Select("id", "name", "user_data").
 		Table("jsons").
 		Where("id=?", 1).
@@ -1037,7 +1003,8 @@ func JsonStructQuery(e *sqlca.Engine) {
 		log.Errorf(err.Error())
 		return
 	}
-	log.Infof("JsonsDO [%+v] UserData [%+v]", do, do.UserData)
+	log.Json(dos)
+	//log.Infof("JsonsDO [%+v] UserData [%+v]", do, do.UserData)
 }
 
 func BuiltInSliceQuery(e *sqlca.Engine) {
@@ -1052,7 +1019,7 @@ func BuiltInSliceQuery(e *sqlca.Engine) {
 }
 
 func BoolConvert(e *sqlca.Engine) {
-	user := &UserDO{}
+	user := &models.UsersDO{}
 	e.Model(user).Table(TABLE_NAME_USERS).Limit(1).Query()
 	log.Info("user query [%+v]", user)
 
@@ -1066,7 +1033,7 @@ func BoolConvert(e *sqlca.Engine) {
 }
 
 func OrmQueryLike(e *sqlca.Engine) {
-	var users []*UserDO
+	var users []*models.UsersDO
 	if _, err := e.Model(&users).Table(TABLE_NAME_USERS).Like("name", "oh").Query(); err != nil {
 		log.Errorf(err.Error())
 		return

@@ -120,7 +120,7 @@ func (r *Result) formatSqlNodeParenSelect(buf *sqlparser.TrackedBuffer, node *sq
 
 func (r *Result) formatSqlNodeParenExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ParenExpr) {
 	log.Json(node)
-
+	buf.Myprintf("%v", node.Expr)
 }
 
 func (r *Result) formatSqlNodeParenTableExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.ParenTableExpr) {
@@ -169,6 +169,15 @@ func (r *Result) formatSqlNodeAndExpr(buf *sqlparser.TrackedBuffer, node *sqlpar
 	buf.Myprintf("%v", node.Left)
 	buf.Myprintf(",")
 	buf.Myprintf("%v", node.Right)
+}
+
+func (r *Result) formatSqlNodeOrExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.OrExpr) {
+	log.Json(node)
+	buf.Myprintf("\"$or\":[")
+	buf.Myprintf("{%v}", node.Left)
+	buf.Myprintf(",")
+	buf.Myprintf("{%v}", node.Right)
+	buf.Myprintf("]")
 }
 
 func (r *Result) formatSqlNodeBinaryExpr(buf *sqlparser.TrackedBuffer, node *sqlparser.BinaryExpr) {

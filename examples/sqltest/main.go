@@ -14,8 +14,8 @@ const (
 )
 
 func main() {
-	parse(strSelect)
-	//parse(strGourpBy)
+	//parse(strSelect)
+	parse(strGourpBy)
 	//parse(strInsert)
 }
 

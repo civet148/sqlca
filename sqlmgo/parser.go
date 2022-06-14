@@ -120,6 +120,8 @@ func (r *Result) formatter(buf *sqlparser.TrackedBuffer, node sqlparser.SQLNode)
 		r.formatSqlNodeAliasedTableExpr(buf, node.(*sqlparser.AliasedTableExpr))
 	case *sqlparser.AndExpr:
 		r.formatSqlNodeAndExpr(buf, node.(*sqlparser.AndExpr))
+	case *sqlparser.OrExpr:
+		r.formatSqlNodeOrExpr(buf, node.(*sqlparser.OrExpr))
 	case *sqlparser.BinaryExpr:
 		r.formatSqlNodeBinaryExpr(buf, node.(*sqlparser.BinaryExpr))
 	case *sqlparser.CollateExpr:

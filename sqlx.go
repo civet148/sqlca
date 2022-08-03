@@ -33,7 +33,8 @@ const (
 const (
 	DRIVER_NAME_MYSQL    = "mysql"
 	DRIVER_NAME_POSTGRES = "postgres"
-	DRIVER_NAME_SQLITE   = "sqlite3"
+	DRIVER_NAME_SQLITE3  = "sqlite3"
+	DRIVER_NAME_SQLITE   = "sqlite"
 	DRIVER_NAME_MSSQL    = "mssql"
 	DRIVER_NAME_REDIS    = "redis"
 )
@@ -136,6 +137,7 @@ var adapterNames = map[string]AdapterType{
 	DRIVER_NAME_MYSQL:    AdapterSqlx_MySQL,
 	DRIVER_NAME_POSTGRES: AdapterSqlx_Postgres,
 	DRIVER_NAME_SQLITE:   AdapterSqlx_Sqlite,
+	DRIVER_NAME_SQLITE3:  AdapterSqlx_Sqlite,
 	DRIVER_NAME_MSSQL:    AdapterSqlx_Mssql,
 	DRIVER_NAME_REDIS:    AdapterCache_Redis,
 }
@@ -431,7 +433,7 @@ func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err err
 	return
 }
 
-func (e *Engine) mysqlExec(strSQL string) (lastInsertId, rowsAffected int64, err error)  {
+func (e *Engine) mysqlExec(strSQL string) (lastInsertId, rowsAffected int64, err error) {
 	var r sql.Result
 	var db *sqlx.DB
 	db = e.getMaster()
@@ -1311,7 +1313,7 @@ func (e *Engine) makeWhereCondition(operType OperType) (strWhere string) {
 			if operType != OperType_Update && operType != OperType_Delete && len(e.joins) == 0 {
 				strWhere += "1=1"
 			} else {
-				if len(e.joins) > 0 || len(e.andConditions) != 0{
+				if len(e.joins) > 0 || len(e.andConditions) != 0 {
 					strWhere += "1=1"
 				}
 			}

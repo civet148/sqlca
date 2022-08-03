@@ -33,8 +33,7 @@ const (
 const (
 	DRIVER_NAME_MYSQL    = "mysql"
 	DRIVER_NAME_POSTGRES = "postgres"
-	DRIVER_NAME_SQLITE3  = "sqlite3"
-	DRIVER_NAME_SQLITE   = "sqlite"
+	DRIVER_NAME_SQLITE   = "sqlite3"
 	DRIVER_NAME_MSSQL    = "mssql"
 	DRIVER_NAME_REDIS    = "redis"
 )
@@ -137,13 +136,14 @@ var adapterNames = map[string]AdapterType{
 	DRIVER_NAME_MYSQL:    AdapterSqlx_MySQL,
 	DRIVER_NAME_POSTGRES: AdapterSqlx_Postgres,
 	DRIVER_NAME_SQLITE:   AdapterSqlx_Sqlite,
-	DRIVER_NAME_SQLITE3:  AdapterSqlx_Sqlite,
 	DRIVER_NAME_MSSQL:    AdapterSqlx_Mssql,
 	DRIVER_NAME_REDIS:    AdapterCache_Redis,
 }
 
 func getAdapterType(name string) AdapterType {
-
+	if strings.EqualFold(name, "sqlite") {
+		name = DRIVER_NAME_SQLITE
+	}
 	return adapterNames[name]
 }
 

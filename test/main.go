@@ -145,21 +145,9 @@ func OrmInsertByModel(e *sqlca.Engine) {
 			Phone:     "+8618682371690",
 			Sex:       1,
 			Balance:   sqlca.NewDecimal("123.456"),
-			Email:     "true",
+			Email:     "lory@example.com",
 			Disable:   true,
-			CreatedAt: time.Now().Format("2006-01-02 15:04:05"),
-			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
-			ExtraData: []*models.CardInfo{
-				{
-					CardType:  1,
-					Available: 23.003,
-					BankCard:  "622588339993321",
-				},
-				{
-					CardType:  2,
-					Available: 23.003,
-					BankCard:  "12345678900000",
-				},
+			ExtraData: &models.UserData{
 			},
 		})
 	}
@@ -906,40 +894,13 @@ func CustomizeUpsert(e *sqlca.Engine) {
 }
 
 func JoinQuery(e *sqlca.Engine) {
-
-	type User struct {
-		Id    int32  `db:"id"`
-		Name  string `db:"name"`
-		Phone string `db:"phone"`
-		Sex   int8   `db:"sex"`
-		Email string `db:"email"`
-	}
-
-	type Class struct {
-		UserId  int32  `db:"user_id"`
-		ClassNo string `db:"class_no"`
-	}
-
-	type UserClass struct {
-		User  User
-		Class Class
-	}
-
-	var ucs []UserClass
-	c, err := e.Model(&ucs).
-		Select("a.id", "a.name", "a.phone", "a.sex", "a.email", "a.disable", "a.balance", "b.user_id", "b.class_no").
-		Table("users a").
-		InnerJoin("classes b").
-		//LeftJoin("classes b").
-		//RightJoin("classes b").
-		On("a.id=b.user_id").
-		Where("a.id <= 9").
-		Query()
+	var users []*models.UsersDO
+	_, err := e.Model(&users).Table(TABLE_NAME_USERS).JsonEqual(models.USERS_COLUMN_EXTRA_DATA, "age", 20).Query()
 	if err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 		return
 	}
-	log.Infof("count [%d] UserClass data [%+v]", c, ucs)
+	log.Json(users)
 }
 
 func NilPointerQuery(e *sqlca.Engine) {

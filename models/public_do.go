@@ -7,7 +7,7 @@ type UserData struct {
 }
 
 type CardInfo struct {
-	CardType  int     `db:"card_type"`
-	Available float64 `db:"available"`
-	BankCard  string  `db:"bank_card"`
+	CardType  int     `json:"card_type"`
+	Available float64 `json:"available"`
+	BankCard  string  `json:"bank_card"`
 }

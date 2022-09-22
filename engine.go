@@ -1153,12 +1153,12 @@ func (e *Engine) Equal(strColumn string, value interface{}) *Engine {
 	return e
 }
 
-func (e *Engine) GraterThan(strColumn string, value interface{}) *Engine {
+func (e *Engine) GreaterThan(strColumn string, value interface{}) *Engine {
 	e.And("%s>'%v'", strColumn, value)
 	return e
 }
 
-func (e *Engine) GraterEqual(strColumn string, value interface{}) *Engine {
+func (e *Engine) GreaterEqual(strColumn string, value interface{}) *Engine {
 	e.And("%s>='%v'", strColumn, value)
 	return e
 }
@@ -1172,3 +1172,28 @@ func (e *Engine) LessEqual(strColumn string, value interface{}) *Engine {
 	e.And("%s<='%v'", strColumn, value)
 	return e
 }
+
+func (e *Engine) jsonExpr(strColumn, strPath string) string {
+	return fmt.Sprintf("`%s`->'$.%s'", strColumn, strPath)
+}
+
+func (e *Engine) JsonEqual(strColumn, strPath string, value interface{}) *Engine {
+	return e.And("%s=%v", e.jsonExpr(strColumn, strPath), value)
+}
+
+func (e *Engine) JsonGreater(strColumn, strPath string, value interface{}) *Engine {
+	return e.And("%s>%v", e.jsonExpr(strColumn, strPath), value)
+}
+
+func (e *Engine) JsonLess(strColumn, strPath string, value interface{}) *Engine {
+	return e.And("%s<%v", e.jsonExpr(strColumn, strPath), value)
+}
+
+func (e *Engine) JsonGreaterEqual(strColumn, strPath string, value interface{}) *Engine {
+	return e.And("%s>=%v", e.jsonExpr(strColumn, strPath), value)
+}
+
+func (e *Engine) JsonLessEqual(strColumn, strPath string, value interface{}) *Engine {
+	return e.And("%s<=%v", e.jsonExpr(strColumn, strPath), value)
+}
+

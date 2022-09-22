@@ -30,7 +30,7 @@ type UsersDO struct {
 	Disable   bool          `json:"disable" db:"disable" bson:"disable"`                           //disabled(0=false 1=true)
 	Balance   sqlca.Decimal `json:"balance" db:"balance" bson:"balance"`                           //balance of decimal
 	SexName   string        `json:"sex_name" db:"sex_name" bson:"sex_name"`                        //sex name
-	ExtraData []*CardInfo   `json:"extra_data" db:"extra_data" bson:"extra_data"`                  //extra data
+	ExtraData *UserData   `json:"extra_data" db:"extra_data" bson:"extra_data"`                  //extra data
 	CreatedAt string        `json:"created_at" db:"created_at" sqlca:"readonly" bson:"created_at"` //create time
 	UpdatedAt string        `json:"updated_at" db:"updated_at" sqlca:"readonly" bson:"updated_at"` //update time
 }
@@ -51,8 +51,8 @@ func (do *UsersDO) GetBalance() sqlca.Decimal  { return do.Balance }
 func (do *UsersDO) SetBalance(v sqlca.Decimal) { do.Balance = v }
 func (do *UsersDO) GetSexName() string         { return do.SexName }
 func (do *UsersDO) SetSexName(v string)        { do.SexName = v }
-func (do *UsersDO) GetExtraData() []*CardInfo  { return do.ExtraData }
-func (do *UsersDO) SetExtraData(v []*CardInfo) { do.ExtraData = v }
+func (do *UsersDO) GetExtraData() *UserData  { return do.ExtraData }
+func (do *UsersDO) SetExtraData(v *UserData) { do.ExtraData = v }
 func (do *UsersDO) GetCreatedAt() string       { return do.CreatedAt }
 func (do *UsersDO) SetCreatedAt(v string)      { do.CreatedAt = v }
 func (do *UsersDO) GetUpdatedAt() string       { return do.UpdatedAt }

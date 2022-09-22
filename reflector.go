@@ -331,8 +331,6 @@ func (e *Engine) getStructSliceKeyValues(excludeReadOnly bool) (keys []string, v
 				elemVal := val.Index(i)
 				if elemTyp.Kind() == reflect.Ptr {
 					elemTyp = elemTyp.Elem()
-				}
-				if elemVal.Kind() == reflect.Ptr {
 					elemVal = elemVal.Elem()
 				}
 
@@ -342,7 +340,6 @@ func (e *Engine) getStructSliceKeyValues(excludeReadOnly bool) (keys []string, v
 					values = append(values, vs)
 				}
 			}
-
 		}
 	default:
 		{
@@ -378,11 +375,25 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 			var strFieldVal string
 			strTagVal := e.getTagValue(typField)
 
-			if typField.Type.Kind() == reflect.Slice || typField.Type.Kind() == reflect.Map {
-				data, _ := json.Marshal(valField.Interface())
-				strFieldVal = fmt.Sprintf("%s", data)
+			if typField.Type.Kind() == reflect.Struct {
+				if d, ok := valField.Interface().(driver.Valuer); ok {
+					v, err := d.Value()
+					if err != nil {
+						log.Errorf(err.Error())
+						return
+					}
+					strFieldVal = fmt.Sprintf("%v", v)
+				} else {
+					data, _ := json.Marshal(valField.Interface())
+					strFieldVal = fmt.Sprintf("%s", data)
+				}
 			} else {
-				strFieldVal = fmt.Sprintf("%v", valField)
+				if typField.Type.Kind() == reflect.Slice || typField.Type.Kind() == reflect.Map {
+					data, _ := json.Marshal(valField.Interface())
+					strFieldVal = fmt.Sprintf("%s", data)
+				} else {
+					strFieldVal = fmt.Sprintf("%v", valField)
+				}
 			}
 
 			if e.isPkValueNil() && strTagVal == e.GetPkName() {

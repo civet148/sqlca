@@ -2,7 +2,6 @@ package sqlca
 
 import (
 	"database/sql/driver"
-	"fmt"
 	"math/big"
 
 	//"go.mongodb.org/mongo-driver/bson/bsontype"
@@ -20,8 +19,6 @@ type Decimal struct {
 }
 
 func NewDecimal(v interface{}) (d Decimal) {
-
-	var err error
 	switch v.(type) {
 	case int8:
 		d.dec = decimal.NewFromInt32(int32(v.(int8)))
@@ -48,17 +45,19 @@ func NewDecimal(v interface{}) (d Decimal) {
 	case float64:
 		d.dec = decimal.NewFromFloat(v.(float64))
 	case []byte:
-		if d.dec, err = decimal.NewFromString(string(v.([]byte))); err != nil {
-			fmt.Printf(" decimal.NewFromString return error [%v]\n", err.Error())
-			panic(err.Error())
+		amt := string(v.([]byte))
+		if amt == "" {
+			amt = "0"
 		}
+		d.dec, _ = decimal.NewFromString(amt)
 	case string:
-		if d.dec, err = decimal.NewFromString(v.(string)); err != nil {
-			fmt.Printf(" decimal.NewFromString return error [%v]", err.Error())
-			panic(err.Error())
+		amt := v.(string)
+		if amt == "" {
+			amt = "0"
 		}
+		d.dec, _ = decimal.NewFromString(v.(string))
 	default:
-		panic("type not support yet")
+		d.dec, _ = decimal.NewFromString("0")
 	}
 	return
 }

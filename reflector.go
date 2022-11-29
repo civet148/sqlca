@@ -355,6 +355,9 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 	if typ.Kind() == reflect.Struct {
 
 		var isBool bool
+		if val.Kind() == reflect.Ptr {
+			val = val.Elem()
+		}
 		NumField := val.NumField()
 		for i := 0; i < NumField; i++ {
 			typField := typ.Field(i)

@@ -104,9 +104,14 @@ func (d *Decimal) FromInt(v int64) {
 }
 
 // Add returns d + d2
-func (d Decimal) Add(d2 Decimal) Decimal {
+func (d Decimal) Add(d2 interface{}) Decimal {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
 	return Decimal{
-		dec: d.dec.Add(d2.dec),
+		dec: d.dec.Add(d3.dec),
 	}
 }
 
@@ -118,9 +123,14 @@ func (d Decimal) Abs() Decimal {
 }
 
 // Sub returns d - d2.
-func (d Decimal) Sub(d2 Decimal) Decimal {
+func (d Decimal) Sub(d2 interface{}) Decimal {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
 	return Decimal{
-		dec: d.dec.Sub(d2.dec),
+		dec: d.dec.Sub(d3.dec),
 	}
 }
 
@@ -132,31 +142,51 @@ func (d Decimal) Neg() Decimal {
 }
 
 // Mul returns d * d2.
-func (d Decimal) Mul(d2 Decimal) Decimal {
+func (d Decimal) Mul(d2 interface{}) Decimal {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
 	return Decimal{
-		dec: d.dec.Mul(d2.dec),
+		dec: d.dec.Mul(d3.dec),
 	}
 }
 
 // Div returns d / d2. If it doesn't divide exactly, the result will have
 // DivisionPrecision digits after the decimal point.
-func (d Decimal) Div(d2 Decimal) Decimal {
+func (d Decimal) Div(d2 interface{}) Decimal {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
 	return Decimal{
-		dec: d.dec.Div(d2.dec),
+		dec: d.dec.Div(d3.dec),
 	}
 }
 
 // Mod returns d % d2.
-func (d Decimal) Mod(d2 Decimal) Decimal {
+func (d Decimal) Mod(d2 interface{}) Decimal {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
 	return Decimal{
-		dec: d.dec.Mod(d2.dec),
+		dec: d.dec.Mod(d3.dec),
 	}
 }
 
 // Pow returns d to the power d2
-func (d Decimal) Pow(d2 Decimal) Decimal {
+func (d Decimal) Pow(d2 interface{}) Decimal {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
 	return Decimal{
-		dec: d.dec.Pow(d2.dec),
+		dec: d.dec.Pow(d3.dec),
 	}
 }
 
@@ -166,33 +196,63 @@ func (d Decimal) Pow(d2 Decimal) Decimal {
 //      0 if d == d2
 //     +1 if d >  d2
 //
-func (d Decimal) Cmp(d2 Decimal) int {
-	return d.dec.Cmp(d2.dec)
+func (d Decimal) Cmp(d2 interface{}) int {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
+	return d.dec.Cmp(d3.dec)
 }
 
 // Equal returns whether the numbers represented by d and d2 are equal.
-func (d Decimal) Equal(d2 Decimal) bool {
-	return d.dec.Equal(d2.dec)
+func (d Decimal) Equal(d2 interface{}) bool {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
+	return d.dec.Equal(d3.dec)
 }
 
 // GreaterThan (GT) returns true when d is greater than d2.
-func (d Decimal) GreaterThan(d2 Decimal) bool {
-	return d.dec.GreaterThan(d2.dec)
+func (d Decimal) GreaterThan(d2 interface{}) bool {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
+	return d.dec.GreaterThan(d3.dec)
 }
 
 // GreaterThanOrEqual (GTE) returns true when d is greater than or equal to d2.
-func (d Decimal) GreaterThanOrEqual(d2 Decimal) bool {
-	return d.dec.GreaterThanOrEqual(d2.dec)
+func (d Decimal) GreaterThanOrEqual(d2 interface{}) bool {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
+	return d.dec.GreaterThanOrEqual(d3.dec)
 }
 
 // LessThan (LT) returns true when d is less than d2.
-func (d Decimal) LessThan(d2 Decimal) bool {
-	return d.dec.LessThan(d2.dec)
+func (d Decimal) LessThan(d2 interface{}) bool {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
+	return d.dec.LessThan(d3.dec)
 }
 
 // LessThanOrEqual (LTE) returns true when d is less than or equal to d2.
-func (d Decimal) LessThanOrEqual(d2 Decimal) bool {
-	return d.dec.LessThanOrEqual(d2.dec)
+func (d Decimal) LessThanOrEqual(d2 interface{}) bool {
+	var ok bool
+	var d3 Decimal
+	if d3, ok = d2.(Decimal); !ok {
+		d3 = NewDecimal(d2)
+	}
+	return d.dec.LessThanOrEqual(d3.dec)
 }
 
 // Sign returns:

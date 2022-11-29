@@ -2,6 +2,8 @@ package sqlca
 
 import (
 	"database/sql/driver"
+	"fmt"
+	"github.com/civet148/log"
 	"math/big"
 
 	//"go.mongodb.org/mongo-driver/bson/bsontype"
@@ -19,6 +21,7 @@ type Decimal struct {
 }
 
 func NewDecimal(v interface{}) (d Decimal) {
+	var err error
 	switch v.(type) {
 	case int8:
 		d.dec = decimal.NewFromInt32(int32(v.(int8)))
@@ -55,9 +58,15 @@ func NewDecimal(v interface{}) (d Decimal) {
 		if amt == "" {
 			amt = "0"
 		}
-		d.dec, _ = decimal.NewFromString(v.(string))
+		d.dec, err = decimal.NewFromString(v.(string))
+		if err != nil {
+			log.Errorf("value [%v] is not a valid number", v)
+		}
 	default:
-		d.dec, _ = decimal.NewFromString("0")
+		d.dec, err = decimal.NewFromString(fmt.Sprintf("%v", v))
+		if err != nil {
+			log.Errorf("value [%v] is not a valid number", v)
+		}
 	}
 	return
 }
@@ -103,13 +112,17 @@ func (d *Decimal) FromInt(v int64) {
 	d.dec = decimal.NewFromInt(v)
 }
 
+func convertDecimal(d interface{}) (dv Decimal) {
+	var ok bool
+	if dv, ok = d.(Decimal); !ok {
+		dv = NewDecimal(d)
+	}
+	return
+}
+
 // Add returns d + d2
 func (d Decimal) Add(d2 interface{}) Decimal {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return Decimal{
 		dec: d.dec.Add(d3.dec),
 	}
@@ -124,11 +137,7 @@ func (d Decimal) Abs() Decimal {
 
 // Sub returns d - d2.
 func (d Decimal) Sub(d2 interface{}) Decimal {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return Decimal{
 		dec: d.dec.Sub(d3.dec),
 	}
@@ -143,11 +152,7 @@ func (d Decimal) Neg() Decimal {
 
 // Mul returns d * d2.
 func (d Decimal) Mul(d2 interface{}) Decimal {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return Decimal{
 		dec: d.dec.Mul(d3.dec),
 	}
@@ -156,11 +161,7 @@ func (d Decimal) Mul(d2 interface{}) Decimal {
 // Div returns d / d2. If it doesn't divide exactly, the result will have
 // DivisionPrecision digits after the decimal point.
 func (d Decimal) Div(d2 interface{}) Decimal {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return Decimal{
 		dec: d.dec.Div(d3.dec),
 	}
@@ -168,11 +169,7 @@ func (d Decimal) Div(d2 interface{}) Decimal {
 
 // Mod returns d % d2.
 func (d Decimal) Mod(d2 interface{}) Decimal {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return Decimal{
 		dec: d.dec.Mod(d3.dec),
 	}
@@ -180,11 +177,7 @@ func (d Decimal) Mod(d2 interface{}) Decimal {
 
 // Pow returns d to the power d2
 func (d Decimal) Pow(d2 interface{}) Decimal {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return Decimal{
 		dec: d.dec.Pow(d3.dec),
 	}
@@ -197,61 +190,37 @@ func (d Decimal) Pow(d2 interface{}) Decimal {
 //     +1 if d >  d2
 //
 func (d Decimal) Cmp(d2 interface{}) int {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return d.dec.Cmp(d3.dec)
 }
 
 // Equal returns whether the numbers represented by d and d2 are equal.
 func (d Decimal) Equal(d2 interface{}) bool {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return d.dec.Equal(d3.dec)
 }
 
 // GreaterThan (GT) returns true when d is greater than d2.
 func (d Decimal) GreaterThan(d2 interface{}) bool {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return d.dec.GreaterThan(d3.dec)
 }
 
 // GreaterThanOrEqual (GTE) returns true when d is greater than or equal to d2.
 func (d Decimal) GreaterThanOrEqual(d2 interface{}) bool {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return d.dec.GreaterThanOrEqual(d3.dec)
 }
 
 // LessThan (LT) returns true when d is less than d2.
 func (d Decimal) LessThan(d2 interface{}) bool {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return d.dec.LessThan(d3.dec)
 }
 
 // LessThanOrEqual (LTE) returns true when d is less than or equal to d2.
 func (d Decimal) LessThanOrEqual(d2 interface{}) bool {
-	var ok bool
-	var d3 Decimal
-	if d3, ok = d2.(Decimal); !ok {
-		d3 = NewDecimal(d2)
-	}
+	d3 := convertDecimal(d2)
 	return d.dec.LessThanOrEqual(d3.dec)
 }
 

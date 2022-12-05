@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"github.com/civet148/log"
+	"math"
 	"math/big"
 
 	//"go.mongodb.org/mongo-driver/bson/bsontype"
@@ -12,6 +13,7 @@ import (
 )
 
 const(
+	fil = "1000000000000000000"
 	ether = "1000000000000000000"
 	btc = "100000000"
 )
@@ -76,6 +78,15 @@ func (d Decimal) BigInt() (b *big.Int, ok bool) {
 	return b.SetString(d.String(), 10)
 }
 
+
+func (d Decimal) Amount2FIL() Decimal {
+	return d.Mul(NewDecimal(fil))
+}
+
+func (d Decimal) FIL2Amount() Decimal {
+	return  d.Div(NewDecimal(fil))
+}
+
 func (d Decimal) Amount2Ether() Decimal {
 	return d.Mul(NewDecimal(ether))
 }
@@ -92,12 +103,18 @@ func (d Decimal) Btc2Amount() Decimal {
 	return  d.Div(NewDecimal(btc))
 }
 
-func (d Decimal) Amount2Coin(prec string) Decimal {
-	return d.Mul(NewDecimal(prec))
+func (d Decimal) Amount2Coin(prec int) Decimal {
+	if prec < 0 {
+		panic("precision cannot be negative")
+	}
+	return d.Mul(NewDecimal(math.Pow10(prec)))
 }
 
-func (d Decimal) Coin2Amount(prec string) Decimal {
-	return  d.Div(NewDecimal(prec))
+func (d Decimal) Coin2Amount(prec int) Decimal {
+	if prec < 0 {
+		panic("precision cannot be negative")
+	}
+	return  d.Div(NewDecimal(math.Pow10(prec)))
 }
 
 func (d *Decimal) FromString(v string) {

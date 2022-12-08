@@ -633,13 +633,21 @@ func (e *Engine) getSelectColumns() (strColumns []string) {
 
 func (e *Engine) setAscColumns(strColumns ...string) {
 	if len(strColumns) > 0 {
-		e.ascColumns = e.appendStrings(e.ascColumns, strColumns...)
+		var orders []string
+		for _, col := range strColumns {
+			orders = append(orders, fmt.Sprintf("%s ASC", col))
+		}
+		e.orderByColumns = append(e.orderByColumns, strings.Join(orders, ","))
 	}
 }
 
 func (e *Engine) setDescColumns(strColumns ...string) {
 	if len(strColumns) > 0 {
-		e.descColumns = e.appendStrings(e.descColumns, strColumns...)
+		var orders []string
+		for _, col := range strColumns {
+			orders = append(orders, fmt.Sprintf("%s DESC", col))
+		}
+		e.orderByColumns = append(e.orderByColumns, strings.Join(orders, ","))
 	}
 }
 
@@ -657,17 +665,9 @@ func (e *Engine) getCustomizeUpdates() []string {
 func (e *Engine) getAscAndDesc() (strAscDesc string) {
 
 	var ss []string
-	//make ASC expression
-	if len(e.ascColumns) > 0 {
-		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.ascColumns, ","), DATABASE_KEY_NAME_ASC))
-	}
-	//make DESC expression
-	if len(e.descColumns) > 0 {
-		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.descColumns, ","), DATABASE_KEY_NAME_DESC))
-	}
 	//make default order by expression
 	if len(ss) == 0 {
-		ss = append(ss, fmt.Sprintf("%v %v", strings.Join(e.orderByColumns, ","), DATABASE_KEY_NAME_ASC))
+		ss = append(ss, strings.Join(e.orderByColumns, ","))
 	}
 	return strings.Join(ss, ",")
 }
@@ -811,8 +811,7 @@ func (e *Engine) setOrderBy(strColumns ...string) {
 }
 
 func (e *Engine) getOrderBy() (strOrderBy string) {
-
-	if isNilOrFalse(e.orderByColumns) && isNilOrFalse(e.ascColumns) && isNilOrFalse(e.descColumns) {
+	if isNilOrFalse(e.orderByColumns) {
 		return
 	}
 	return fmt.Sprintf("%v %v", DATABASE_KEY_NAME_ORDER_BY, e.getAscAndDesc())

@@ -64,8 +64,8 @@ type Engine struct {
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string               // order by columns
 	groupByColumns  []string               // group by columns
-	ascColumns      []string               // order by xxx ASC
-	descColumns     []string               // order by xxx DESC
+	//ascColumns      []string               // order by xxx ASC
+	//descColumns     []string               // order by xxx DESC
 	havingCondition string                 // having condition
 	inConditions    []condition            // in condition
 	notConditions   []condition            // not in condition
@@ -387,8 +387,8 @@ func (e *Engine) Having(strFmt string, args ...interface{}) *Engine {
 }
 
 // order by [field1,field2...] [ASC]
-func (e *Engine) OrderBy(strColumns ...string) *Engine {
-	e.setOrderBy(strColumns...)
+func (e *Engine) OrderBy(orders ...string) *Engine {
+	e.setOrderBy(orders...)
 	return e
 }
 

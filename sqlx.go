@@ -1413,7 +1413,7 @@ func (e *Engine) makeSqlxDelete() (strSqlx string) {
 	if strWhere == "" {
 		panic("no condition to delete records") //删除必须加条件,WHERE条件可设置为1=1(确保不是人为疏忽)
 	}
-	strSqlx = fmt.Sprintf("%v %v %v %v", DATABASE_KEY_NAME_DELETE, DATABASE_KEY_NAME_FROM, e.getTableName(), strWhere)
+	strSqlx = fmt.Sprintf("%v %v %v %v %v", DATABASE_KEY_NAME_DELETE, DATABASE_KEY_NAME_FROM, e.getTableName(), strWhere, e.getLimit())
 	return
 }
 

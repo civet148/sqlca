@@ -15,6 +15,11 @@ import (
 	"strings"
 )
 
+const (
+	DefaultConnMax  = 150
+	DefaultConnIdle = 5
+)
+
 type Options struct {
 	Debug bool //enable debug mode
 	Max   int  //max active connections
@@ -66,19 +71,19 @@ type Engine struct {
 	groupByColumns  []string               // group by columns
 	//ascColumns      []string               // order by xxx ASC
 	//descColumns     []string               // order by xxx DESC
-	havingCondition string                 // having condition
-	inConditions    []condition            // in condition
-	notConditions   []condition            // not in condition
-	andConditions   []string               // and condition
-	orConditions    []string               // or condition
-	dbTags          []string               // custom db tag names
-	readOnly        []string               // read only column names
-	slowQueryTime   int                    // slow query alert time (milliseconds)
-	slowQueryOn     bool                   // enable slow query alert (default off)
-	strCaseWhen     string                 // case..when...then...else...end
-	nearby          *nearby                // nearby
-	strUpdates      []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
-	joins           []*Join                //inner/left/right/full-outer join(s)
+	havingCondition string      // having condition
+	inConditions    []condition // in condition
+	notConditions   []condition // not in condition
+	andConditions   []string    // and condition
+	orConditions    []string    // or condition
+	dbTags          []string    // custom db tag names
+	readOnly        []string    // read only column names
+	slowQueryTime   int         // slow query alert time (milliseconds)
+	slowQueryOn     bool        // enable slow query alert (default off)
+	strCaseWhen     string      // case..when...then...else...end
+	nearby          *nearby     // nearby
+	strUpdates      []string    // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
+	joins           []*Join     //inner/left/right/full-outer join(s)
 	selected        bool
 	noVerbose       bool
 }
@@ -175,6 +180,13 @@ func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
 
 	var err error
 	var adapter AdapterType
+	if len(options) == 0 {
+		options = append(options, &Options{
+			Debug: false,
+			Max:   DefaultConnMax,
+			Idle:  DefaultConnIdle,
+		})
+	}
 	//var strDriverName, strDSN string
 	us := strings.Split(strUrl, URL_SCHEME_SEP)
 	if len(us) != 2 { //default mysql
@@ -1196,4 +1208,3 @@ func (e *Engine) JsonGreaterEqual(strColumn, strPath string, value interface{}) 
 func (e *Engine) JsonLessEqual(strColumn, strPath string, value interface{}) *Engine {
 	return e.And("%s<=%v", e.jsonExpr(strColumn, strPath), value)
 }
-

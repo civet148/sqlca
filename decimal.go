@@ -7,15 +7,17 @@ import (
 	"math"
 	"math/big"
 
-	//"go.mongodb.org/mongo-driver/bson/bsontype"
 	"github.com/shopspring/decimal"
-	//"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/x/bsonx"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
-const(
-	fil = "1000000000000000000"
+const (
+	fil   = "1000000000000000000"
 	ether = "1000000000000000000"
-	btc = "100000000"
+	btc   = "100000000"
 )
 
 type Decimal struct {
@@ -78,13 +80,12 @@ func (d Decimal) BigInt() (b *big.Int, ok bool) {
 	return b.SetString(d.String(), 10)
 }
 
-
 func (d Decimal) Amount2FIL() Decimal {
 	return d.Mul(NewDecimal(fil))
 }
 
 func (d Decimal) FIL2Amount() Decimal {
-	return  d.Div(NewDecimal(fil))
+	return d.Div(NewDecimal(fil))
 }
 
 func (d Decimal) Amount2Ether() Decimal {
@@ -92,7 +93,7 @@ func (d Decimal) Amount2Ether() Decimal {
 }
 
 func (d Decimal) Ether2Amount() Decimal {
-	return  d.Div(NewDecimal(ether))
+	return d.Div(NewDecimal(ether))
 }
 
 func (d Decimal) Amount2Btc() Decimal {
@@ -100,7 +101,7 @@ func (d Decimal) Amount2Btc() Decimal {
 }
 
 func (d Decimal) Btc2Amount() Decimal {
-	return  d.Div(NewDecimal(btc))
+	return d.Div(NewDecimal(btc))
 }
 
 func (d Decimal) Amount2Coin(prec int) Decimal {
@@ -114,7 +115,7 @@ func (d Decimal) Coin2Amount(prec int) Decimal {
 	if prec < 0 {
 		panic("precision cannot be negative")
 	}
-	return  d.Div(NewDecimal(math.Pow10(prec)))
+	return d.Div(NewDecimal(math.Pow10(prec)))
 }
 
 func (d *Decimal) FromString(v string) {
@@ -367,26 +368,63 @@ func (d Decimal) MarshalBinary() (data []byte, err error) {
 	return d.dec.MarshalBinary()
 }
 
-//
-//// MarshalBSON implements the bson.Marshaler interface.
-//func (d Decimal) MarshalBSON() ([]byte, error) {
-//	return d.dec.MarshalJSON()
-//}
-//
-//func (d *Decimal) UnmarshalBSON(data []byte) error {
-//	return d.dec.UnmarshalJSON(data)
-//}
-//
 // MarshalBSON implements the bson.Marshaler interface.
-//func (d Decimal) MarshalBSONValue() (bsontype.Type, []byte, error) {
-//	return bsontype.String, []byte(d.dec.String()), nil
-//}
-//
-//// UnmarshalBSON implements the bson.Unmarshaler interface.
-//func (d *Decimal) UnmarshalBSONValue(_ bsontype.Type, data []byte) error {
-//	return d.dec.UnmarshalJSON(data)
-//}
-//
+func (d Decimal) MarshalBSON() ([]byte, error) {
+	return d.dec.MarshalJSON()
+}
+
+func (d *Decimal) UnmarshalBSON(data []byte) error {
+	return d.dec.UnmarshalJSON(data)
+}
+
+//MarshalBSONValue implements the bson.Marshaler interface.
+func (d Decimal) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	pd, err := primitive.ParseDecimal128(d.dec.String())
+	if err != nil {
+		return bsontype.Decimal128, nil, log.Errorf(err.Error())
+	}
+	return bsonx.Decimal128(pd).MarshalBSONValue()
+}
+
+// UnmarshalBSONValue implements the bson.Unmarshaler interface.
+func (d *Decimal) UnmarshalBSONValue(bt bsontype.Type, data []byte) error {
+
+	if bt == bsontype.Decimal128 {
+		bd, _, ok := bsoncore.ReadDecimal128(data)
+		if !ok {
+			return log.Errorf("unmarshal decimal128 error")
+		}
+		d.FromString(bd.String())
+	} else if bt == bsontype.Double {
+		bd, _, ok := bsoncore.ReadDouble(data)
+		if !ok {
+			return log.Errorf("unmarshal Double error")
+		}
+		d.FromFloat(bd)
+	} else if bt == bsontype.String {
+		bd, _, ok := bsoncore.ReadString(data)
+		if !ok {
+			return log.Errorf("unmarshal String error")
+		}
+		d.FromString(bd)
+	} else if bt == bsontype.Int64 {
+		bd, _, ok := bsoncore.ReadInt64(data)
+		if !ok {
+			return log.Errorf("unmarshal Int64 error")
+		}
+		d.FromInt(bd)
+	} else if bt == bsontype.Int32 {
+		bd, _, ok := bsoncore.ReadInt32(data)
+		if !ok {
+			return log.Errorf("unmarshal Int32 error")
+		}
+		d.FromInt(int64(bd))
+	} else {
+		return log.Errorf("unknown bson type [%s] to unmarshal", bt)
+	}
+	return nil
+}
+
 //// GetBSON implements the bson.Getter interface (mgo.v2)
 //func (d Decimal) GetBSON() (interface{}, error) {
 //	return d.dec.String(), nil
@@ -411,14 +449,14 @@ func (d Decimal) MarshalBinary() (data []byte, err error) {
 //	}
 //	return nil
 //}
-//
-//func (d Decimal) Marshal() ([]byte, error) {
-//	return d.dec.MarshalJSON()
-//}
-//
-//func (d *Decimal) Unmarshal(data []byte) error {
-//	return d.dec.UnmarshalJSON(data)
-//}
+
+func (d Decimal) Marshal() ([]byte, error) {
+	return d.dec.MarshalJSON()
+}
+
+func (d *Decimal) Unmarshal(data []byte) error {
+	return d.dec.UnmarshalJSON(data)
+}
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface. As a string representation
 // is already used when encoding to text, this method stores that string as []byte

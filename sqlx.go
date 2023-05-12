@@ -348,6 +348,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 func (e *Engine) clone(models ...interface{}) *Engine {
 
 	engine := &Engine{
+		strDSN:          e.strDSN,
 		dsn:             e.dsn,
 		dbMasters:       e.dbMasters,
 		dbSlaves:        e.dbSlaves,

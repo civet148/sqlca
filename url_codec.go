@@ -40,6 +40,15 @@ type UrlInfo struct {
 	Queries    map[string]string
 }
 
+func (ui *UrlInfo) Url() string {
+	var queries []string
+	for k, v := range ui.Queries {
+		queries = append(queries, fmt.Sprintf("%s=%s", k, v))
+	}
+	strQueries := strings.Join(queries, "&")
+	return fmt.Sprintf("%s://%s:%s@%s%s?%s", ui.Scheme, ui.User, ui.Password, ui.Host, ui.Path, strQueries)
+}
+
 type dsnDriver struct {
 	strDriverName string
 	parameter     dsnParameter
@@ -344,6 +353,13 @@ func (e *Engine) parseMysqlDSN(adapterType AdapterType, strMySQLDSN string) (dsn
 	}
 	e.setDatabaseName(strDatabaseName)
 	return
+}
+
+//rawMySql2Url convert raw mysql data source name to url, e.g "root:123456@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4"
+func rawMySql2Url(strRawDSN string) string {
+	strRawDSN = strings.ReplaceAll(strRawDSN, "tcp(", "")
+	strRawDSN = strings.ReplaceAll(strRawDSN, ")", "")
+	return fmt.Sprintf("%s://%s", DRIVER_NAME_MYSQL, strRawDSN)
 }
 
 func cutFirst(strIn, strSep string) (strOut string) {

@@ -12,7 +12,6 @@ const (
 	TABLE_NAME_USERS = "users"
 )
 
-
 var urls = []string{
 	"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //raw mysql DSN (default 'mysql' if scheme is not specified)
 	//"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4",
@@ -81,6 +80,7 @@ func SSHTunnel(e *sqlca.Engine) {
 
 //connect database directly
 func Direct(e *sqlca.Engine) {
+	SwitchDatabase(e)
 	OrmInsertByModel(e)
 	OrmUpsertByModel(e)
 	OrmUpdateByModel(e)
@@ -123,6 +123,23 @@ func Direct(e *sqlca.Engine) {
 	OrmQueryLike(e)
 }
 
+func SwitchDatabase(e *sqlca.Engine) {
+	//type Block struct {
+	//	Id  int32  `json:"id" db:"id"`
+	//	Cid string `json:"cid" db:"cid"`
+	//}
+	//db, err := e.Use("stos-manager")
+	//if err != nil {
+	//	log.Errorf(err.Error())
+	//	return
+	//}
+	//var blocks []*Block
+	//_, err = db.Model(&blocks).Table("block").Limit(5).Query()
+	//for _, b := range blocks {
+	//	log.Infof("block [%+v]", b)
+	//}
+}
+
 func OrmQueryToDecimal(e *sqlca.Engine) {
 	var d sqlca.Decimal
 	c, err := e.Model(&d).Table(TABLE_NAME_USERS).Count("id").Query()
@@ -147,8 +164,7 @@ func OrmInsertByModel(e *sqlca.Engine) {
 			Balance:   sqlca.NewDecimal("123.456"),
 			Email:     "lory@example.com",
 			Disable:   true,
-			ExtraData: &models.UserData{
-			},
+			ExtraData: &models.UserData{},
 		})
 	}
 
@@ -943,10 +959,10 @@ func QueryEx(e *sqlca.Engine) {
 func JsonStructQuery(e *sqlca.Engine) {
 
 	type JsonsDO struct {
-		Id       int32     `db:"id"`
-		Name     string    `db:"name"`
+		Id   int32  `db:"id"`
+		Name string `db:"name"`
 		//UserData *models.UserData `db:"user_data"` //column 'user_data' is a json string in table, eg. {"age": 18, "female": false, "height": 178}
-		UserData []*models.UserData  `db:"user_data"` //column 'user_data' is a json string in table, eg. [{"age":18, "female":false, "height":178},{"age":28, "female":true, "height": 162}]
+		UserData []*models.UserData `db:"user_data"` //column 'user_data' is a json string in table, eg. [{"age":18, "female":false, "height":178},{"age":28, "female":true, "height": 162}]
 	}
 	var dos []*JsonsDO
 	/* -- SELECT  id, name, user_data FROM jsons  WHERE id='1' --

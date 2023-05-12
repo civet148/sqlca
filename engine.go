@@ -42,7 +42,9 @@ type nearby struct {
 }
 
 type Engine struct {
+	strDSN          string                 // database source name
 	dsn             dsnDriver              // driver name and parameters
+	options         *Options               // database options
 	slave           bool                   // use slave to query ?
 	dbMasters       []*sqlx.DB             // DB instance masters
 	dbSlaves        []*sqlx.DB             // DB instance slaves
@@ -164,18 +166,13 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 //
 //  1. data source name
 //
-// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&slave=false&max=100&idle=1")
-// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&slave=false&max=100&idle=1")
-// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false&max=100&idle=1")
+// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
+// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable")
+// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
 // 	   [sqlite]   Open("sqlite:///var/lib/test.db")
 //
-//  2. cache config
-//     [redis-alone]    Open("redis://123456@127.0.0.1:6379/cluster?db=0")
-//     [redis-cluster]  Open("redis://123456@127.0.0.1:6379/cluster?db=0&replicate=127.0.0.1:6380,127.0.0.1:6381")
-//
 // options:
-//        1. specify master or slave, MySQL/Postgres (Options)
-//        2. cache data expire seconds, just for redis (Integer)
+//        1. specify master or slave, MySQL/Postgres (optional)
 func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
 
 	var err error
@@ -248,28 +245,45 @@ func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
 		err = fmt.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
 		return nil, err
 	}
+	e.strDSN = strUrl
+	e.options = opt
 	log.Debugf("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
 	return e, nil
 }
 
-// attach from a exist sqlx db instance
+// Use switch database (returns a new instance)
+func (e *Engine) Use(strDatabaseName string) (*Engine, error) {
+	var strUrl = e.strDSN
+	us := strings.Split(strUrl, URL_SCHEME_SEP)
+	if len(us) != 2 { //mysql raw database source name
+		strUrl = rawMySql2Url(strUrl)
+	}
+	ui := ParseUrl(strUrl)
+	if ui == nil {
+		return nil, log.Errorf("url %s invalid", strUrl)
+	}
+	ui.Path = fmt.Sprintf("/%s", strDatabaseName)
+	return NewEngine(ui.Url(), e.options)
+}
+
+// Attach attach from a exist sqlx db instance
 func (e *Engine) Attach(strDatabaseName string, db *sqlx.DB) *Engine {
 	e.appendMaster(db)
 	e.setDatabaseName(strDatabaseName)
 	return e
 }
 
-// set log file
+// SetLogFile set log file
 func (e *Engine) SetLogFile(strPath string) {
 	log.Open(strPath)
 }
 
-// log debug mode on or off
+// Debug log debug mode on or off
 func (e *Engine) Debug(ok bool) {
 	e.setDebug(ok)
 }
 
-// orm model
+// Model orm model
 // use to get result set, support single struct object or slice [pointer type]
 // notice: will clone a new engine object for orm operations(query/update/insert/upsert)
 func (e *Engine) Model(args ...interface{}) *Engine {
@@ -277,7 +291,7 @@ func (e *Engine) Model(args ...interface{}) *Engine {
 	return e.clone(args...)
 }
 
-// set orm query table name(s)
+// Table set orm query table name(s)
 // when your struct type name is not a table name
 func (e *Engine) Table(strNames ...string) *Engine {
 	assert(strNames, "table name is nil")
@@ -285,7 +299,7 @@ func (e *Engine) Table(strNames ...string) *Engine {
 	return e
 }
 
-// set orm primary key's name, default named 'id'
+// SetPkName set orm primary key's name, default named 'id'
 func (e *Engine) SetPkName(strName string) *Engine {
 	assert(strName, "name is nil")
 	e.strPkName = strName
@@ -296,13 +310,13 @@ func (e *Engine) GetPkName() string {
 	return e.strPkName
 }
 
-// set orm primary key's value
+// Id set orm primary key's value
 func (e *Engine) Id(value interface{}) *Engine {
 	e.setPkValue(value)
 	return e
 }
 
-// orm select/update columns
+// Select orm select/update columns
 func (e *Engine) Select(strColumns ...string) *Engine {
 	if e.setSelectColumns(strColumns...) {
 		e.selected = true
@@ -310,19 +324,19 @@ func (e *Engine) Select(strColumns ...string) *Engine {
 	return e
 }
 
-// orm select/update columns
+// Exclude orm select/update columns
 func (e *Engine) Exclude(strColumns ...string) *Engine {
 	e.setExcludeColumns(strColumns...)
 	return e
 }
 
-// set distinct when select
+// Distinct set distinct when select
 func (e *Engine) Distinct() *Engine {
 	e.setDistinct()
 	return e
 }
 
-// orm where condition
+// Where orm where condition
 func (e *Engine) Where(strWhere string, args ...interface{}) *Engine {
 	assert(strWhere, "string is nil")
 	strWhere = e.formatString(strWhere, args...)
@@ -340,7 +354,7 @@ func (e *Engine) Or(strFmt string, args ...interface{}) *Engine {
 	return e
 }
 
-// set the conflict columns for upsert
+// OnConflict set the conflict columns for upsert
 // only for postgresql
 func (e *Engine) OnConflict(strColumns ...string) *Engine {
 
@@ -348,7 +362,7 @@ func (e *Engine) OnConflict(strColumns ...string) *Engine {
 	return e
 }
 
-// query limit
+// Limit query limit
 // Limit(10) - query records limit 10 (mysql/postgres)
 func (e *Engine) Limit(args ...int) *Engine {
 
@@ -376,8 +390,8 @@ func (e *Engine) Limit(args ...int) *Engine {
 	return e
 }
 
-//page query
-//SELECT ... FROM ... WHERE ... LIMIT (pageNo*pageSize), pageSize
+// Page page query
+//      SELECT ... FROM ... WHERE ... LIMIT (pageNo*pageSize), pageSize
 func (e *Engine) Page(pageNo, pageSize int) *Engine {
 	if pageNo < 0 || pageSize <= 0 {
 		return e
@@ -385,26 +399,26 @@ func (e *Engine) Page(pageNo, pageSize int) *Engine {
 	return e.Limit(pageNo*pageSize, pageSize)
 }
 
-// query offset (for mysql/postgres)
+// Offset query offset (for mysql/postgres)
 func (e *Engine) Offset(offset int) *Engine {
 	e.setOffset(fmt.Sprintf("OFFSET %v", offset))
 	return e
 }
 
-// having [condition]
+// Having having [condition]
 func (e *Engine) Having(strFmt string, args ...interface{}) *Engine {
 	strCondition := e.formatString(strFmt, args...)
 	e.setHaving(strCondition)
 	return e
 }
 
-// order by [field1,field2...] [ASC]
+// OrderBy order by [field1,field2...] [ASC]
 func (e *Engine) OrderBy(orders ...string) *Engine {
 	e.setOrderBy(orders...)
 	return e
 }
 
-// order by [field1,field2...] asc
+// Asc order by [field1,field2...] asc
 func (e *Engine) Asc(strColumns ...string) *Engine {
 
 	if len(strColumns) == 0 {
@@ -415,7 +429,7 @@ func (e *Engine) Asc(strColumns ...string) *Engine {
 	return e
 }
 
-// order by [field1,field2...] desc
+// Desc order by [field1,field2...] desc
 func (e *Engine) Desc(strColumns ...string) *Engine {
 
 	if len(strColumns) == 0 {
@@ -426,7 +440,7 @@ func (e *Engine) Desc(strColumns ...string) *Engine {
 	return e
 }
 
-// `field_name` IN ('1','2',...)
+// In `field_name` IN ('1','2',...)
 func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
 	v := condition{
 		ColumnName:   strColumn,
@@ -436,7 +450,7 @@ func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
 	return e
 }
 
-// `field_name` NOT IN ('1','2',...)
+// Not `field_name` NOT IN ('1','2',...)
 func (e *Engine) Not(strColumn string, args ...interface{}) *Engine {
 	v := condition{
 		ColumnName:   strColumn,
@@ -446,19 +460,19 @@ func (e *Engine) Not(strColumn string, args ...interface{}) *Engine {
 	return e
 }
 
-// group by [field1,field2...]
+// GroupBy group by [field1,field2...]
 func (e *Engine) GroupBy(strColumns ...string) *Engine {
 	e.setGroupBy(strColumns...)
 	return e
 }
 
-// orm query from a slave db
+// Slave orm query from a slave db
 func (e *Engine) Slave() *Engine {
 	e.slave = true
 	return e
 }
 
-// orm query
+// Query orm query
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 // if slave == true, try query from a slave connection, if not exist query from master
@@ -490,7 +504,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	return e.fetchRows(rows)
 }
 
-// orm query with total count
+// QueryEx orm query with total count
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 // if slave == true, try query from a slave connection, if not exist query from master
@@ -546,7 +560,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	return
 }
 
-// orm find with customer conditions (map[string]interface{})
+// Find orm find with customer conditions (map[string]interface{})
 func (e *Engine) Find(conditions map[string]interface{}) (rowsAffected int64, err error) {
 	for k, v := range conditions {
 		e.And("%v=%v", e.getQuoteColumnName(k), e.getQuoteColumnValue(v))
@@ -554,7 +568,7 @@ func (e *Engine) Find(conditions map[string]interface{}) (rowsAffected int64, er
 	return e.Query()
 }
 
-// orm insert
+// Insert orm insert
 // return last insert id and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Insert() (lastInsertId int64, err error) {
@@ -586,7 +600,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	return
 }
 
-// orm insert or update if key(s) conflict
+// Upsert orm insert or update if key(s) conflict
 // return last insert id and error, if err is not nil must be something wrong, if your primary key is not a int/int64 type, maybe id return 0
 // NOTE: Model function is must be called before call this function and call OnConflict function when you are on postgresql
 // updates -> customize updates condition when key(s) conflict
@@ -633,7 +647,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 	return
 }
 
-// orm update from model
+// Update orm update from model
 // strColumns... if set, columns will be updated, if none all columns in model will be updated except primary key
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
@@ -672,7 +686,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	return
 }
 
-// orm delete record(s) from db and cache
+// Delete orm delete record(s) from db
 func (e *Engine) Delete() (rowsAffected int64, err error) {
 
 	strSql := e.makeSQL(OperType_Delete)
@@ -702,7 +716,7 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	return
 }
 
-// use raw sql to query results
+// QueryRaw use raw sql to query results
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
@@ -731,7 +745,7 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	return e.fetchRows(rows.Rows)
 }
 
-// use raw sql to query results into a map slice (model type is []map[string]string)
+// QueryMap use raw sql to query results into a map slice (model type is []map[string]string)
 // return results and error
 // NOTE: Model function is must be called before call this function
 func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
@@ -765,7 +779,7 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 	return
 }
 
-// use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
+// ExecRaw use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows affected and error, if err is not nil must be something wrong
 func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
 
@@ -800,7 +814,7 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	return
 }
 
-// force update/insert read only column(s)
+// Force force update/insert read only column(s)
 func (e *Engine) Force() *Engine {
 	e.bForce = true
 	return e
@@ -900,7 +914,7 @@ func (e *Engine) ToSQL(operType OperType) (strSql string) {
 	return
 }
 
-// set your customer tag for db query/insert/update (eg. go structure generated by protobuf not contain 'db' tag)
+// SetCustomTag set your customer tag for db query/insert/update (eg. go structure generated by protobuf not contain 'db' tag)
 // this function must calls before Model()
 func (e *Engine) SetCustomTag(tagNames ...string) *Engine {
 	if len(tagNames) > 0 {
@@ -909,7 +923,7 @@ func (e *Engine) SetCustomTag(tagNames ...string) *Engine {
 	return e
 }
 
-// ping database
+// Ping ping database
 func (e *Engine) Ping() (err error) {
 
 	for _, m := range e.dbMasters {
@@ -928,13 +942,13 @@ func (e *Engine) Ping() (err error) {
 	return
 }
 
-// set read only columns
+// SetReadOnly set read only columns
 func (e *Engine) SetReadOnly(columns ...string) {
 	e.readOnly = columns
 }
 
-//execute transaction by customize handler
-//auto rollback when handler return error
+// TxHandle execute transaction by customize handler
+// auto rollback when handler return error
 func (e *Engine) TxHandle(handler TxHandler) (err error) {
 	var tx *Engine
 	c := e.Counter()
@@ -955,8 +969,8 @@ func (e *Engine) TxHandle(handler TxHandler) (err error) {
 	return tx.TxCommit()
 }
 
-//execute transaction by customize function
-//auto rollback when function return error
+//TxFunc execute transaction by customize function
+//       auto rollback when function return error
 func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	var tx *Engine
 	c := e.Counter()
@@ -978,8 +992,8 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	return tx.TxCommit()
 }
 
-//execute transaction by customize function with context
-//auto rollback when function return error
+//TxFuncContext execute transaction by customize function with context
+//              auto rollback when function return error
 func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context, tx *Engine) error) (err error) {
 	var tx *Engine
 	c := e.Counter()
@@ -1000,7 +1014,7 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 	return tx.TxCommit()
 }
 
-//query result marshal to json
+//QueryJson query result marshal to json
 func (e *Engine) QueryJson() (s string, err error) {
 	var count int64
 	count, err = e.Query()
@@ -1021,9 +1035,9 @@ func (e *Engine) QueryJson() (s string, err error) {
 	return
 }
 
-//slow query alert on or off
-//on -> true/false
-//ms -> milliseconds (can be 0 if on is false)
+//SlowQuery slow query alert on or off
+//           on -> true/false
+//           ms -> milliseconds (can be 0 if on is false)
 func (e *Engine) SlowQuery(on bool, ms int) {
 	e.slowQueryOn = on
 	if on {
@@ -1042,7 +1056,9 @@ func (e *Engine) Case(strThen string, strWhen string, args ...interface{}) *Case
 	return cw
 }
 
-/* -- select geo point as distance where distance <= n km (float64)
+/*
+NearBy
+-- select geo point as distance where distance <= n km (float64)
 SELECT
     a.*,
     (
@@ -1071,8 +1087,8 @@ func (e *Engine) NearBy(strLngCol, strLatCol, strAS string, lng, lat, distance f
 	return e
 }
 
-//encode geo hash string (precision 1~8)
-//returns geo hash and neighbors areas
+//GeoHash encode geo hash string (precision 1~8)
+//        returns geo hash and neighbors areas
 func (e *Engine) GeoHash(lng, lat float64, precision int) (strGeoHash string, strNeighbors []string) {
 	strGeoHash, _ = geohash.Encode(lat, lng, precision)
 	strNeighbors = geohash.GetNeighbors(lat, lng, precision)

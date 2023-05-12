@@ -820,6 +820,17 @@ func (e *Engine) Force() *Engine {
 	return e
 }
 
+// Close disconnect all database connections
+func (e *Engine) Close() *Engine {
+	for _, db := range e.dbMasters {
+		_ = db.Close()
+	}
+	for _, db := range e.dbSlaves {
+		_ = db.Close()
+	}
+	return e
+}
+
 func (e *Engine) AutoRollback() *Engine {
 	e.bAutoRollback = true
 	return e

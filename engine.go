@@ -166,13 +166,13 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 //
 //  1. data source name
 //
-// 	   [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
-// 	   [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable")
-// 	   [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
-// 	   [sqlite]   Open("sqlite:///var/lib/test.db")
+//     [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
+//     [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable")
+//     [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
+//     [sqlite]   Open("sqlite:///var/lib/test.db")
 //
 // options:
-//        1. specify master or slave, MySQL/Postgres (optional)
+//  1. specify master or slave, MySQL/Postgres (optional)
 func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
 
 	var err error
@@ -391,7 +391,8 @@ func (e *Engine) Limit(args ...int) *Engine {
 }
 
 // Page page query
-//      SELECT ... FROM ... WHERE ... LIMIT (pageNo*pageSize), pageSize
+//
+//	SELECT ... FROM ... WHERE ... LIMIT (pageNo*pageSize), pageSize
 func (e *Engine) Page(pageNo, pageSize int) *Engine {
 	if pageNo < 0 || pageSize <= 0 {
 		return e
@@ -980,8 +981,9 @@ func (e *Engine) TxHandle(handler TxHandler) (err error) {
 	return tx.TxCommit()
 }
 
-//TxFunc execute transaction by customize function
-//       auto rollback when function return error
+// TxFunc execute transaction by customize function
+//
+//	auto rollback when function return error
 func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	var tx *Engine
 	c := e.Counter()
@@ -1003,8 +1005,9 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	return tx.TxCommit()
 }
 
-//TxFuncContext execute transaction by customize function with context
-//              auto rollback when function return error
+// TxFuncContext execute transaction by customize function with context
+//
+//	auto rollback when function return error
 func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context, tx *Engine) error) (err error) {
 	var tx *Engine
 	c := e.Counter()
@@ -1025,7 +1028,7 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 	return tx.TxCommit()
 }
 
-//QueryJson query result marshal to json
+// QueryJson query result marshal to json
 func (e *Engine) QueryJson() (s string, err error) {
 	var count int64
 	count, err = e.Query()
@@ -1046,9 +1049,10 @@ func (e *Engine) QueryJson() (s string, err error) {
 	return
 }
 
-//SlowQuery slow query alert on or off
-//           on -> true/false
-//           ms -> milliseconds (can be 0 if on is false)
+// SlowQuery slow query alert on or off
+//
+//	on -> true/false
+//	ms -> milliseconds (can be 0 if on is false)
 func (e *Engine) SlowQuery(on bool, ms int) {
 	e.slowQueryOn = on
 	if on {
@@ -1071,20 +1075,25 @@ func (e *Engine) Case(strThen string, strWhen string, args ...interface{}) *Case
 NearBy
 -- select geo point as distance where distance <= n km (float64)
 SELECT
-    a.*,
-    (
-    6371 * ACOS (
-    COS( RADIANS( a.lat ) ) * COS( RADIANS( 28.8039097230 ) ) * COS(
-      RADIANS( 121.5619236231 ) - RADIANS( a.lng )
-     ) + SIN( RADIANS( a.lat ) ) * SIN( RADIANS( 28.8039097230 ) )
-    )
-    ) AS distance
+
+	a.*,
+	(
+	6371 * ACOS (
+	COS( RADIANS( a.lat ) ) * COS( RADIANS( 28.8039097230 ) ) * COS(
+	  RADIANS( 121.5619236231 ) - RADIANS( a.lng )
+	 ) + SIN( RADIANS( a.lat ) ) * SIN( RADIANS( 28.8039097230 ) )
+	)
+	) AS distance
+
 FROM
-    t_address a
+
+	t_address a
+
 HAVING distance <= 200 -- less than or equal 200km
 ORDER BY
-    distance
-    LIMIT 10
+
+	distance
+	LIMIT 10
 */
 func (e *Engine) NearBy(strLngCol, strLatCol, strAS string, lng, lat, distance float64) *Engine {
 	e.nearby = &nearby{
@@ -1098,8 +1107,9 @@ func (e *Engine) NearBy(strLngCol, strLatCol, strAS string, lng, lat, distance f
 	return e
 }
 
-//GeoHash encode geo hash string (precision 1~8)
-//        returns geo hash and neighbors areas
+// GeoHash encode geo hash string (precision 1~8)
+//
+//	returns geo hash and neighbors areas
 func (e *Engine) GeoHash(lng, lat float64, precision int) (strGeoHash string, strNeighbors []string) {
 	strGeoHash, _ = geohash.Encode(lat, lng, precision)
 	strNeighbors = geohash.GetNeighbors(lat, lng, precision)
@@ -1192,9 +1202,19 @@ func (e *Engine) Equal(strColumn string, value interface{}) *Engine {
 	return e
 }
 
+// Eq alias of Equal
+func (e *Engine) Eq(strColumn string, value interface{}) *Engine {
+	return e.Equal(strColumn, value)
+}
+
 func (e *Engine) GreaterThan(strColumn string, value interface{}) *Engine {
 	e.And("%s>'%v'", strColumn, value)
 	return e
+}
+
+// Gt alias of GreaterThan
+func (e *Engine) Gt(strColumn string, value interface{}) *Engine {
+	return e.GreaterThan(strColumn, value)
 }
 
 func (e *Engine) GreaterEqual(strColumn string, value interface{}) *Engine {
@@ -1202,13 +1222,35 @@ func (e *Engine) GreaterEqual(strColumn string, value interface{}) *Engine {
 	return e
 }
 
+// Gte alias of GreaterEqual
+func (e *Engine) Gte(strColumn string, value interface{}) *Engine {
+	return e.GreaterEqual(strColumn, value)
+}
+
 func (e *Engine) LessThan(strColumn string, value interface{}) *Engine {
 	e.And("%s<'%v'", strColumn, value)
 	return e
 }
 
+// Lt alias of LessThan
+func (e *Engine) Lt(strColumn string, value interface{}) *Engine {
+	return e.LessThan(strColumn, value)
+}
+
 func (e *Engine) LessEqual(strColumn string, value interface{}) *Engine {
 	e.And("%s<='%v'", strColumn, value)
+	return e
+}
+
+// Lte alias of LessEqual
+func (e *Engine) Lte(strColumn string, value interface{}) *Engine {
+	return e.LessEqual(strColumn, value)
+}
+
+// GteLte greater than equal and less than equal
+func (e *Engine) GteLte(strColumn string, value1, value2 interface{}) *Engine {
+	e.Gte(strColumn, value1)
+	e.Lte(strColumn, value2)
 	return e
 }
 

@@ -87,7 +87,6 @@ func Direct(e *sqlca.Engine) {
 	OrmQueryIntoModel(e)
 	OrmQueryExcludeIntoModel(e)
 	OrmQueryIntoModelSlice(e)
-	OrmUpdateIndexToCache(e)
 	OrmSelectMultiTable(e)
 	OrmDeleteFromTable(e)
 	OrmInCondition(e)
@@ -334,33 +333,6 @@ func RawExec(e *sqlca.Engine) {
 		log.Errorf("exec raw sql error [%v]", err.Error())
 	} else {
 		log.Infof("exec raw sql ok, rows affected [%v] last insert id [%v]", rowsAffected, lasteInsertId)
-	}
-}
-
-func OrmUpdateIndexToCache(e *sqlca.Engine) {
-
-	log.Enter()
-	defer log.Leave()
-
-	user := models.UsersDO{
-		Id:    1,
-		Name:  "john3",
-		Phone: "8615011111114",
-		Sex:   1,
-		Email: "john3@gmail.com",
-	}
-
-	//SQL: update users set name='john3', phone='8615011111114', sex='1', email='john3@gmail.com' where id='1'
-	//index: name, phone
-	//redis key:  sqlca:cache:[table]:[column]:[column value]
-	if rowsAffected, err := e.Model(&user).
-		Table(TABLE_NAME_USERS).
-		Distinct().
-		Select("name", "phone", "email", "sex").
-		Update(); err != nil {
-		log.Errorf("update data model [%+v] error [%v]", user, err.Error())
-	} else {
-		log.Infof("update data model [%+v] ok, rows affected [%v]", user, rowsAffected)
 	}
 }
 

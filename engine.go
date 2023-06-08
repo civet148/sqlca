@@ -71,21 +71,19 @@ type Engine struct {
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns  []string               // order by columns
 	groupByColumns  []string               // group by columns
-	//ascColumns      []string               // order by xxx ASC
-	//descColumns     []string               // order by xxx DESC
-	havingCondition string      // having condition
-	inConditions    []condition // in condition
-	notConditions   []condition // not in condition
-	andConditions   []string    // and condition
-	orConditions    []string    // or condition
-	dbTags          []string    // custom db tag names
-	readOnly        []string    // read only column names
-	slowQueryTime   int         // slow query alert time (milliseconds)
-	slowQueryOn     bool        // enable slow query alert (default off)
-	strCaseWhen     string      // case..when...then...else...end
-	nearby          *nearby     // nearby
-	strUpdates      []string    // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
-	joins           []*Join     //inner/left/right/full-outer join(s)
+	havingCondition string                 // having condition
+	inConditions    []condition            // in condition
+	notConditions   []condition            // not in condition
+	andConditions   []string               // and condition
+	orConditions    []string               // or condition
+	dbTags          []string               // custom db tag names
+	readOnly        []string               // read only column names
+	slowQueryTime   int                    // slow query alert time (milliseconds)
+	slowQueryOn     bool                   // enable slow query alert (default off)
+	strCaseWhen     string                 // case..when...then...else...end
+	nearby          *nearby                // nearby
+	strUpdates      []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
+	joins           []*Join                //inner/left/right/full-outer join(s)
 	selected        bool
 	noVerbose       bool
 }
@@ -94,8 +92,7 @@ func init() {
 	log.SetLevel(log.LEVEL_INFO)
 }
 
-func NewEngine(args ...interface{}) (*Engine, error) {
-
+func NewEngine(strUrl string, options ...*Options) (*Engine, error) {
 	e := &Engine{
 		strPkName:     DEFAULT_PRIMARY_KEY_NAME,
 		expireTime:    DEFAULT_CAHCE_EXPIRE_SECONDS,
@@ -103,43 +100,7 @@ func NewEngine(args ...interface{}) (*Engine, error) {
 		adapterSqlx:   AdapterSqlx_MySQL,
 	}
 	e.dbTags = append(e.dbTags, TAG_NAME_DB, TAG_NAME_SQLCA, TAG_NAME_PROTOBUF, TAG_NAME_JSON)
-
-	var ok bool
-	var strOpenUrl string
-	var argc = len(args)
-	if argc == 0 {
-		return e, nil
-	} else if argc > 0 {
-		if argc == 1 {
-			if strOpenUrl, ok = args[0].(string); ok {
-				_, err := e.Open(strOpenUrl)
-				if err != nil {
-					return nil, err
-				}
-			}
-		} else {
-			var v1 Options
-			var v2 *Options
-			var options *Options
-			strOpenUrl = args[0].(string)
-			if v1, ok = args[1].(Options); ok {
-				options = &v1
-			} else {
-				if v2, ok = args[1].(*Options); ok {
-					options = v2
-				} else {
-					strOpenUrl = fmt.Sprintf(args[0].(string), args[1:]...) //legacy version compatible
-					return e.Open(strOpenUrl)
-				}
-			}
-			_, err := e.Open(strOpenUrl, options)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return e, nil
+	return e.Open(strUrl, options...)
 }
 
 // get data base driver name and data source name
@@ -173,7 +134,7 @@ func (e *Engine) getDriverNameAndDSN(adapterType AdapterType, strUrl string) (dr
 //
 // options:
 //  1. specify master or slave, MySQL/Postgres (optional)
-func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
+func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 
 	var err error
 	var adapter AdapterType
@@ -195,26 +156,20 @@ func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
 	}
 	var dsn = &e.dsn
 	var opt *Options
-	var parameter = &dsn.parameter
+	var param = &dsn.parameter
 	switch adapter {
 	case AdapterSqlx_MySQL, AdapterSqlx_Postgres, AdapterSqlx_Sqlite, AdapterSqlx_Mssql:
 		e.adapterSqlx = adapter
 		var db *sqlx.DB
 		if len(options) != 0 {
-
-			if v, ok := options[0].(*Options); ok {
-				opt = v
-			} else {
-				o := options[0].(Options)
-				opt = &o
-			}
+			opt = options[0]
 			e.Debug(opt.Debug)
 			if opt.SSH != nil { //SSH tunnel enable
 				dsn = opt.SSH.openSSHTunnel(dsn)
 			}
 		}
 
-		if db, err = sqlx.Open(dsn.strDriverName, parameter.strDSN); err != nil {
+		if db, err = sqlx.Open(dsn.strDriverName, param.strDSN); err != nil {
 			//log.Errorf("open database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
 			return nil, err
 		}
@@ -228,15 +183,15 @@ func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
 			dsn.SetIdle(opt.Idle)
 			dsn.SetSlave(opt.Slave)
 		}
-		//log.Debugf("dsn parameter [%+v]", dsn.parameter)
-		if parameter.max != 0 {
-			db.SetMaxOpenConns(parameter.max)
+
+		if param.max != 0 {
+			db.SetMaxOpenConns(param.max)
 		}
-		if parameter.idle != 0 {
-			db.SetMaxIdleConns(parameter.idle)
+		if param.idle != 0 {
+			db.SetMaxIdleConns(param.idle)
 		}
 
-		if parameter.slave {
+		if param.slave {
 			e.appendSlave(db)
 		} else {
 			e.appendMaster(db)
@@ -247,7 +202,7 @@ func (e *Engine) Open(strUrl string, options ...interface{}) (*Engine, error) {
 	}
 	e.strDSN = strUrl
 	e.options = opt
-	log.Debugf("[%s] open url [%s] with options [%+v] ok", adapter.String(), parameter.strDSN, opt)
+	log.Debugf("[%s] open url [%s] with options [%+v] ok", adapter.String(), param.strDSN, opt)
 	return e, nil
 }
 

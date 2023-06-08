@@ -124,20 +124,20 @@ func Direct(e *sqlca.Engine) {
 }
 
 func SwitchDatabase(e *sqlca.Engine) {
-	//type Block struct {
-	//	Id  int32  `json:"id" db:"id"`
-	//	Cid string `json:"cid" db:"cid"`
-	//}
-	//db, err := e.Use("stos-manager")
-	//if err != nil {
-	//	log.Errorf(err.Error())
-	//	return
-	//}
-	//var blocks []*Block
-	//_, err = db.Model(&blocks).Table("block").Limit(5).Query()
-	//for _, b := range blocks {
-	//	log.Infof("block [%+v]", b)
-	//}
+	type Block struct {
+		Id  int32  `json:"id" db:"id"`
+		Cid string `json:"cid" db:"cid"`
+	}
+	db, err := e.Use("stos-manager")
+	if err != nil {
+		log.Errorf(err.Error())
+		return
+	}
+	var blocks []*Block
+	_, err = db.Model(&blocks).Table("block").Limit(5).Query()
+	for _, b := range blocks {
+		log.Infof("block [%+v]", b)
+	}
 }
 
 func OrmQueryToDecimal(e *sqlca.Engine) {

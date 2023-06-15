@@ -13,7 +13,7 @@ const (
 )
 
 var urls = []string{
-	"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //raw mysql DSN (default 'mysql' if scheme is not specified)
+	"root:123456@tcp(192.168.2.9:3306)/test?charset=utf8mb4", //raw mysql DSN (default 'mysql' if scheme is not specified)
 	//"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4",
 	//"postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable",
 	//"mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false",
@@ -78,7 +78,7 @@ func SSHTunnel(e *sqlca.Engine) {
 	log.Infof("SSH tunnel query users [%+v]", users)
 }
 
-//connect database directly
+// connect database directly
 func Direct(e *sqlca.Engine) {
 	SwitchDatabase(e)
 	OrmInsertByModel(e)
@@ -157,13 +157,17 @@ func OrmInsertByModel(e *sqlca.Engine) {
 	for i := 0; i < 3; i++ {
 		users = append(users, models.UsersDO{
 			//Id:    0,
-			Name:      "lory",
-			Phone:     "+8618682371690",
-			Sex:       1,
-			Balance:   sqlca.NewDecimal("123.456"),
-			Email:     "lory@example.com",
-			Disable:   true,
-			ExtraData: &models.UserData{},
+			Name:    "lory",
+			Phone:   "+8618682371690",
+			Sex:     1,
+			Balance: sqlca.NewDecimal("123.456"),
+			Email:   "lory@example.com",
+			Disable: true,
+			ExtraData: &models.UserData{
+				Age:    32,
+				Height: 183,
+				Female: true,
+			},
 		})
 	}
 
@@ -905,7 +909,7 @@ func NilPointerQuery(e *sqlca.Engine) {
 	log.Infof("count [%d] UserClass data [%+v]", c, user)
 }
 
-//query result returns json string
+// query result returns json string
 func QueryJSON(e *sqlca.Engine) {
 
 	var users []models.UsersDO

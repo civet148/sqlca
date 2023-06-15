@@ -18,21 +18,21 @@ const (
 )
 
 type OrdersDO struct {
-	Id        int32         `json:"id" db:"id" bson:"id"`                                          //自增ID(主键)
+	Id        int32         `json:"id" db:"id" bson:"_id"`                                         //自增ID(主键)
 	Name      string        `json:"name" db:"name" bson:"name"`                                    //订单名称
-	Details   string        `json:"details" db:"details" bson:"details"`                           //订单明细
+	Details   struct{}      `json:"details" db:"details" sqlca:"isnull" bson:"details"`            //订单明细
 	Amount    sqlca.Decimal `json:"amount" db:"amount" bson:"amount"`                              //金额
 	CreatedAt string        `json:"created_at" db:"created_at" sqlca:"readonly" bson:"created_at"` //创建时间
 	UpdatedAt string        `json:"updated_at" db:"updated_at" sqlca:"readonly" bson:"updated_at"` //更新时间
-	Location  string        `json:"location" db:"location" bson:"location"`                        //位置
+	Location  string        `json:"location" db:"location" sqlca:"isnull" bson:"location"`         //位置
 }
 
 func (do *OrdersDO) GetId() int32              { return do.Id }
 func (do *OrdersDO) SetId(v int32)             { do.Id = v }
 func (do *OrdersDO) GetName() string           { return do.Name }
 func (do *OrdersDO) SetName(v string)          { do.Name = v }
-func (do *OrdersDO) GetDetails() string        { return do.Details }
-func (do *OrdersDO) SetDetails(v string)       { do.Details = v }
+func (do *OrdersDO) GetDetails() struct{}      { return do.Details }
+func (do *OrdersDO) SetDetails(v struct{})     { do.Details = v }
 func (do *OrdersDO) GetAmount() sqlca.Decimal  { return do.Amount }
 func (do *OrdersDO) SetAmount(v sqlca.Decimal) { do.Amount = v }
 func (do *OrdersDO) GetCreatedAt() string      { return do.CreatedAt }
@@ -45,7 +45,7 @@ func (do *OrdersDO) SetLocation(v string)      { do.Location = v }
 /*
 CREATE TABLE `orders` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '自增ID(主键)',
-  `name` varchar(32) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '订单名称',
+  `name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '订单名称',
   `details` json DEFAULT NULL COMMENT '订单明细',
   `amount` decimal(60,30) NOT NULL DEFAULT '0.000000000000000000000000000000' COMMENT '金额',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

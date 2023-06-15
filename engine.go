@@ -66,6 +66,7 @@ type Engine struct {
 	strLimit        string                 // limit
 	strOffset       string                 // offset (only for postgres)
 	strDistinct     string                 // distinct
+	nullableColumns []string               // nullable columns for update/insert
 	excludeColumns  []string               // exclude columns for query: select xxx not contain exclude some columns
 	selectColumns   []string               // columns to query: select
 	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
@@ -1207,6 +1208,14 @@ func (e *Engine) GteLte(strColumn string, value1, value2 interface{}) *Engine {
 	e.Gte(strColumn, value1)
 	e.Lte(strColumn, value2)
 	return e
+}
+
+func (e *Engine) IsNULL(strColumn string) *Engine {
+	return e.And("%s is NULL", strColumn)
+}
+
+func (e *Engine) NotNULL(strColumn string) *Engine {
+	return e.And("%s is not NULL", strColumn)
 }
 
 func (e *Engine) jsonExpr(strColumn, strPath string) string {

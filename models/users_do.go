@@ -16,13 +16,15 @@ const (
 	USERS_COLUMN_DISABLE    = "disable"
 	USERS_COLUMN_BALANCE    = "balance"
 	USERS_COLUMN_SEX_NAME   = "sex_name"
+	USERS_COLUMN_DATA_SIZE  = "data_size"
 	USERS_COLUMN_EXTRA_DATA = "extra_data"
 	USERS_COLUMN_CREATED_AT = "created_at"
 	USERS_COLUMN_UPDATED_AT = "updated_at"
+	USERS_COLUMN_DELETED_AT = "deleted_at"
 )
 
 type UsersDO struct {
-	Id        uint32        `json:"id" db:"id" bson:"id"`                                          //auto inc id
+	Id        uint32        `json:"id" db:"id" bson:"_id"`                                         //auto inc id
 	Name      string        `json:"name" db:"name" bson:"name"`                                    //user name
 	Phone     string        `json:"phone" db:"phone" bson:"phone"`                                 //phone number
 	Sex       uint8         `json:"sex" db:"sex" bson:"sex"`                                       //user sex
@@ -30,9 +32,11 @@ type UsersDO struct {
 	Disable   bool          `json:"disable" db:"disable" bson:"disable"`                           //disabled(0=false 1=true)
 	Balance   sqlca.Decimal `json:"balance" db:"balance" bson:"balance"`                           //balance of decimal
 	SexName   string        `json:"sex_name" db:"sex_name" bson:"sex_name"`                        //sex name
-	ExtraData *UserData   `json:"extra_data" db:"extra_data" bson:"extra_data"`                  //extra data
+	DataSize  int64         `json:"data_size" db:"data_size" bson:"data_size"`                     //data size
+	ExtraData *UserData     `json:"extra_data" db:"extra_data" sqlca:"isnull" bson:"extra_data"`   //extra data
 	CreatedAt string        `json:"created_at" db:"created_at" sqlca:"readonly" bson:"created_at"` //create time
 	UpdatedAt string        `json:"updated_at" db:"updated_at" sqlca:"readonly" bson:"updated_at"` //update time
+	DeletedAt string        `json:"deleted_at" db:"deleted_at" sqlca:"isnull" bson:"deleted_at"`   //delete time
 }
 
 func (do *UsersDO) GetId() uint32              { return do.Id }
@@ -51,12 +55,16 @@ func (do *UsersDO) GetBalance() sqlca.Decimal  { return do.Balance }
 func (do *UsersDO) SetBalance(v sqlca.Decimal) { do.Balance = v }
 func (do *UsersDO) GetSexName() string         { return do.SexName }
 func (do *UsersDO) SetSexName(v string)        { do.SexName = v }
-func (do *UsersDO) GetExtraData() *UserData  { return do.ExtraData }
-func (do *UsersDO) SetExtraData(v *UserData) { do.ExtraData = v }
+func (do *UsersDO) GetDataSize() int64         { return do.DataSize }
+func (do *UsersDO) SetDataSize(v int64)        { do.DataSize = v }
+func (do *UsersDO) GetExtraData() *UserData    { return do.ExtraData }
+func (do *UsersDO) SetExtraData(v *UserData)   { do.ExtraData = v }
 func (do *UsersDO) GetCreatedAt() string       { return do.CreatedAt }
 func (do *UsersDO) SetCreatedAt(v string)      { do.CreatedAt = v }
 func (do *UsersDO) GetUpdatedAt() string       { return do.UpdatedAt }
 func (do *UsersDO) SetUpdatedAt(v string)      { do.UpdatedAt = v }
+func (do *UsersDO) GetDeletedAt() string       { return do.DeletedAt }
+func (do *UsersDO) SetDeletedAt(v string)      { do.DeletedAt = v }
 
 /*
 CREATE TABLE `users` (
@@ -68,10 +76,12 @@ CREATE TABLE `users` (
   `disable` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'disabled(0=false 1=true)',
   `balance` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'balance of decimal',
   `sex_name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'sex name',
-  `extra_data` text COLLATE utf8mb4_general_ci COMMENT 'extra data',
+  `data_size` bigint NOT NULL DEFAULT '0' COMMENT 'data size',
+  `extra_data` json DEFAULT NULL COMMENT 'extra data',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
+  `deleted_at` datetime DEFAULT NULL COMMENT 'delete time',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `phone` (`phone`)
-) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 */

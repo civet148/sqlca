@@ -15,7 +15,7 @@ const (
 )
 
 type JsonsDO struct {
-	Id        int32     `json:"id" db:"id" bson:"id"`                                          //自增ID
+	Id        int32     `json:"id" db:"id" bson:"_id"`                                         //自增ID
 	Name      string    `json:"name" db:"name" bson:"name"`                                    //用户名
 	Sex       int32     `json:"sex" db:"sex" bson:"sex"`                                       //性别
 	UserData  *UserData `json:"user_data" db:"user_data" bson:"user_data"`                     //用户JSON数据
@@ -41,7 +41,7 @@ CREATE TABLE `jsons` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '自增ID',
   `name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '用户名',
   `sex` int NOT NULL DEFAULT '1' COMMENT '性别',
-  `user_data` text COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户JSON数据',
+  `user_data` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户JSON数据',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`)

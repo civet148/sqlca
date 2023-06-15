@@ -133,6 +133,13 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 			if ignore {
 				continue
 			}
+			var tagSqlca string
+			tagSqlca, ignore = s.getTag(typField, TAG_NAME_SQLCA)
+			if !ignore {
+				if tagSqlca == SQLCA_TAG_VALUE_IS_NULL {
+					s.engine.setNullableColumns(tagVal)
+				}
+			}
 			if typField.Type.Kind() == reflect.Struct {
 
 				if _, ok := valField.Interface().(driver.Valuer); ok {
@@ -166,13 +173,13 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 	}
 }
 
-//parse decimal
+// parse decimal
 func (s *ModelReflector) parseValuer(field reflect.StructField, val reflect.Value, tagNames ...string) {
 
 	s.setValueByField(field, val, tagNames...)
 }
 
-//trim the field value's first and last blank character and save to map
+// trim the field value's first and last blank character and save to map
 func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.Value, tagNames ...string) {
 
 	if len(tagNames) == 0 {
@@ -241,7 +248,7 @@ func (e *Engine) fetchRows(r *sql.Rows) (count int64, err error) {
 	return
 }
 
-//fetch row to struct or slice, must call rows.Next() before call this function
+// fetch row to struct or slice, must call rows.Next() before call this function
 func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err error) {
 
 	fetcher, _ := e.getFetcher(rows)
@@ -424,7 +431,7 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 	return
 }
 
-//fetch cache data to struct or slice or map
+// fetch cache data to struct or slice or map
 func (e *Engine) fetchCache(fetchers []*Fetcher, args ...interface{}) (count int64, err error) {
 
 	for i, fetcher := range fetchers {
@@ -511,7 +518,7 @@ func (e *Engine) getFetcher(rows *sql.Rows) (fetcher *Fetcher, err error) {
 	return
 }
 
-//fetch row data to map
+// fetch row data to map
 func (e *Engine) fetchToMap(fetcher *Fetcher, arg interface{}) (err error) {
 
 	typ := reflect.TypeOf(arg)
@@ -527,7 +534,7 @@ func (e *Engine) fetchToMap(fetcher *Fetcher, arg interface{}) (err error) {
 	return
 }
 
-//fetch row data to struct
+// fetch row data to struct
 func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {
 
 	if typ.Kind() == reflect.Ptr {
@@ -588,7 +595,7 @@ func (e *Engine) fetchToStructAny(fetcher *Fetcher, field reflect.StructField, v
 	}
 }
 
-//json string unmarshal to struct/slice
+// json string unmarshal to struct/slice
 func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, val reflect.Value) (err error) {
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
@@ -612,7 +619,7 @@ func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, 
 	return
 }
 
-//fetch to struct object by customize scanner
+// fetch to struct object by customize scanner
 func (e *Engine) fetchToScanner(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
@@ -679,7 +686,7 @@ func (e *Engine) getTagValue(sf reflect.StructField) (strValue string) {
 	return
 }
 
-//按结构体字段标签赋值
+// 按结构体字段标签赋值
 func (e *Engine) setValueByField(fetcher *Fetcher, field reflect.StructField, val reflect.Value) (err error) {
 
 	//优先给有db标签的成员变量赋值
@@ -693,7 +700,7 @@ func (e *Engine) setValueByField(fetcher *Fetcher, field reflect.StructField, va
 	return
 }
 
-//将string存储的值赋值到变量
+// 将string存储的值赋值到变量
 func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) {
 	switch typ.Kind() {
 	case reflect.Struct:

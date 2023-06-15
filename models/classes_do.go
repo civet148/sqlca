@@ -14,7 +14,7 @@ const (
 )
 
 type ClassesDO struct {
-	Id        int32  `json:"id" db:"id" bson:"id"`                                          //incr id
+	Id        int32  `json:"id" db:"id" bson:"_id"`                                         //incr id
 	ClassNo   string `json:"class_no" db:"class_no" bson:"class_no"`                        //class no
 	UserId    int32  `json:"user_id" db:"user_id" bson:"user_id"`                           //student id
 	CreatedAt string `json:"created_at" db:"created_at" sqlca:"readonly" bson:"created_at"` //create time
@@ -40,5 +40,5 @@ CREATE TABLE `classes` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 */

@@ -21,7 +21,8 @@ const (
 
 const (
 	SQLCA_TAG_VALUE_AUTO_INCR = "autoincr" //auto increment
-	SQLCA_TAG_VALUE_READ_ONLY = "readonly" //read only (eg. created_at)
+	SQLCA_TAG_VALUE_READ_ONLY = "readonly" //read only
+	SQLCA_TAG_VALUE_IS_NULL   = "isnull"   //is nullable
 	SQLCA_TAG_VALUE_IGNORE    = "-"        //ignore
 )
 
@@ -628,6 +629,12 @@ func (e *Engine) setExcludeColumns(strColumns ...string) {
 	}
 }
 
+func (e *Engine) setNullableColumns(strColumns ...string) {
+	if len(strColumns) > 0 {
+		e.nullableColumns = e.appendStrings(e.nullableColumns, strColumns...)
+	}
+}
+
 func (e *Engine) getSelectColumns() (strColumns []string) {
 	return e.selectColumns
 }
@@ -885,6 +892,19 @@ func (e *Engine) isExcluded(strCol string) bool {
 	return false
 }
 
+func (e *Engine) isNull(strCol string) bool {
+
+	for _, v := range e.nullableColumns {
+		if v == strCol {
+			val := fmt.Sprintf("%v", e.dict[strCol])
+			if val == "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (e *Engine) isSelected(strCol string) bool {
 
 	for _, v := range e.selectColumns {
@@ -1042,7 +1062,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 	var cols []string
 	for _, v := range strColumns {
 
-		if e.isColumnSelected(v, strExcepts...) && !e.isReadOnly(v) {
+		if e.isColumnSelected(v, strExcepts...) && !e.isReadOnly(v) && !e.isNull(v) {
 			val := e.getModelValue(v)
 			if val == nil {
 				//log.Warnf("column [%v] selected but have no value", v)
@@ -1155,7 +1175,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 		cols2, values = e.getStructSliceKeyValues(true)
 		for i, v := range cols2 {
 
-			if e.isReadOnly(v) || e.isExcluded(v) {
+			if e.isReadOnly(v) || e.isExcluded(v) || e.isNull(v) {
 				excludeIndexes = append(excludeIndexes, i) //index of exclude columns slice
 				continue
 			}
@@ -1182,7 +1202,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 	} else {
 		for k, v := range e.dict {
 
-			if e.isReadOnly(k) || e.isExcluded(k) {
+			if e.isReadOnly(k) || e.isExcluded(k) || e.isNull(k) {
 				continue
 			}
 			//log.Warnf("dict key %+v value %#v", k, v)

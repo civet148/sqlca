@@ -3,6 +3,7 @@ package sqlca
 import (
 	"fmt"
 	"github.com/civet148/log"
+	"github.com/civet148/sqlca/v2/types"
 	"net/url"
 	"strconv"
 	"strings"
@@ -125,7 +126,7 @@ func (d *dsnParameter) parseUrlInfo(ui *UrlInfo) {
 	}
 }
 
-//URL have some special characters in password(支持URL中密码包含特殊字符)
+// URL have some special characters in password(支持URL中密码包含特殊字符)
 func ParseUrl(strUrl string) (ui *UrlInfo) {
 
 	ui = &UrlInfo{Queries: make(map[string]string, 1)}
@@ -239,7 +240,7 @@ func getHostPort(strHost string) (ip, port string) {
 	return
 }
 
-//DSN="root:123456@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4"
+// DSN="root:123456@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4"
 func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 
 	ui := ParseUrl(strUrl)
@@ -256,7 +257,7 @@ func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 	return
 }
 
-//DSN="host=127.0.0.1 port=5432 user=root password=123456 dbname=mydb sslmode=disable"
+// DSN="host=127.0.0.1 port=5432 user=root password=123456 dbname=mydb sslmode=disable"
 func (e *Engine) parsePostgresUrl(strUrl string) (parameter dsnParameter) {
 
 	ui := ParseUrl(strUrl)
@@ -281,7 +282,7 @@ func buildPostgresDSN(strIP, strPort, strUser, strPassword, strDatabase string, 
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s %s", strIP, strPort, strUser, strPassword, strDatabase, strExtras)
 }
 
-//DSN: "/var/lib/my.db"
+// DSN: "/var/lib/my.db"
 func (e *Engine) parseSqliteUrl(strUrl string) (parameter dsnParameter) {
 
 	s := strings.Split(strUrl, URL_SCHEME_SEP)
@@ -290,8 +291,8 @@ func (e *Engine) parseSqliteUrl(strUrl string) (parameter dsnParameter) {
 	return
 }
 
-//DSN no windows authentication: "Provider=SQLOLEDB;port=1433;server=127.0.0.1\SQLEXPRESS;database=test;user id=sa;password=123456"
-//DSN with windows authentication: "Provider=SQLOLEDB;integrated security=SSPI;port=1433;Data Source=127.0.0.1;database=mydb"
+// DSN no windows authentication: "Provider=SQLOLEDB;port=1433;server=127.0.0.1\SQLEXPRESS;database=test;user id=sa;password=123456"
+// DSN with windows authentication: "Provider=SQLOLEDB;integrated security=SSPI;port=1433;Data Source=127.0.0.1;database=mydb"
 func (e *Engine) parseMssqlUrl(strUrl string) (parameter dsnParameter) {
 	ui := ParseUrl(strUrl)
 	parameter.parseUrlInfo(ui)
@@ -325,7 +326,7 @@ func buildMssqlDSN(strIP, strPort, strUser, strPassword, strDatabase string, que
 }
 
 //root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4
-func (e *Engine) parseMysqlDSN(adapterType AdapterType, strMySQLDSN string) (dsn dsnDriver) {
+func (e *Engine) parseMysqlDSN(adapterType types.AdapterType, strMySQLDSN string) (dsn dsnDriver) {
 	var strQueries string
 	var querySlice []string
 	var strUserPassword string
@@ -355,11 +356,11 @@ func (e *Engine) parseMysqlDSN(adapterType AdapterType, strMySQLDSN string) (dsn
 	return
 }
 
-//rawMySql2Url convert raw mysql data source name to url, e.g "root:123456@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4"
+// rawMySql2Url convert raw mysql data source name to url, e.g "root:123456@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4"
 func rawMySql2Url(strRawDSN string) string {
 	strRawDSN = strings.ReplaceAll(strRawDSN, "tcp(", "")
 	strRawDSN = strings.ReplaceAll(strRawDSN, ")", "")
-	return fmt.Sprintf("%s://%s", DRIVER_NAME_MYSQL, strRawDSN)
+	return fmt.Sprintf("%s://%s", types.DRIVER_NAME_MYSQL, strRawDSN)
 }
 
 func cutFirst(strIn, strSep string) (strOut string) {

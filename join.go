@@ -1,5 +1,7 @@
 package sqlca
 
+import "github.com/civet148/sqlca/v2/types"
+
 type JoinType int
 
 const (
@@ -27,11 +29,11 @@ func (t JoinType) String() string {
 func (t JoinType) ToKeyWord() string {
 	switch t {
 	case JoinType_Inner:
-		return DATABASE_KEY_NAME_INNER_JOIN
+		return types.DATABASE_KEY_NAME_INNER_JOIN
 	case JoinType_Left:
-		return DATABASE_KEY_NAME_LEFT_JOIN
+		return types.DATABASE_KEY_NAME_LEFT_JOIN
 	case JoinType_Right:
-		return DATABASE_KEY_NAME_RIGHT_JOIN
+		return types.DATABASE_KEY_NAME_RIGHT_JOIN
 	}
 	return "<nil>"
 }

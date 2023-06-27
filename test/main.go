@@ -4,6 +4,7 @@ import (
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v2"
 	"github.com/civet148/sqlca/v2/models"
+	"github.com/civet148/sqlca/v2/types"
 	"time"
 	//_ "github.com/mattn/go-sqlite3" //import go sqlite3 if you want
 )
@@ -454,11 +455,11 @@ func OrmToSQL(e *sqlca.Engine) {
 		Sex:   1,
 		Email: "john3@gmail.com",
 	}
-	log.Infof("ToSQL insert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Insert))
-	log.Infof("ToSQL upsert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Upsert))
-	log.Infof("ToSQL query [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(sqlca.OperType_Query))
-	log.Infof("ToSQL delete [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_Delete))
-	log.Infof("ToSQL for update [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(sqlca.OperType_ForUpdate))
+	log.Infof("ToSQL insert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(types.OperType_Insert))
+	log.Infof("ToSQL upsert [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(types.OperType_Upsert))
+	log.Infof("ToSQL query [%v]", e.Model(&user).Table(TABLE_NAME_USERS).Select("name", "phone", "sex", "email").ToSQL(types.OperType_Query))
+	log.Infof("ToSQL delete [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(types.OperType_Delete))
+	log.Infof("ToSQL for update [%v]", e.Model(&user).Table(TABLE_NAME_USERS).ToSQL(types.OperType_ForUpdate))
 }
 
 func OrmGroupByHaving(e *sqlca.Engine) {
@@ -671,7 +672,7 @@ func CustomTag(e *sqlca.Engine) {
 
 	var users []CustomUser
 	//add custom tag
-	e.SetCustomTag(sqlca.TAG_NAME_PROTOBUF, sqlca.TAG_NAME_JSON)
+	e.SetCustomTag(types.TAG_NAME_PROTOBUF, types.TAG_NAME_JSON)
 	if count, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
 		Where("id < ?", 5).
@@ -870,9 +871,9 @@ func CustomizeUpsert(e *sqlca.Engine) {
 	var strCustomUpdates string
 	adapter := e.GetAdapter()
 	switch adapter {
-	case sqlca.AdapterSqlx_MySQL:
+	case types.AdapterSqlx_MySQL:
 		strCustomUpdates = "balance=balance+VALUES(balance)"
-	case sqlca.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres:
 		strCustomUpdates = "balance=users.balance+excluded.balance"
 	}
 	if _, err := e.Model(&do).

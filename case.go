@@ -1,6 +1,9 @@
 package sqlca
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/civet148/sqlca/v2/types"
+)
 
 type when struct {
 	strWhen string
@@ -32,13 +35,13 @@ func (c *CaseWhen) End(strName string) *Engine {
 	e = c.e
 	c.strEnd = strName
 
-	e.strCaseWhen = DATABASE_KEY_NAME_CASE
+	e.strCaseWhen = types.DATABASE_KEY_NAME_CASE
 	for _, v := range c.whens {
-		e.strCaseWhen += fmt.Sprintf(" %s %s %s %s ", DATABASE_KEY_NAME_WHEN, v.strWhen, DATABASE_KEY_NAME_THEN, e.getQuoteColumnValue(v.strThen))
+		e.strCaseWhen += fmt.Sprintf(" %s %s %s %s ", types.DATABASE_KEY_NAME_WHEN, v.strWhen, types.DATABASE_KEY_NAME_THEN, e.getQuoteColumnValue(v.strThen))
 	}
 	if c.strElse != "" {
-		e.strCaseWhen += fmt.Sprintf(" %s %s ", DATABASE_KEY_NAME_ELSE, e.getQuoteColumnValue(c.strElse))
+		e.strCaseWhen += fmt.Sprintf(" %s %s ", types.DATABASE_KEY_NAME_ELSE, e.getQuoteColumnValue(c.strElse))
 	}
-	e.strCaseWhen += fmt.Sprintf(" %s %s ", DATABASE_KEY_NAME_END, c.strEnd)
+	e.strCaseWhen += fmt.Sprintf(" %s %s ", types.DATABASE_KEY_NAME_END, c.strEnd)
 	return c.e
 }

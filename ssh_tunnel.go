@@ -6,6 +6,7 @@ import (
 	"github.com/civet148/gotools/wss"
 	_ "github.com/civet148/gotools/wss/tcpsock" //required (register socket instance)
 	"github.com/civet148/log"
+	"github.com/civet148/sqlca/v2/types"
 	"github.com/elliotchance/sshtunnel"
 	"golang.org/x/crypto/ssh"
 	"net"
@@ -42,7 +43,7 @@ func (s *SSH) setDefaultPort() {
 	}
 }
 func (s *SSH) openSSHTunnel(dsn *dsnDriver) (d *dsnDriver) {
-	var adapter = getAdapterType(dsn.strDriverName)
+	var adapter = types.GetAdapterType(dsn.strDriverName)
 
 	if ok := s.startSSHTunnel(dsn); !ok {
 		err := fmt.Errorf("start SSH tunnel service failed, please make sure your tunnel server config [%+v] is correct", s)
@@ -50,11 +51,11 @@ func (s *SSH) openSSHTunnel(dsn *dsnDriver) (d *dsnDriver) {
 		panic(err.Error())
 	}
 	switch adapter {
-	case AdapterSqlx_MySQL:
+	case types.AdapterSqlx_MySQL:
 		d = s.buildMysqlTunnelDSN(dsn)
-	case AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres:
 		d = s.buildPostgresTunnelDSN(dsn)
-	case AdapterSqlx_Mssql:
+	case types.AdapterSqlx_Mssql:
 		d = s.buildMssqlTunnelDSN(dsn)
 	default:
 		d = dsn

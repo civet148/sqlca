@@ -407,7 +407,8 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 				}
 			}
 
-			if e.isPkValueNil() && strTagVal == e.GetPkName() {
+			if (strFieldVal == "" || strFieldVal == "0") && strTagVal == e.GetPkName() {
+				//log.Warnf("tag name [%v] value [%v] ignored", strTagVal, strFieldVal)
 				continue
 			}
 

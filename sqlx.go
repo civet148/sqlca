@@ -159,10 +159,18 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		slowQueryTime:   e.slowQueryTime,
 		tx:              e.tx,
 		operType:        e.operType,
+		idgen:           e.idgen,
 	}
 
 	engine.setModel(models...)
 	return engine
+}
+
+func (e *Engine) genSnowflakeId() ID {
+	if e.idgen == nil {
+		return 0
+	}
+	return e.idgen.Generate()
 }
 
 func (e *Engine) newTx() (txEngine *Engine, err error) {
@@ -317,9 +325,7 @@ func (e *Engine) sepStrByDot(strIn string) (strPrefix, strSuffix string) {
 }
 
 func (e *Engine) getModelValue(strKey string) interface{} {
-
 	_, strCol := e.sepStrByDot(strKey)
-	//log.Debugf("getModelValue raw=%v col=%v dict=%+v", strKey, strCol, e.dict)
 	return e.dict[strCol]
 }
 
@@ -358,19 +364,15 @@ func (e *Engine) setPkValue(value interface{}) {
 	case int8, int16, int, int32, int64, uint8, uint16, uint, uint32, uint64:
 		{
 			strValue = fmt.Sprintf("%v", value)
-			if strValue == "0" {
-				log.Debugf("primary key's value is 0")
-			}
 		}
 	default:
-		log.Errorf("primary key's value type illegal")
+		strValue = fmt.Sprintf("%v", value)
 	}
 	e.strPkValue = strValue
 }
 
 func (e *Engine) getPkValue() string {
 	if e.strPkValue == "" {
-
 		modelValue := e.getModelValue(e.GetPkName())
 		if modelValue != nil {
 			e.strPkValue = fmt.Sprintf("%v", modelValue) //get primary value from model dictionary
@@ -959,7 +961,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 	if kind == reflect.Ptr {
 		typ = typ.Elem()
 	}
-	//log.Debugf("reflect.TypeOf(e.model) = %v", typ.Kind())
+
 	if typ.Kind() == reflect.Slice {
 		var cols2 []string
 		var values [][]string
@@ -994,11 +996,9 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 		}
 	} else {
 		for k, v := range e.dict {
-
 			if e.isReadOnly(k) || e.isExcluded(k) || e.isNull(k) {
 				continue
 			}
-			//log.Warnf("dict key %+v value %#v", k, v)
 			v = convertBool2Int(v)
 			c := fmt.Sprintf("%v%v%v", e.getForwardQuote(), k, e.getBackQuote()) // column name format to `id`,...
 

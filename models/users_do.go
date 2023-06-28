@@ -24,7 +24,7 @@ const (
 )
 
 type UsersDO struct {
-	Id        uint32        `json:"id" db:"id" bson:"_id"`                                         //auto inc id
+	Id        sqlca.ID      `json:"id" db:"id" bson:"_id"`                                         //auto inc id
 	Name      string        `json:"name" db:"name" bson:"name"`                                    //user name
 	Phone     string        `json:"phone" db:"phone" bson:"phone"`                                 //phone number
 	Sex       uint8         `json:"sex" db:"sex" bson:"sex"`                                       //user sex
@@ -39,8 +39,8 @@ type UsersDO struct {
 	DeletedAt string        `json:"deleted_at" db:"deleted_at" sqlca:"isnull" bson:"deleted_at"`   //delete time
 }
 
-func (do *UsersDO) GetId() uint32              { return do.Id }
-func (do *UsersDO) SetId(v uint32)             { do.Id = v }
+func (do *UsersDO) GetId() sqlca.ID            { return do.Id }
+func (do *UsersDO) SetId(v sqlca.ID)           { do.Id = v }
 func (do *UsersDO) GetName() string            { return do.Name }
 func (do *UsersDO) SetName(v string)           { do.Name = v }
 func (do *UsersDO) GetPhone() string           { return do.Phone }
@@ -68,7 +68,7 @@ func (do *UsersDO) SetDeletedAt(v string)      { do.DeletedAt = v }
 
 /*
 CREATE TABLE `users` (
-  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'auto inc id',
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'auto inc id',
   `name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'user name',
   `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'phone number',
   `sex` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'user sex',
@@ -83,5 +83,5 @@ CREATE TABLE `users` (
   `deleted_at` datetime DEFAULT NULL COMMENT 'delete time',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `phone` (`phone`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 */

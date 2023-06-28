@@ -17,10 +17,10 @@ const (
 type TPointDO struct {
 	AddresId     uint64  `json:"addres_id" db:"addres_id" bson:"addres_id"`             //
 	AddressPoint string  `json:"address_point" db:"address_point" bson:"address_point"` //
-	Lng          float64 `json:"lng" db:"lng" bson:"lng"`                               //
-	Lat          float64 `json:"lat" db:"lat" bson:"lat"`                               //
-	Name         string  `json:"name" db:"name" bson:"name"`                            //
-	Geohash      string  `json:"geohash" db:"geohash" bson:"geohash"`                   //
+	Lng          float64 `json:"lng" db:"lng" sqlca:"isnull" bson:"lng"`                //
+	Lat          float64 `json:"lat" db:"lat" sqlca:"isnull" bson:"lat"`                //
+	Name         string  `json:"name" db:"name" sqlca:"isnull" bson:"name"`             //
+	Geohash      string  `json:"geohash" db:"geohash" sqlca:"isnull" bson:"geohash"`    //
 }
 
 func (do *TPointDO) GetAddresId() uint64      { return do.AddresId }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/bwmarrin/snowflake"
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v2/types"
 	_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
@@ -21,12 +22,19 @@ const (
 	DefaultConnIdle = 5
 )
 
+type ID = snowflake.ID
+
 type Options struct {
-	Debug bool //enable debug mode
-	Max   int  //max active connections
-	Idle  int  //max idle connections
-	Slave bool //is a slave DSN ?
-	SSH   *SSH //SSH tunnel server config
+	Debug     bool       //enable debug mode
+	Max       int        //max active connections
+	Idle      int        //max idle connections
+	Slave     bool       //is a slave DSN ?
+	SSH       *SSH       //ssh tunnel server config
+	SnowFlake *SnowFlake //snowflake id config
+}
+
+type SnowFlake struct {
+	NodeId int64 //node id (0~1023)
 }
 
 type TxHandler interface {
@@ -85,9 +93,10 @@ type Engine struct {
 	strCaseWhen     string                 // case..when...then...else...end
 	nearby          *nearby                // nearby
 	strUpdates      []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
-	joins           []*Join                //inner/left/right/full-outer join(s)
-	selected        bool
-	noVerbose       bool
+	joins           []*Join                // inner/left/right/full-outer join(s)
+	selected        bool                   // column(s) selected
+	noVerbose       bool                   // no more verbose
+	idgen           *snowflake.Node        // snowflake id generator
 }
 
 func init() {
@@ -202,9 +211,15 @@ func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 		err = fmt.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
 		return nil, err
 	}
+	if opt != nil && opt.SnowFlake != nil {
+		e.idgen, err = snowflake.NewNode(opt.SnowFlake.NodeId)
+		if err != nil {
+			return nil, log.Errorf("new snowflake id generator error [%s]", err.Error())
+		}
+	}
 	e.strDSN = strUrl
 	e.options = opt
-	log.Debugf("[%s] open url [%s] with options [%+v] ok", adapter.String(), param.strDSN, opt)
+	log.Infof("[%s] open url [%s] with options [%+v] ok", adapter.String(), param.strDSN, opt)
 	return e, nil
 }
 
@@ -1241,4 +1256,11 @@ func (e *Engine) JsonGreaterEqual(strColumn, strPath string, value interface{}) 
 
 func (e *Engine) JsonLessEqual(strColumn, strPath string, value interface{}) *Engine {
 	return e.And("%s<=%v", e.jsonExpr(strColumn, strPath), value)
+}
+
+func (e *Engine) NewID() ID {
+	if e.idgen == nil {
+		log.Panic("snowflake node id not set, please set it by Options when using NewEngine method")
+	}
+	return e.idgen.Generate()
 }

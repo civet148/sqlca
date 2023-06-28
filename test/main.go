@@ -39,8 +39,16 @@ func main() {
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 
 	//connect database directly
+	var opt = sqlca.Options{
+		Debug:     true,
+		Max:       150,
+		Idle:      2,
+		Slave:     false,
+		SSH:       nil,
+		SnowFlake: &sqlca.SnowFlake{NodeId: 1},
+	}
 	for _, url := range urls {
-		e, err := sqlca.NewEngine(url)
+		e, err := sqlca.NewEngine(url, &opt)
 		if err != nil {
 			log.Errorf(err.Error())
 			continue
@@ -155,11 +163,11 @@ func OrmInsertByModel(e *sqlca.Engine) {
 	log.Enter()
 	defer log.Leave()
 	var users = make([]models.UsersDO, 0)
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		users = append(users, models.UsersDO{
-			//Id:    0,
+			//Id:      e.NewID(),
 			Name:    "lory",
-			Phone:   "+8618682371690",
+			Phone:   "+8618182371693",
 			Sex:     1,
 			Balance: sqlca.NewDecimal("123.456"),
 			Email:   "lory@example.com",
@@ -180,6 +188,27 @@ func OrmInsertByModel(e *sqlca.Engine) {
 	} else {
 		log.Infof("insert data model [%+v] exclude created_at and updated_at ok, last insert id [%v]", users, lastInsertId)
 	}
+
+	var user = &models.UsersDO{
+		//Id:      e.NewID(),
+		Name:    "lory3",
+		Phone:   "+8618182371693",
+		Sex:     2,
+		Balance: sqlca.NewDecimal("333.456"),
+		Email:   "lory3@example.com",
+		Disable: true,
+		ExtraData: &models.UserData{
+			Age:    33,
+			Height: 173,
+			Female: false,
+		},
+	}
+	if lastInsertId, err := e.Model(&user).Table(TABLE_NAME_USERS).Insert(); err != nil {
+		log.Errorf("insert data model [%+v] error [%v]", users, err.Error())
+	} else {
+		log.Infof("insert data model [%+v] ok, last insert id [%v]", user, lastInsertId)
+	}
+
 }
 
 func OrmUpsertByModel(e *sqlca.Engine) {

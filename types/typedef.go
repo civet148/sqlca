@@ -93,17 +93,17 @@ func (a AdapterType) String() string {
 
 	switch a {
 	case AdapterSqlx_MySQL:
-		return "AdapterSqlx_MySQL"
+		return "MySQL"
 	case AdapterSqlx_Postgres:
-		return "AdapterSqlx_Postgres"
+		return "Postgres"
 	case AdapterSqlx_Sqlite:
-		return "AdapterSqlx_Sqlite"
+		return "Sqlite"
 	case AdapterSqlx_Mssql:
-		return "AdapterSqlx_Mssql"
+		return "Mssql"
 	case AdapterCache_Redis:
-		return "AdapterCache_Redis"
+		return "Redis"
 	}
-	return "Adapter_Unknown"
+	return "<Unknown>"
 }
 
 func (a AdapterType) DriverName() string {

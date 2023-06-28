@@ -16,11 +16,11 @@ const (
 )
 
 type RunConfigDO struct {
-	Id          int32  `json:"id" db:"id" bson:"id"`                                                //incr id
+	Id          int32  `json:"id" db:"id" bson:"_id"`                                               //incr id
 	ConfigName  string `json:"config_name" db:"config_name" bson:"config_name"`                     //config name
 	ConfigKey   string `json:"config_key" db:"config_key" bson:"config_key"`                        //config key
-	ConfigValue string `json:"config_value" db:"config_value" bson:"config_value"`                  //config value
-	Remark      string `json:"remark" db:"remark" bson:"remark"`                                    //remark
+	ConfigValue string `json:"config_value" db:"config_value" sqlca:"isnull" bson:"config_value"`   //config value
+	Remark      string `json:"remark" db:"remark" sqlca:"isnull" bson:"remark"`                     //remark
 	Deleted     bool   `json:"deleted" db:"deleted" bson:"deleted"`                                 //is deleted(0=false 1=true)
 	CreatedTime string `json:"created_time" db:"created_time" sqlca:"readonly" bson:"created_time"` //created time
 }

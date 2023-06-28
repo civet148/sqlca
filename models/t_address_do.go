@@ -15,12 +15,12 @@ const (
 )
 
 type TAddressDO struct {
-	Id       uint64  `json:"id" db:"id" bson:"id"`                   //
-	Lng      float64 `json:"lng" db:"lng" bson:"lng"`                //
-	Lat      float64 `json:"lat" db:"lat" bson:"lat"`                //
-	Name     string  `json:"name" db:"name" bson:"name"`             //
-	Geohash  string  `json:"geohash" db:"geohash" bson:"geohash"`    //
-	Location string  `json:"location" db:"location" bson:"location"` //
+	Id       uint64  `json:"id" db:"id" bson:"_id"`                                 //
+	Lng      float64 `json:"lng" db:"lng" sqlca:"isnull" bson:"lng"`                //
+	Lat      float64 `json:"lat" db:"lat" sqlca:"isnull" bson:"lat"`                //
+	Name     string  `json:"name" db:"name" sqlca:"isnull" bson:"name"`             //
+	Geohash  string  `json:"geohash" db:"geohash" sqlca:"isnull" bson:"geohash"`    //
+	Location string  `json:"location" db:"location" sqlca:"isnull" bson:"location"` //
 }
 
 func (do *TAddressDO) GetId() uint64        { return do.Id }

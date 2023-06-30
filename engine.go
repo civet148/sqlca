@@ -1179,6 +1179,11 @@ func (e *Engine) Eq(strColumn string, value interface{}) *Engine {
 	return e.Equal(strColumn, value)
 }
 
+// Ne not equal
+func (e *Engine) Ne(strColumn string, value interface{}) *Engine {
+	return e.And("%s != '%v'", strColumn, value)
+}
+
 func (e *Engine) GreaterThan(strColumn string, value interface{}) *Engine {
 	e.And("%s>'%v'", strColumn, value)
 	return e

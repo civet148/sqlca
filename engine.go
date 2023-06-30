@@ -423,8 +423,8 @@ func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
 	return e
 }
 
-// Not `field_name` NOT IN ('1','2',...)
-func (e *Engine) Not(strColumn string, args ...interface{}) *Engine {
+// NotIn `field_name` NOT IN ('1','2',...)
+func (e *Engine) NotIn(strColumn string, args ...interface{}) *Engine {
 	v := condition{
 		ColumnName:   strColumn,
 		ColumnValues: args,

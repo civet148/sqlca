@@ -857,7 +857,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 	var cols []string
 	for _, v := range strColumns {
 
-		if e.isColumnSelected(v, strExcepts...) && !e.isReadOnly(v) && !e.isNull(v) {
+		if e.isColumnSelected(v, strExcepts...) && !e.isReadOnly(v) {
 			val := e.getModelValue(v)
 			if val == nil {
 				//log.Warnf("column [%v] selected but have no value", v)

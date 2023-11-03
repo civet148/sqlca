@@ -14,10 +14,11 @@ const (
 )
 
 var urls = []string{
-	"root:123456@tcp(192.168.2.9:3306)/test?charset=utf8mb4", //raw mysql DSN (default 'mysql' if scheme is not specified)
+	"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //native golang mysql DSN
 	//"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4",
-	//"postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable",
+	//"postgres://postgres:123456@127.0.0.1:5432/bdjuno?sslmode=disable&search_path=public",
 	//"mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false",
+	//"sqlite:///var/lib/test.db",
 }
 
 //func (u *UserData) Scan(src interface{}) (err error) {
@@ -34,7 +35,7 @@ func main() {
 	//e.Open("root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4") // open with raw mysql DSN
 	//e.Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", &sqlca.Options{Max: 20, Idle: 2})             //MySQL master
 	//e.Open("mysql://root:123456@127.0.0.1:3307/test?charset=utf8mb4", sqlca.Options{Max: 20, Idle: 5, Slave: true}) //MySQL slave
-	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=enable") //postgres
+	//e.Open("postgres://root:`~!@#$%^&*()-_=+@127.0.0.1:5432/test?sslmode=disable&search_path=public") //postgres
 	//e.Open("sqlite:///var/lib/test.db") //sqlite3
 	//e.Open("mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false") //windows MS SQLSERVER
 

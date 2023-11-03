@@ -9,8 +9,8 @@ require (
 	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e
 	github.com/elliotchance/sshtunnel v1.2.0
 	github.com/gansidui/geohash v0.0.0-20141019080235-ebe5ba447f34
-	github.com/go-sql-driver/mysql v1.5.0
-	github.com/jmoiron/sqlx v1.2.0
+	github.com/go-sql-driver/mysql v1.6.0
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.2.0
 	github.com/shopspring/decimal v1.2.0
 	go.mongodb.org/mongo-driver v1.11.6

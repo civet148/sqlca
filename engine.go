@@ -266,8 +266,13 @@ func (e *Engine) Model(args ...interface{}) *Engine {
 // Table set orm query table name(s)
 // when your struct type name is not a table name
 func (e *Engine) Table(strNames ...string) *Engine {
-	assert(strNames, "table name is nil")
-	e.setTableName(strNames...)
+	return e.From(strNames...)
+}
+
+// From alias of Table method
+func (e *Engine) From(exprs ...string) *Engine {
+	assert(exprs, "from express is nil")
+	e.setTableName(exprs...)
 	return e
 }
 

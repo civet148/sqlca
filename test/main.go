@@ -14,21 +14,12 @@ const (
 )
 
 var urls = []string{
-	"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //native golang mysql DSN
+	//"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //native golang mysql DSN
 	//"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4",
-	//"postgres://postgres:123456@127.0.0.1:5432/bdjuno?sslmode=disable&search_path=public",
+	"postgres://postgres:123456@127.0.0.1:5432/bdjuno?sslmode=disable&schema=public",
 	//"mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false",
 	//"sqlite:///var/lib/test.db",
 }
-
-//func (u *UserData) Scan(src interface{}) (err error) {
-//	//log.Debugf("UserData -> scan from string...[%+v]", src)
-//	if err =  json.Unmarshal(src.(string), u); err != nil {
-//		log.Errorf(err.Error())
-//		return
-//	}
-//	return
-//}
 
 func main() {
 

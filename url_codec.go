@@ -10,11 +10,13 @@ import (
 )
 
 const (
-	URL_SCHEME_SEP    = "://"
-	URL_QUERY_SLAVE   = "slave"
-	URL_QUERY_MAX     = "max"
-	URL_QUERY_IDLE    = "idle"
-	URL_QUERY_CHARSET = "charset"
+	URL_SCHEME_SEP     = "://"
+	URL_QUERY_SLAVE    = "slave"
+	URL_QUERY_MAX      = "max"
+	URL_QUERY_IDLE     = "idle"
+	URL_QUERY_CHARSET  = "charset"
+	urlQuerySchema     = "schema"
+	urlQuerySearchPath = "search_path"
 )
 
 const (
@@ -274,6 +276,9 @@ func buildPostgresDSN(strIP, strPort, strUser, strPassword, strDatabase string, 
 	var kvs []string
 	var strExtras string
 	for k, v := range queries {
+		if k == urlQuerySchema {
+			k = urlQuerySearchPath
+		}
 		kvs = append(kvs, fmt.Sprintf("%s=%s", k, v))
 	}
 	if len(kvs) > 0 {

@@ -81,46 +81,46 @@ func SSHTunnel(e *sqlca.Engine) {
 
 // connect database directly
 func Direct(e *sqlca.Engine) {
-	//SwitchDatabase(e)
-	//OrmInsertByModel(e)
-	//OrmUpsertByModel(e)
-	//OrmUpdateByModel(e)
-	//OrmQueryIntoModel(e)
-	//OrmQueryExcludeIntoModel(e)
-	//OrmQueryIntoModelSlice(e)
-	//OrmSelectMultiTable(e)
-	//OrmDeleteFromTable(e)
-	//OrmInCondition(e)
-	//OrmFind(e)
-	//OrmWhereRequire(e)
-	//OrmToSQL(e)
-	//OrmGroupByHaving(e)
-	//RawQueryIntoModel(e)
-	//RawQueryIntoModelSlice(e)
-	//RawQueryIntoMap(e)
-	//RawExec(e)
-	//TxGetExec(e)
-	//TxRollback(e)
-	//TxForUpdate(e)
-	//TxWrapper(e)
-	//CustomTag(e)
-	//BuiltInTypesUpdate(e)
-	//DuplicateUpdateGetId(e)
-	//Count(e)
-	//CaseWhen(e)
-	//UpdateByMap(e)
-	//NearBy(e)
-	//MySqlJsonQuery(e)
-	//CustomizeUpsert(e)
-	//JoinQuery(e)
-	//NilPointerQuery(e)
-	//JsonStructQuery(e)
-	//BuiltInSliceQuery(e)
-	//QueryJSON(e)
+	SwitchDatabase(e)
+	OrmInsertByModel(e)
+	OrmUpsertByModel(e)
+	OrmUpdateByModel(e)
+	OrmQueryIntoModel(e)
+	OrmQueryExcludeIntoModel(e)
+	OrmQueryIntoModelSlice(e)
+	OrmSelectMultiTable(e)
+	OrmDeleteFromTable(e)
+	OrmInCondition(e)
+	OrmFind(e)
+	OrmWhereRequire(e)
+	OrmToSQL(e)
+	OrmGroupByHaving(e)
+	RawQueryIntoModel(e)
+	RawQueryIntoModelSlice(e)
+	RawQueryIntoMap(e)
+	RawExec(e)
+	TxGetExec(e)
+	TxRollback(e)
+	TxForUpdate(e)
+	TxWrapper(e)
+	CustomTag(e)
+	BuiltInTypesUpdate(e)
+	DuplicateUpdateGetId(e)
+	Count(e)
+	CaseWhen(e)
+	UpdateByMap(e)
+	NearBy(e)
+	MySqlJsonQuery(e)
+	CustomizeUpsert(e)
+	JoinQuery(e)
+	NilPointerQuery(e)
+	JsonStructQuery(e)
+	BuiltInSliceQuery(e)
+	QueryJSON(e)
 	BoolConvert(e)
-	//QueryEx(e)
-	//OrmQueryToDecimal(e)
-	//OrmQueryLike(e)
+	QueryEx(e)
+	OrmQueryToDecimal(e)
+	OrmQueryLike(e)
 }
 
 func SwitchDatabase(e *sqlca.Engine) {
@@ -994,42 +994,17 @@ func BuiltInSliceQuery(e *sqlca.Engine) {
 }
 
 func BoolConvert(e *sqlca.Engine) {
-	//user := &models.UsersDO{}
-	//e.Model(user).Table(TABLE_NAME_USERS).Limit(1).Query()
-	//log.Info("user query [%+v]", user)
-	//
-	//if user.Disable {
-	//	user.Disable = false
-	//} else {
-	//	user.Disable = true
-	//}
-	//e.Model(user).Table(TABLE_NAME_USERS).Upsert()
-	//log.Info("user upsert [%+v] ", user)
+	user := &models.UsersDO{}
+	e.Model(user).Table(TABLE_NAME_USERS).Limit(1).Query()
+	log.Info("user query [%+v]", user)
 
-	type PostgresTxDO struct {
-		Hash        string `json:"hash" db:"hash" bson:"hash"`                                        //交易哈希
-		Height      int64  `json:"height" db:"height" bson:"height"`                                  //区块高度
-		Success     bool   `json:"success" db:"success" bson:"success"`                               //是否成功(0=失败 1=成功)
-		Messages    string `json:"messages" db:"messages" sqlca:"isnull" bson:"messages"`             //消息内容(JSON)
-		Memo        string `json:"memo" db:"memo" sqlca:"isnull" bson:"memo"`                         //memo
-		Signatures  string `json:"signatures" db:"signatures" bson:"signatures"`                      //签名信息
-		SignerInfos string `json:"signer_infos" db:"signer_infos" sqlca:"isnull" bson:"signer_infos"` //签名人信息(JSON)
-		Fee         string `json:"fee" db:"fee" sqlca:"isnull" bson:"fee"`                            //费用明细(JSON)
-		GasWanted   int64  `json:"gas_wanted" db:"gas_wanted" bson:"gas_wanted"`                      //Gas限额
-		GasUsed     int64  `json:"gas_used" db:"gas_used" bson:"gas_used"`                            //Gas用量
-		RawLog      string `json:"raw_log" db:"raw_log" sqlca:"isnull" bson:"raw_log"`                //原始日志(JSON)
-		Logs        string `json:"logs" db:"logs" sqlca:"isnull" bson:"logs"`                         //全部日志(JSON)
-		PartitionId int64  `json:"partition_id" db:"partition_id" bson:"partition_id"`                //分区ID
+	if user.Disable {
+		user.Disable = false
+	} else {
+		user.Disable = true
 	}
-	var do *PostgresTxDO
-	_, err := e.Model(&do).
-		Table("transaction").
-		Eq("hash", "A302697D8E45D24C20E99544252A5E55BDB88C31486AA593DB96BF3422D2D9E4").
-		Query()
-	if err != nil {
-		log.Error(err.Error())
-	}
-	log.Infof("height %v success %v", do.Height, do.Success)
+	e.Model(user).Table(TABLE_NAME_USERS).Upsert()
+	log.Info("user upsert [%+v] ", user)
 }
 
 func OrmQueryLike(e *sqlca.Engine) {

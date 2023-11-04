@@ -726,14 +726,17 @@ func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) {
 		i, _ := strconv.ParseFloat(v, 64)
 		val.SetFloat(i)
 	case reflect.Bool:
-		i, _ := strconv.ParseUint(v, 10, 64)
 		val.SetBool(true)
-		if i == 0 {
+		if v == "f" { //postgresql boolean value
 			val.SetBool(false)
+		} else { //other database integer value
+			i, _ := strconv.ParseUint(v, 10, 64)
+			if i == 0 {
+				val.SetBool(false)
+			}
 		}
 	case reflect.Ptr:
 		typ = typ.Elem()
-		//val = val.Elem()
 		e.setValue(typ, val, v)
 	default:
 		panic(fmt.Sprintf("can't assign value [%v] to variant type [%v]\n", v, typ.Kind()))
@@ -757,14 +760,6 @@ func convertBool2Int(v interface{}) interface{} {
 				return 1
 			}
 		}
-		//case reflect.String:
-		//	{
-		//		if val.Interface() == "false" {
-		//			return 0
-		//		} else if val.Interface() == "true" {
-		//			return 1
-		//		}
-		//	}
 	}
 	return v
 }

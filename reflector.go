@@ -726,13 +726,12 @@ func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) {
 		i, _ := strconv.ParseFloat(v, 64)
 		val.SetFloat(i)
 	case reflect.Bool:
-		val.SetBool(true)
-		if v == "f" { //postgresql boolean value
-			val.SetBool(false)
+		if v == "true" { //postgresql boolean value
+			val.SetBool(true)
 		} else { //other database integer value
 			i, _ := strconv.ParseUint(v, 10, 64)
-			if i == 0 {
-				val.SetBool(false)
+			if i != 0 {
+				val.SetBool(true)
 			}
 		}
 	case reflect.Ptr:

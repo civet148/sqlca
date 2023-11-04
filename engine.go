@@ -157,7 +157,7 @@ func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 		})
 	}
 	//var strDriverName, strDSN string
-	us := strings.Split(strUrl, URL_SCHEME_SEP)
+	us := strings.Split(strUrl, urlSchemeSep)
 	if len(us) != 2 { //default mysql
 		adapter = types.AdapterSqlx_MySQL
 		e.dsn = e.parseMysqlDSN(adapter, strUrl)
@@ -226,7 +226,7 @@ func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 // Use switch database (returns a new instance)
 func (e *Engine) Use(strDatabaseName string) (*Engine, error) {
 	var strUrl = e.strDSN
-	us := strings.Split(strUrl, URL_SCHEME_SEP)
+	us := strings.Split(strUrl, urlSchemeSep)
 	if len(us) != 2 { //mysql raw database source name
 		strUrl = rawMySql2Url(strUrl)
 	}

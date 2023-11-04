@@ -10,25 +10,13 @@ import (
 )
 
 const (
-	URL_SCHEME_SEP     = "://"
-	URL_QUERY_SLAVE    = "slave"
-	URL_QUERY_MAX      = "max"
-	URL_QUERY_IDLE     = "idle"
-	URL_QUERY_CHARSET  = "charset"
+	urlSchemeSep       = "://"
+	urlQuerySlave      = "slave"
+	urlQueryMax        = "max"
+	urlQueryIdle       = "idle"
+	urlQueryCharset    = "charset"
 	urlQuerySchema     = "schema"
 	urlQuerySearchPath = "search_path"
-)
-
-const (
-	//DSN no windows authentication: "Provider=SQLOLEDB;port=1433;server=127.0.0.1\SQLEXPRESS;database=test;user id=sa;password=123456"
-	//DSN with windows authentication: "Provider=SQLOLEDB;integrated security=SSPI;port=1433;Data Source=127.0.0.1;database=mydb"
-	WINDOWS_DSN_PROVIDER_SQLOLEDB        = "Provider=SQLOLEDB"
-	WINDOWS_DSN_PORT                     = "Port"
-	WINDOWS_DSN_DATA_SOURCE              = "Server"
-	WINDOWS_DSN_INITIAL_CATALOG          = "Database"
-	WINDOWS_DSN_USER_ID                  = "User Id"
-	WINDOWS_DSN_PASSWORD                 = "Password"
-	WINDOWS_DSN_INTEGRATED_SECURITY_SSPI = "Integrated Security=SSPI"
 )
 
 type UrlInfo struct {
@@ -99,32 +87,32 @@ func (d *dsnParameter) parseUrlInfo(ui *UrlInfo) {
 	d.ip, d.port = getHostPort(d.host)
 	d.password = ui.Password
 	d.db = parseDatabaseName(ui.Path)
-	d.charset = ui.Queries[URL_QUERY_CHARSET]
+	d.charset = ui.Queries[urlQueryCharset]
 	d.queries = ui.Queries
 
-	if val, ok = ui.Queries[URL_QUERY_SLAVE]; ok {
+	if val, ok = ui.Queries[urlQuerySlave]; ok {
 		if val == "true" {
 			d.slave = true
 		}
-		delete(ui.Queries, URL_QUERY_SLAVE)
+		delete(ui.Queries, urlQuerySlave)
 	}
 
-	if val, ok = ui.Queries[URL_QUERY_MAX]; ok {
+	if val, ok = ui.Queries[urlQueryMax]; ok {
 		if val != "" {
 			d.max, _ = strconv.Atoi(val)
 		} else {
 			d.max = 100
 		}
-		delete(ui.Queries, URL_QUERY_MAX)
+		delete(ui.Queries, urlQueryMax)
 	}
 
-	if val, ok = ui.Queries[URL_QUERY_IDLE]; ok {
+	if val, ok = ui.Queries[urlQueryIdle]; ok {
 		if val != "" {
 			d.idle, _ = strconv.Atoi(val)
 		} else {
 			d.idle = 1
 		}
-		delete(ui.Queries, URL_QUERY_IDLE)
+		delete(ui.Queries, urlQueryIdle)
 	}
 }
 
@@ -176,7 +164,7 @@ func ParseUrl(strUrl string) (ui *UrlInfo) {
 		var strScheme string
 		_ = strScheme
 
-		index := strings.LastIndex(strUrl, URL_SCHEME_SEP)
+		index := strings.LastIndex(strUrl, urlSchemeSep)
 		if index > 0 {
 			strScheme = strUrl[:index]
 			strUrl = strUrl[index+3:]
@@ -193,7 +181,7 @@ func ParseUrl(strUrl string) (ui *UrlInfo) {
 			}
 
 			if strScheme != "" {
-				strUrl = strScheme + URL_SCHEME_SEP
+				strUrl = strScheme + urlSchemeSep
 			}
 			strUrl += strPrefix + strSuffix
 		}
@@ -290,7 +278,7 @@ func buildPostgresDSN(strIP, strPort, strUser, strPassword, strDatabase string, 
 // DSN: "/var/lib/my.db"
 func (e *Engine) parseSqliteUrl(strUrl string) (parameter dsnParameter) {
 
-	s := strings.Split(strUrl, URL_SCHEME_SEP)
+	s := strings.Split(strUrl, urlSchemeSep)
 	assert(len(s) == 2, "invalid url [%v] of sqlite, eg. 'sqlite:///var/lib/my.db'", strUrl)
 	parameter.strDSN = s[1]
 	return
@@ -351,7 +339,7 @@ func (e *Engine) parseMysqlDSN(adapterType types.AdapterType, strMySQLDSN string
 	for _, q := range querySlice {
 		qv := strings.Split(q, "=")
 		if len(qv) == 2 {
-			if qv[0] == URL_QUERY_CHARSET {
+			if qv[0] == urlQueryCharset {
 				dsn.parameter.charset = qv[1]
 			}
 			dsn.parameter.queries[qv[0]] = qv[1]

@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	SSH_TUNNEL_PORT = 6033 //
+	sshTunnelPort = 6033 //
 )
 
 type SSH struct {
@@ -150,7 +150,7 @@ func (s *SSH) tryConnect(strHost string) (err error) {
 func (s *SSH) tryListenRandomPort() (port int, ok bool) {
 
 	s.listenIP = "127.0.0.1"
-	port = SSH_TUNNEL_PORT
+	port = sshTunnelPort
 
 	for i := 0; i < 1000; i++ {
 		port += i

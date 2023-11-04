@@ -14,9 +14,9 @@ const (
 )
 
 var urls = []string{
-	//"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //native golang mysql DSN
+	"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4", //native golang mysql DSN
 	//"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4",
-	"postgres://postgres:123456@127.0.0.1:5432/bdjuno?sslmode=disable&schema=public",
+	//"postgres://postgres:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public",
 	//"mssql://sa:123456@127.0.0.1:1433/test?instance=SQLEXPRESS&windows=false",
 	//"sqlite:///var/lib/test.db",
 }
@@ -693,7 +693,7 @@ func CustomTag(e *sqlca.Engine) {
 
 	var users []CustomUser
 	//add custom tag
-	e.SetCustomTag(types.TAG_NAME_PROTOBUF, types.TAG_NAME_JSON)
+	e.SetCustomTag(types.TAG_NAME_PROTOBUF)
 	if count, err := e.Model(&users).
 		Table(TABLE_NAME_USERS).
 		Where("id < ?", 5).

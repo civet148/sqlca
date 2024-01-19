@@ -54,7 +54,7 @@ type nearby struct {
 type Engine struct {
 	strDSN          string                 // database source name
 	dsn             dsnDriver              // driver name and parameters
-	options         *Options               // database options
+	options         Options                // database options
 	slave           bool                   // use slave to query ?
 	dbMasters       []*sqlx.DB             // DB instance masters
 	dbSlaves        []*sqlx.DB             // DB instance slaves
@@ -219,7 +219,7 @@ func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 		}
 	}
 	e.strDSN = strUrl
-	e.options = opt
+	e.options = *opt
 	log.Infof("[%s] open url [%s] with options [%+v] ok", adapter.String(), param.strDSN, opt)
 	return e, nil
 }
@@ -236,7 +236,7 @@ func (e *Engine) Use(strDatabaseName string) (*Engine, error) {
 		return nil, log.Errorf("url %s invalid", strUrl)
 	}
 	ui.Path = fmt.Sprintf("/%s", strDatabaseName)
-	return NewEngine(ui.Url(), e.options)
+	return NewEngine(ui.Url(), &e.options)
 }
 
 // Attach attach from a exist sqlx db instance

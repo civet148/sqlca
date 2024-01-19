@@ -25,12 +25,13 @@ const (
 type ID = snowflake.ID
 
 type Options struct {
-	Debug     bool       //enable debug mode
-	Max       int        //max active connections
-	Idle      int        //max idle connections
-	Slave     bool       //is a slave DSN ?
-	SSH       *SSH       //ssh tunnel server config
-	SnowFlake *SnowFlake //snowflake id config
+	Debug      bool       //enable debug mode
+	Max        int        //max active connections
+	Idle       int        //max idle connections
+	Slave      bool       //is a slave DSN ?
+	SSH        *SSH       //ssh tunnel server config
+	SnowFlake  *SnowFlake //snowflake id config
+	PageOffset bool       //page offset for LIMIT
 }
 
 type SnowFlake struct {
@@ -367,12 +368,19 @@ func (e *Engine) Limit(args ...int) *Engine {
 	return e
 }
 
+func (e *Engine) pageOffset() bool {
+	return e.options.PageOffset
+}
+
 // Page page query
 //
 //	SELECT ... FROM ... WHERE ... LIMIT (pageNo*pageSize), pageSize
 func (e *Engine) Page(pageNo, pageSize int) *Engine {
 	if pageNo < 0 || pageSize <= 0 {
 		return e
+	}
+	if e.pageOffset() && pageNo > 0 {
+		pageNo -= 1
 	}
 	return e.Limit(pageNo*pageSize, pageSize)
 }

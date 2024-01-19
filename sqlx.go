@@ -160,6 +160,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		tx:              e.tx,
 		operType:        e.operType,
 		idgen:           e.idgen,
+		options:         e.options,
 	}
 
 	engine.setModel(models...)

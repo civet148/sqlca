@@ -403,19 +403,14 @@ func cutRight(strIn, strSep string) (strOut string) {
 
 //root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4
 func Url2MySql(strUrl string) (string, error) {
-	ui, err := url.Parse(strUrl)
-	if err != nil {
-		return strUrl, err
-	}
+	ui := ParseUrl(strUrl)
 	var params []string
-	strUser := ui.User.String()
+	strUser := ui.User
+	strPasswd := ui.Password
 	strHost := ui.Host
 	strPath := ui.Path
-	for k, v := range ui.Query() {
-		if len(v) == 0 {
-			continue
-		}
-		params = append(params, fmt.Sprintf("%s=%v", k, v[0]))
+	for k, v := range ui.Queries {
+		params = append(params, fmt.Sprintf("%s=%v", k, v))
 	}
-	return fmt.Sprintf("%s@tcp(%s)%s?%s", strUser, strHost, strPath, strings.Join(params, "&")), nil
+	return fmt.Sprintf("%s:%s@tcp(%s)%s?%s", strUser, strPasswd, strHost, strPath, strings.Join(params, "&")), nil
 }

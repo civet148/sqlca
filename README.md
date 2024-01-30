@@ -1,43 +1,293 @@
-# author 
-lory.li
-# email
-civet148@126.com
-# QQ 
-93864947
-# sqlca
-a enhancement database based on sqlx
+# SQLCA
+The simplest ORM for gopher which supports mysql/sqlite/mssql-server/postgresql
+---------------------------------------------------------------
 
-# 中文
-[中文文档](README_CN.md)
+# Quick start
 
-# Overview
+## database models generation
 
-- Almost full-featured ORM
-- Multiple databases (MySQL/Postgres/MS-SQLSERVER), read/write splitting
-- Multiple model type `struct, slice, built-in types, map` 
-- Batch insert
-- Query/Insert/Update
-- Upsert by customization [only MySQL/Postgres]
-- Transactions wrapper (auto rollback or commit)
-- Slow query warning
-- Json column query and unmarshal to sub struct nested in data model
-- GEO HASH 
-- Nearby query by lng+lat+distance
-- Built-in `db, protobuf, json` tag fetching  
-- Read only column(s) specified by `sqlca:"readonly"` tag 
-- Case...when syntax 
-- Decimal, `sqlca.Decimal` instead of float64 for high precision calculation
-- Where condition required when UPDATE/DELETE 
-- [db2go](cmd/db2go) command line tool generate table schema output to .go or .proto file
-- Custom sql.Scanner implement fetching 
-- SSH tunnel
-- Query results marshal to json string (QueryJson)
-- Simply and developer friendly more than other ORM
+- create database
+
+```sql
+/*
+MySQL - 8.0.23 : Database - sqlca-db
+*********************************************************************
+*/
+
+/*!40101 SET NAMES utf8 */;
+
+/*!40101 SET SQL_MODE=''*/;
+
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+CREATE DATABASE /*!32312 IF NOT EXISTS*/`sqlca-db` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+
+USE `sqlca-db`;
+
+/*Table structure for table `user` */
+
+CREATE TABLE `user` (
+                        `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'auto inc id',
+                        `name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'user name',
+                        `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'phone number',
+                        `sex` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'user sex',
+                        `email` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'email',
+                        `disable` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'disabled(0=false 1=true)',
+                        `balance` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'balance of decimal',
+                        `sex_name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'sex name',
+                        `data_size` bigint NOT NULL DEFAULT '0' COMMENT 'data size',
+                        `extra_data` json DEFAULT NULL COMMENT 'extra data (json)',
+                        `created_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'created time',
+                        `updated_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'updated time',
+                        PRIMARY KEY (`id`) USING BTREE,
+                        KEY `phone` (`phone`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 
-# tests
-[mysql schema](test/test.sql)
+```
 
-[test cases](test/main.go)
+- **install db2go**
 
+```shell
+$ go install github.com/civet148/db2go@latest
+```
+
+- **script to generate**
+
+```shell
+#!/bin/sh
+
+# output directory
+OUT_DIR=..
+# golang package name of models
+PACK_NAME=models
+# model file suffix
+SUFFIX_NAME=do
+# set columns to readonly, they will be ignored when insert or update
+READ_ONLY=created_time,updated_time
+# more tags separated by colon
+TAGS=bson
+# database source name
+DSN_URL='mysql://root:123456@127.0.0.1:3306/sqlca-db?charset=utf8'
+# customized types for table columns
+SPEC_TYPES='user.is_admin=bool, user.extra_data=UserExtra'
+# tiny int columns as boolean when exporting for all tables
+TINYINT_TO_BOOL=deleted,disabled,banned,is_admin
+# the models import path for --dao flag
+IMPORT_MODELS=/path/to/models
+
+db2go --url "${DSN_URL}" --out "${OUT_DIR}" --enable-decimal --spec-type "${SPEC_TYPES}" \
+      --suffix "${SUFFIX_NAME}" --package "${PACK_NAME}" --readonly "${READ_ONLY}" --tag "${TAGS}" --tinyint-as-bool "${TINYINT_TO_BOOL}" \
+      --dao dao --import-models "${IMPORT_MODELS}"
+
+gofmt -w "${OUT_DIR}"/"${PACK_NAME}"
+```
+
+- **model sample**
+
+  /path/to/models/user_do.go
+
+```go
+// Code generated by db2go. DO NOT EDIT.
+// https://github.com/civet148/sqlca
+
+package models
+
+import "github.com/civet148/sqlca/v2"
+
+const TableNameUser = "user" 
+
+const (
+	USER_COLUMN_ID           = "id"
+	USER_COLUMN_NAME         = "name"
+	USER_COLUMN_PHONE        = "phone"
+	USER_COLUMN_SEX          = "sex"
+	USER_COLUMN_EMAIL        = "email"
+	USER_COLUMN_DISABLE      = "disable"
+	USER_COLUMN_BALANCE      = "balance"
+	USER_COLUMN_SEX_NAME     = "sex_name"
+	USER_COLUMN_DATA_SIZE    = "data_size"
+	USER_COLUMN_EXTRA_DATA   = "extra_data"
+	USER_COLUMN_CREATED_TIME = "created_time"
+	USER_COLUMN_UPDATED_TIME = "updated_time"
+)
+
+type UserDO struct {
+	Id          uint64        `json:"id" db:"id" bson:"_id"`                                               //auto inc id
+	Name        string        `json:"name" db:"name" bson:"name"`                                          //user name
+	Phone       string        `json:"phone" db:"phone" bson:"phone"`                                       //phone number
+	Sex         uint8         `json:"sex" db:"sex" bson:"sex"`                                             //user sex
+	Email       string        `json:"email" db:"email" bson:"email"`                                       //email
+	Disable     int8          `json:"disable" db:"disable" bson:"disable"`                                 //disabled(0=false 1=true)
+	Balance     sqlca.Decimal `json:"balance" db:"balance" bson:"balance"`                                 //balance of decimal
+	SexName     string        `json:"sex_name" db:"sex_name" bson:"sex_name"`                              //sex name
+	DataSize    int64         `json:"data_size" db:"data_size" bson:"data_size"`                           //data size
+	ExtraData   UserExtra     `json:"extra_data" db:"extra_data" sqlca:"isnull" bson:"extra_data"`         //extra data (json)
+	CreatedTime string        `json:"created_time" db:"created_time" sqlca:"readonly" bson:"created_time"` //created time
+	UpdatedTime string        `json:"updated_time" db:"updated_time" sqlca:"readonly" bson:"updated_time"` //updated time
+}
+
+type UserExtra struct {
+	HomeAddress string `json:"home_address"`
+}
+```
+
+## database connection
+
+```golang
+package main
+
+import (
+    "github.com/civet148/log"
+    "github.com/civet148/sqlca-bench/models"
+    "github.com/civet148/sqlca/v2"
+)
+
+const (
+    MysqlDSN = "mysql://root:123456@127.0.0.1:3306/sqlca-db?charset=utf8mb4"
+)
+
+var db *sqlca.Engine
+
+func main() {
+    var err error
+    db, err = sqlca.NewEngine(MysqlDSN)
+    if err != nil {
+        log.Panic(err.Error())
+    }
+    //db.Debug(true) //open debug mode
+}
+
+```
+
+## query by id
+
+```go
+func QueryById(db *sqlca.Engine) (err error) {
+    var rows int64
+    var user *models.UserDO
+    
+    //SELECT * FROM user WHERE id=1
+    var userId = 1
+    rows, err = db.Model(&user).
+                    Table(models.TableNameUser).
+                    Id(userId).
+                    Query()
+    if err != nil {
+        return log.Errorf(err.Error())
+    }
+    if rows == 0 || user.Id == 0 {
+        return log.Errorf("query user by id %v not found", userId)
+    }
+    log.Infof("[SELECT * FROM user WHERE id=1] query result: [%+v]", user)
+    return nil
+}
+```
+
+## query by page
+
+```go
+
+func QueryByPage(db *sqlca.Engine) (err error) {
+	var rows, total int64
+	var users []*models.UserDO
+
+	//SELECT id, name, sex_name, balance, created_time, updated_time FROM user LIMIT 0, 100
+	rows, total, err = db.Model(&users).
+		Table(models.TableNameUser).
+		Select(models.USER_COLUMN_ID, models.USER_COLUMN_NAME, models.USER_COLUMN_SEX_NAME, models.USER_COLUMN_CREATED_TIME, models.USER_COLUMN_UPDATED_TIME, models.USER_COLUMN_BALANCE).
+		Page(0, 100).
+		QueryEx()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("[SELECT id, name, sex_name, balance, created_time, updated_time FROM user LIMIT 0, 100] query result: rows [%v] total [%v]", rows, total)
+	return nil
+}
+
+```
+
+## query by conditions
+
+```go
+func QueryByConditions(db *sqlca.Engine, id int64, name, createdTime string) (err error) {
+    var rows int64
+    var users []*models.UserDO
+    
+    //SELECT id, name, sex_name, balance, created_time, updated_time FROM user WHERE id = ? AND name = ? AND created_time >= ?
+    e := db.Model(&users).
+            Table(models.TableNameUser).
+            Select(models.USER_COLUMN_ID, models.USER_COLUMN_NAME, models.USER_COLUMN_SEX_NAME, models.USER_COLUMN_CREATED_TIME, models.USER_COLUMN_UPDATED_TIME, models.USER_COLUMN_BALANCE)
+    if id != 0 {
+        e.Eq(models.USER_COLUMN_ID, id)
+    }
+    if name != "" {
+        e.Eq(models.USER_COLUMN_NAME, name)
+    }
+    if createdTime != "" {
+        e.Gte(models.USER_COLUMN_CREATED_TIME, createdTime)
+    }
+    if rows, err = e.Query(); err != nil {
+        return log.Errorf(err.Error())
+    }
+    log.Infof("[SELECT id, name, sex_name, balance, created_time, updated_time FROM user  WHERE id = ? AND name = ? AND created_time >= ?] query result: rows [%v] users [%+v]", rows, users)
+    return nil
+}
+```
+
+## insert 
+
+```go
+func Insert(db *sqlca.Engine) (err error) {
+	//INSERT INTO user(name, phone, sex_name, balance) VALUES('john', '+0014155787342', 'male', '12423.32356')
+	var user = &models.UserDO{
+		Name:    "john",
+		Phone:   "+0014155787342",
+		Balance: sqlca.NewDecimal("12423.32356"),
+		SexName: "male",
+	}
+	var id int64
+	id, err = db.Model(&user).Table(models.TableNameUser).Insert()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("[INSERT INTO user(name, phone, sex_name, balance) VALUES('john', '+0014155787342', 'male', '12423.32356')] result: last insert id [%v]", id)
+	return nil
+}
+```
+
+## insert batch
+
+```go
+func InsertBatch(db *sqlca.Engine) (err error) {
+	//INSERT INTO user(name, phone, sex_name, balance) VALUES('john', '+0014155787342', 'male', '12423.32356'),('rose', '+0014155787343', 'female', '423.006')
+	var users = []*models.UserDO{
+		{
+			Name:    "john",
+			Phone:   "+0014155787342",
+			Balance: sqlca.NewDecimal("12423.32356"),
+			SexName: "male",
+		},
+		{
+			Name:    "rose",
+			Phone:   "+0014155787343",
+			Balance: sqlca.NewDecimal("423.006"),
+			SexName: "female",
+		},
+	}
+	_, err = db.Model(&users).Table(models.TableNameUser).Insert()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("[INSERT INTO user(name, phone, sex_name, balance) VALUES('john', '+0014155787342', 'male', '12423.32356'),('rose', '+0014155787343', 'female', '423.006')] successful")
+	return nil
+}
+```
 

@@ -1034,7 +1034,24 @@ func (e *Engine) formatString(strIn string, args ...interface{}) (strFmt string)
 	if e.isQuestionPlaceHolder(strIn, args...) { //question placeholder exist
 		strFmt = strings.Replace(strFmt, "?", "'%v'", -1)
 	}
-	return fmt.Sprintf(strFmt, args...)
+	return e.preventInjectionFmt(strFmt, args...)
+}
+
+func (e *Engine) preventInjectionFmt(strFmt string, args ...interface{}) string {
+	var newArgs []interface{}
+	for _, a := range args {
+		switch a.(type) {
+		case string:
+			{
+				strIn := a.(string)
+				strIn = e.handleSpecialChars(strIn)
+				newArgs = append(newArgs, strIn)
+			}
+		default:
+			newArgs = append(newArgs, a)
+		}
+	}
+	return fmt.Sprintf(strFmt, newArgs...)
 }
 
 func (e *Engine) makeSqlxQueryPrimaryKey() (strSql string) {

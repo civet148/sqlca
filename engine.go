@@ -1282,3 +1282,11 @@ func (e *Engine) NewID() ID {
 	}
 	return e.idgen.Generate()
 }
+
+//func (e *Engine) PrepareEx(query string, args ...interface{}) (stmt *sqlx.Stmt, err error) {
+//	db := e.getMaster()
+//	stmt, err = db.Preparex(query)
+//	defer stmt.Close()
+//
+//	return
+//}

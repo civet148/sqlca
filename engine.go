@@ -101,7 +101,6 @@ type Engine struct {
 }
 
 func init() {
-	log.SetLevel(log.LEVEL_INFO)
 }
 
 func NewEngine(strUrl string, options ...*Options) (*Engine, error) {

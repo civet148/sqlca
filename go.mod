@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/civet148/gotools v1.4.1
-	github.com/civet148/log v1.5.0
+	github.com/civet148/log v1.5.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e
 	github.com/elliotchance/sshtunnel v1.2.0
 	github.com/gansidui/geohash v0.0.0-20141019080235-ebe5ba447f34

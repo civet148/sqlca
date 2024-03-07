@@ -174,7 +174,9 @@ func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 		var db *sqlx.DB
 		if len(options) != 0 {
 			opt = options[0]
-			e.Debug(opt.Debug)
+			if opt.Debug {
+				e.Debug(true)
+			}
 			if opt.SSH != nil { //SSH tunnel enable
 				dsn = opt.SSH.openSSHTunnel(dsn)
 			}

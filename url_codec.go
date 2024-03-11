@@ -403,6 +403,9 @@ func cutRight(strIn, strSep string) (strOut string) {
 
 //root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4
 func Url2MySql(strUrl string) (string, error) {
+	if strings.Index(strUrl, urlSchemeSep) == -1 {
+		return strUrl, nil
+	}
 	ui := ParseUrl(strUrl)
 	var params []string
 	strUser := ui.User

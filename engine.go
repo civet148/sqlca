@@ -1277,6 +1277,11 @@ func (e *Engine) JsonLessEqual(strColumn, strPath string, value interface{}) *En
 	return e.And("%s<=%v", e.jsonExpr(strColumn, strPath), value)
 }
 
+// SELECT * FROM news WHERE JSON_CONTAINS(tags,  JSON_ARRAY("#Blockchain"))
+func (e *Engine) JsonContainArray(strColumn string, value interface{}) *Engine {
+	return e.And("JSON_CONTAINS(%s, JSON_ARRAY('%v'))", strColumn, value)
+}
+
 func (e *Engine) NewID() ID {
 	if e.idgen == nil {
 		log.Panic("snowflake node id not set, please set it by Options when using NewEngine method")

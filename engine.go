@@ -221,7 +221,6 @@ func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 	}
 	e.strDSN = strUrl
 	e.options = *opt
-	log.Infof("[%s] open url [%s] with options [%+v] ok", adapter.String(), param.strDSN, opt)
 	return e, nil
 }
 

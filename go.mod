@@ -13,6 +13,5 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.2.0
 	github.com/shopspring/decimal v1.2.0
-	go.mongodb.org/mongo-driver v1.11.6
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 )

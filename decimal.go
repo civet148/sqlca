@@ -8,10 +8,8 @@ import (
 	"math/big"
 
 	"github.com/shopspring/decimal"
-	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/x/bsonx"
-	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
+	//"go.mongodb.org/mongo-driver/x/bsonx"
+	//"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
 const (
@@ -203,10 +201,9 @@ func (d Decimal) Pow(d2 interface{}) Decimal {
 
 // Cmp compares the numbers represented by d and d2 and returns:
 //
-//     -1 if d <  d2
-//      0 if d == d2
-//     +1 if d >  d2
-//
+//	-1 if d <  d2
+//	 0 if d == d2
+//	+1 if d >  d2
 func (d Decimal) Cmp(d2 interface{}) int {
 	d3 := convertDecimal(d2)
 	return d.dec.Cmp(d3.dec)
@@ -247,7 +244,6 @@ func (d Decimal) LessThanOrEqual(d2 interface{}) bool {
 //	-1 if d <  0
 //	 0 if d == 0
 //	+1 if d >  0
-//
 func (d Decimal) Sign() int {
 	return d.dec.Sign()
 }
@@ -296,13 +292,12 @@ func (d Decimal) Float64() (f float64) {
 //
 // Example:
 //
-//     d := New(-12345, -3)
-//     println(d.String())
+//	d := New(-12345, -3)
+//	println(d.String())
 //
 // Output:
 //
-//     -12.345
-//
+//	-12.345
 func (d Decimal) String() string {
 	return d.dec.String()
 }
@@ -312,14 +307,13 @@ func (d Decimal) String() string {
 //
 // Example:
 //
-// 	   NewFromFloat(0).StringFixed(2) // output: "0.00"
-// 	   NewFromFloat(0).StringFixed(0) // output: "0"
-// 	   NewFromFloat(5.45).StringFixed(0) // output: "5"
-// 	   NewFromFloat(5.45).StringFixed(1) // output: "5.5"
-// 	   NewFromFloat(5.45).StringFixed(2) // output: "5.45"
-// 	   NewFromFloat(5.45).StringFixed(3) // output: "5.450"
-// 	   NewFromFloat(545).StringFixed(-1) // output: "550"
-//
+//	NewFromFloat(0).StringFixed(2) // output: "0.00"
+//	NewFromFloat(0).StringFixed(0) // output: "0"
+//	NewFromFloat(5.45).StringFixed(0) // output: "5"
+//	NewFromFloat(5.45).StringFixed(1) // output: "5.5"
+//	NewFromFloat(5.45).StringFixed(2) // output: "5.45"
+//	NewFromFloat(5.45).StringFixed(3) // output: "5.450"
+//	NewFromFloat(545).StringFixed(-1) // output: "550"
 func (d Decimal) StringFixed(places int32) string {
 	return d.dec.StringFixed(places)
 }
@@ -329,9 +323,8 @@ func (d Decimal) StringFixed(places int32) string {
 //
 // Example:
 //
-// 	   NewFromFloat(5.45).Round(1).String() // output: "5.5"
-// 	   NewFromFloat(545).Round(-1).String() // output: "550"
-//
+//	NewFromFloat(5.45).Round(1).String() // output: "5.5"
+//	NewFromFloat(545).Round(-1).String() // output: "550"
 func (d Decimal) Round(places int32) Decimal {
 
 	return Decimal{
@@ -345,8 +338,7 @@ func (d Decimal) Round(places int32) Decimal {
 //
 // Example:
 //
-//     decimal.NewFromString("123.456").Truncate(2).String() // "123.45"
-//
+//	decimal.NewFromString("123.456").Truncate(2).String() // "123.45"
 func (d Decimal) Truncate(precision int32) Decimal {
 	return Decimal{
 		dec: d.dec.Truncate(precision),
@@ -377,54 +369,55 @@ func (d *Decimal) UnmarshalBSON(data []byte) error {
 	return d.dec.UnmarshalJSON(data)
 }
 
-//MarshalBSONValue implements the bson.Marshaler interface.
-func (d Decimal) MarshalBSONValue() (bsontype.Type, []byte, error) {
-	pd, err := primitive.ParseDecimal128(d.dec.String())
-	if err != nil {
-		return bsontype.Decimal128, nil, log.Errorf(err.Error())
-	}
-	return bsonx.Decimal128(pd).MarshalBSONValue()
-}
-
-// UnmarshalBSONValue implements the bson.Unmarshaler interface.
-func (d *Decimal) UnmarshalBSONValue(bt bsontype.Type, data []byte) error {
-
-	if bt == bsontype.Decimal128 {
-		bd, _, ok := bsoncore.ReadDecimal128(data)
-		if !ok {
-			return log.Errorf("unmarshal decimal128 error")
-		}
-		d.FromString(bd.String())
-	} else if bt == bsontype.Double {
-		bd, _, ok := bsoncore.ReadDouble(data)
-		if !ok {
-			return log.Errorf("unmarshal Double error")
-		}
-		d.FromFloat(bd)
-	} else if bt == bsontype.String {
-		bd, _, ok := bsoncore.ReadString(data)
-		if !ok {
-			return log.Errorf("unmarshal String error")
-		}
-		d.FromString(bd)
-	} else if bt == bsontype.Int64 {
-		bd, _, ok := bsoncore.ReadInt64(data)
-		if !ok {
-			return log.Errorf("unmarshal Int64 error")
-		}
-		d.FromInt(bd)
-	} else if bt == bsontype.Int32 {
-		bd, _, ok := bsoncore.ReadInt32(data)
-		if !ok {
-			return log.Errorf("unmarshal Int32 error")
-		}
-		d.FromInt(int64(bd))
-	} else {
-		return log.Errorf("unknown bson type [%s] to unmarshal", bt)
-	}
-	return nil
-}
-
+//
+////MarshalBSONValue implements the bson.Marshaler interface.
+//func (d Decimal) MarshalBSONValue() (bsontype.Type, []byte, error) {
+//	pd, err := primitive.ParseDecimal128(d.dec.String())
+//	if err != nil {
+//		return bsontype.Decimal128, nil, log.Errorf(err.Error())
+//	}
+//	return bsonx.Decimal128(pd).MarshalBSONValue()
+//}
+//
+//// UnmarshalBSONValue implements the bson.Unmarshaler interface.
+//func (d *Decimal) UnmarshalBSONValue(bt bsontype.Type, data []byte) error {
+//
+//	if bt == bsontype.Decimal128 {
+//		bd, _, ok := bsoncore.ReadDecimal128(data)
+//		if !ok {
+//			return log.Errorf("unmarshal decimal128 error")
+//		}
+//		d.FromString(bd.String())
+//	} else if bt == bsontype.Double {
+//		bd, _, ok := bsoncore.ReadDouble(data)
+//		if !ok {
+//			return log.Errorf("unmarshal Double error")
+//		}
+//		d.FromFloat(bd)
+//	} else if bt == bsontype.String {
+//		bd, _, ok := bsoncore.ReadString(data)
+//		if !ok {
+//			return log.Errorf("unmarshal String error")
+//		}
+//		d.FromString(bd)
+//	} else if bt == bsontype.Int64 {
+//		bd, _, ok := bsoncore.ReadInt64(data)
+//		if !ok {
+//			return log.Errorf("unmarshal Int64 error")
+//		}
+//		d.FromInt(bd)
+//	} else if bt == bsontype.Int32 {
+//		bd, _, ok := bsoncore.ReadInt32(data)
+//		if !ok {
+//			return log.Errorf("unmarshal Int32 error")
+//		}
+//		d.FromInt(int64(bd))
+//	} else {
+//		return log.Errorf("unknown bson type [%s] to unmarshal", bt)
+//	}
+//	return nil
+//}
+//
 //// GetBSON implements the bson.Getter interface (mgo.v2)
 //func (d Decimal) GetBSON() (interface{}, error) {
 //	return d.dec.String(), nil

@@ -532,3 +532,8 @@ func (d Decimal) Cos() Decimal {
 func (d Decimal) Tan() Decimal {
 	return Decimal{dec: d.dec.Tan()}
 }
+
+// GetDecimal returns the decimal.Decimal type
+func (d Decimal) GetDecimal() decimal.Decimal {
+	return d.dec
+}

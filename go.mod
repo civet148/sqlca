@@ -10,6 +10,7 @@ require (
 	github.com/elliotchance/sshtunnel v1.2.0
 	github.com/gansidui/geohash v0.0.0-20141019080235-ebe5ba447f34
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/jinzhu/now v1.1.5
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.2.0
 	github.com/shopspring/decimal v1.2.0

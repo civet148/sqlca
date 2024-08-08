@@ -69,7 +69,7 @@ func (e *Engine) getSlave() *sqlx.DB {
 }
 
 func (e *Engine) setModel(models ...interface{}) *Engine {
-
+	var strCamelTableName string
 	for _, v := range models {
 
 		if v == nil {
@@ -87,7 +87,6 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 				{
 					if typ.Elem().Kind() == reflect.Struct { //struct pointer address (&*StructType)
 						if val.IsNil() {
-							//log.Warnf("[%+v] -> pointer is nil", typ.Elem().Name())
 							var typNew = typ.Elem()
 							var valNew = reflect.New(typNew)
 							val.Set(valNew)
@@ -97,10 +96,11 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 				}
 			}
 		}
-
 		if isStructPtrPtr {
 			e.model = val.Interface()
 			e.setModelType(types.ModelType_Struct)
+			typSt := typ.Elem()
+			strCamelTableName = typSt.Name()
 		} else {
 			switch typ.Kind() {
 			case reflect.Struct: // struct
@@ -113,18 +113,29 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 				e.setModelType(types.ModelType_BaseType)
 			}
 			if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
+				strCamelTableName = typ.Name()
 				e.model = models[0] //map, struct or slice
-				if typ.Kind() == reflect.Slice && val.IsNil() {
+				if typ.Kind() == reflect.Slice {
 					modelVal := reflect.ValueOf(e.model)
 					elemTyp := modelVal.Type().Elem()
 					elemVal := reflect.New(elemTyp).Elem()
-					val.Set(reflect.MakeSlice(elemVal.Type(), 0, 0))
+					typSt := elemVal.Type().Elem()
+					if typSt.Kind() == reflect.Ptr {
+						typSt = typSt.Elem()
+						strCamelTableName = typSt.Name()
+					}
+					if val.IsNil() {
+						val.Set(reflect.MakeSlice(elemVal.Type(), 0, 0))
+					}
 				}
 			} else {
 				e.model = models //built-in types, eg int/string/float32...
 			}
 		}
-
+		if strCamelTableName != "" {
+			name := convertCamelToSnake(strCamelTableName)
+			e.setTableName(strings.ToLower(name))
+		}
 		var selectColumns []string
 		e.dict = newReflector(e, e.model).ToMap(e.dbTags...)
 		for k, _ := range e.dict {
@@ -688,7 +699,7 @@ func (e *Engine) isExcluded(strCol string) bool {
 	return false
 }
 
-func (e *Engine) isNull(strCol string) bool {
+func (e *Engine) isEmpty(strCol string) bool {
 
 	for _, v := range e.nullableColumns {
 		if v == strCol {
@@ -971,7 +982,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 		cols2, values = e.getStructSliceKeyValues(true)
 		for i, v := range cols2 {
 
-			if e.isReadOnly(v) || e.isExcluded(v) || e.isNull(v) {
+			if e.isReadOnly(v) || e.isExcluded(v) || e.isEmpty(v) {
 				excludeIndexes = append(excludeIndexes, i) //index of exclude columns slice
 				continue
 			}
@@ -997,7 +1008,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 		}
 	} else {
 		for k, v := range e.dict {
-			if e.isReadOnly(k) || e.isExcluded(k) || e.isNull(k) {
+			if e.isReadOnly(k) || e.isExcluded(k) || e.isEmpty(k) {
 				continue
 			}
 			v = convertBool2Int(v)
@@ -1288,3 +1299,4 @@ func (e *Engine) roundFunc(strColumn string, round int, strAS ...string) string 
 	}
 	return fmt.Sprintf("%s(%s, %d) AS %s", types.DATABASE_KEY_NAME_ROUND, strColumn, round, strAlias)
 }
+

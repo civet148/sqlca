@@ -7,13 +7,19 @@ const (
 	TAG_NAME_JSON     = "json"
 	TAG_NAME_PROTOBUF = "protobuf"
 	TAG_NAME_SQLCA    = "sqlca"
+	TAG_NAME_GORM     = "gorm"
+	TAG_NAME_XORM     = "xorm"
 )
 
 const (
-	SQLCA_TAG_VALUE_AUTO_INCR = "autoincr" //auto increment
-	SQLCA_TAG_VALUE_READ_ONLY = "readonly" //read only
-	SQLCA_TAG_VALUE_IS_NULL   = "isnull"   //is nullable
-	SQLCA_TAG_VALUE_IGNORE    = "-"        //ignore
+	SQLCA_TAG_VALUE_AUTO_INCR       = "autoincr"       //auto increment
+	SQLCA_TAG_VALUE_READ_ONLY       = "readonly"       //read only
+	SQLCA_TAG_VALUE_IS_NULL         = "isnull"         //is nullable
+	SQLCA_TAG_VALUE_IGNORE          = "-"              //ignore
+	GORM_TAG_VALUE_AUTO_CREATE_TIME = "autoCreateTime" //gorm:"autoCreateTime"
+	GORM_TAG_VALUE_AUTO_UPDATE_TIME = "autoUpdateTime" //gorm:"autoUpdateTime"
+	XORM_TAG_VALUE_AUTO_CREATE_TIME = "created"        //xorm:"created"
+	XORM_TAG_VALUE_AUTO_UPDATE_TIME = "updated"        //xorm:"updated"
 )
 
 const (
@@ -209,3 +215,4 @@ func (m ModelType) String() string {
 	}
 	return "ModelType_Unknown"
 }
+

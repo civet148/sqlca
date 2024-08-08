@@ -25,13 +25,13 @@ const (
 type ID = snowflake.ID
 
 type Options struct {
-	Debug      bool       //enable debug mode
-	Max        int        //max active connections
-	Idle       int        //max idle connections
-	Slave      bool       //is a slave DSN ?
-	SSH        *SSH       //ssh tunnel server config
-	SnowFlake  *SnowFlake //snowflake id config
-	PageOffset bool       //page offset for LIMIT
+	Debug         bool       //enable debug mode
+	Max           int        //max active connections
+	Idle          int        //max idle connections
+	Slave         bool       //is a slave DSN ?
+	SSH           *SSH       //ssh tunnel server config
+	SnowFlake     *SnowFlake //snowflake id config
+	DisableOffset bool       //disable page offset for LIMIT (default page no is 1, if true then page no start from 0)
 }
 
 type SnowFlake struct {
@@ -302,8 +302,14 @@ func (e *Engine) Select(strColumns ...string) *Engine {
 	return e
 }
 
-// Exclude orm select/update columns
+// Exclude exclude orm select/update columns
 func (e *Engine) Exclude(strColumns ...string) *Engine {
+	e.setExcludeColumns(strColumns...)
+	return e
+}
+
+// Omit same as Exclude
+func (e *Engine) Omit(strColumns ...string) *Engine {
 	e.setExcludeColumns(strColumns...)
 	return e
 }
@@ -369,7 +375,7 @@ func (e *Engine) Limit(args ...int) *Engine {
 }
 
 func (e *Engine) pageOffset() bool {
-	return e.options.PageOffset
+	return !e.options.DisableOffset
 }
 
 // Page page query
@@ -1182,6 +1188,11 @@ func (e *Engine) Like(strColumn, strSub string) *Engine {
 	return e
 }
 
+func (e *Engine) IsNull(strColumn string) *Engine {
+	e.And("%s IS NULL", strColumn)
+	return e
+}
+
 func (e *Engine) Equal(strColumn string, value interface{}) *Engine {
 	e.And("%s='%v'", strColumn, value)
 	return e
@@ -1295,3 +1306,4 @@ func (e *Engine) NewID() ID {
 //
 //	return
 //}
+

@@ -11,7 +11,6 @@ import (
 
 const (
 	urlSchemeSep       = "://"
-	urlQuerySlave      = "slave"
 	urlQueryMax        = "max"
 	urlQueryIdle       = "idle"
 	urlQueryCharset    = "charset"
@@ -53,7 +52,6 @@ type dsnParameter struct {
 	password string
 	db       string
 	charset  string
-	slave    bool
 	max      int
 	idle     int
 	strDSN   string
@@ -72,12 +70,6 @@ func (d *dsnDriver) SetIdle(idle int) {
 	}
 }
 
-func (d *dsnDriver) SetSlave(slave bool) {
-	if slave {
-		d.parameter.slave = slave
-	}
-}
-
 func (d *dsnParameter) parseUrlInfo(ui *UrlInfo) {
 	var ok bool
 	var val string
@@ -89,13 +81,6 @@ func (d *dsnParameter) parseUrlInfo(ui *UrlInfo) {
 	d.db = parseDatabaseName(ui.Path)
 	d.charset = ui.Queries[urlQueryCharset]
 	d.queries = ui.Queries
-
-	if val, ok = ui.Queries[urlQuerySlave]; ok {
-		if val == "true" {
-			d.slave = true
-		}
-		delete(ui.Queries, urlQuerySlave)
-	}
 
 	if val, ok = ui.Queries[urlQueryMax]; ok {
 		if val != "" {
@@ -417,3 +402,4 @@ func Url2MySql(strUrl string) (string, error) {
 	}
 	return fmt.Sprintf("%s:%s@tcp(%s)%s?%s", strUser, strPasswd, strHost, strPath, strings.Join(params, "&")), nil
 }
+

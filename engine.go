@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/bwmarrin/snowflake"
 	"github.com/civet148/log"
@@ -20,18 +21,24 @@ import (
 const (
 	DefaultConnMax  = 150
 	DefaultConnIdle = 5
+	DefaultLimit    = 1000
+)
+
+var (
+	ErrRecordNotFound = errors.New("record not found")
 )
 
 type ID = snowflake.ID
+type Id = ID
 
 type Options struct {
 	Debug         bool       //enable debug mode
 	Max           int        //max active connections
 	Idle          int        //max idle connections
-	Slave         bool       //is a slave DSN ?
 	SSH           *SSH       //ssh tunnel server config
 	SnowFlake     *SnowFlake //snowflake id config
 	DisableOffset bool       //disable page offset for LIMIT (default page no is 1, if true then page no start from 0)
+	DefaultLimit  int32      //limit default 1000
 }
 
 type SnowFlake struct {
@@ -52,52 +59,52 @@ type nearby struct {
 }
 
 type Engine struct {
-	strDSN          string                 // database source name
-	dsn             dsnDriver              // driver name and parameters
-	options         Options                // database options
-	slave           bool                   // use slave to query ?
-	dbMasters       []*sqlx.DB             // DB instance masters
-	dbSlaves        []*sqlx.DB             // DB instance slaves
-	tx              *sql.Tx                // sql tx instance
-	adapterSqlx     types.AdapterType      // what's adapter of sqlx
-	adapterCache    types.AdapterType      // what's adapter of cache
-	modelType       types.ModelType        // model type
-	operType        types.OperType         // operation type
-	expireTime      int                    // cache expire time of seconds
-	bForce          bool                   // force update/insert read only column(s)
-	bAutoRollback   bool                   // auto rollback when tx error occurred
-	model           interface{}            // data model [struct object or struct slice]
-	dict            map[string]interface{} // data model db dictionary
-	strDatabaseName string                 // database name
-	strTableName    string                 // table name
-	strPkName       string                 // primary key of table, default 'id'
-	strPkValue      string                 // primary key's value
-	strWhere        string                 // where condition to query or update
-	strLimit        string                 // limit
-	strOffset       string                 // offset (only for postgres)
-	strDistinct     string                 // distinct
-	nullableColumns []string               // nullable columns for update/insert
-	excludeColumns  []string               // exclude columns for query: select xxx not contain exclude some columns
-	selectColumns   []string               // columns to query: select
-	conflictColumns []string               // conflict key on duplicate set (just for postgresql)
-	orderByColumns  []string               // order by columns
-	groupByColumns  []string               // group by columns
-	havingCondition string                 // having condition
-	inConditions    []condition            // in condition
-	notConditions   []condition            // not in condition
-	andConditions   []string               // and condition
-	orConditions    []string               // or condition
-	dbTags          []string               // custom db tag names
-	readOnly        []string               // read only column names
-	slowQueryTime   int                    // slow query alert time (milliseconds)
-	slowQueryOn     bool                   // enable slow query alert (default off)
-	strCaseWhen     string                 // case..when...then...else...end
-	nearby          *nearby                // nearby
-	strUpdates      []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
-	joins           []*Join                // inner/left/right/full-outer join(s)
-	selected        bool                   // column(s) selected
-	noVerbose       bool                   // no more verbose
-	idgen           *snowflake.Node        // snowflake id generator
+	strDSN           string                 // database source name
+	dsn              dsnDriver              // driver name and parameters
+	options          Options                // database options
+	db               *sqlx.DB               // DB instance masters
+	tx               *sql.Tx                // sql tx instance
+	adapterSqlx      types.AdapterType      // what's adapter of sqlx
+	adapterCache     types.AdapterType      // what's adapter of cache
+	modelType        types.ModelType        // model type
+	operType         types.OperType         // operation type
+	expireTime       int                    // cache expire time of seconds
+	bForce           bool                   // force update/insert read only column(s)
+	bAutoRollback    bool                   // auto rollback when tx error occurred
+	model            interface{}            // data model [struct object or struct slice]
+	dict             map[string]interface{} // data model db dictionary
+	strDatabaseName  string                 // database name
+	strTableName     string                 // table name
+	strPkName        string                 // primary key of table, default 'id'
+	strPkValue       string                 // primary key's value
+	strWhere         string                 // where condition to query or update
+	strLimit         string                 // limit
+	strOffset        string                 // offset (only for postgres)
+	strDistinct      string                 // distinct
+	strForUpdate     string                 // tx query for update
+	strLockShareMode string                 // tx query lock share mode
+	nullableColumns  []string               // nullable columns for update/insert
+	excludeColumns   []string               // exclude columns for query: select xxx not contain exclude some columns
+	selectColumns    []string               // columns to query: select
+	conflictColumns  []string               // conflict key on duplicate set (just for postgresql)
+	orderByColumns   []string               // order by columns
+	groupByColumns   []string               // group by columns
+	havingCondition  string                 // having condition
+	inConditions     []condition            // in condition
+	notConditions    []condition            // not in condition
+	andConditions    []string               // and condition
+	orConditions     []string               // or condition
+	dbTags           []string               // custom db tag names
+	readOnly         []string               // read only column names
+	slowQueryTime    int                    // slow query alert time (milliseconds)
+	slowQueryOn      bool                   // enable slow query alert (default off)
+	strCaseWhen      string                 // case..when...then...else...end
+	nearby           *nearby                // nearby
+	strUpdates       []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
+	joins            []*Join                // inner/left/right/full-outer join(s)
+	selected         bool                   // column(s) selected
+	noVerbose        bool                   // no more verbose
+	idgen            *snowflake.Node        // snowflake id generator
 }
 
 func init() {
@@ -111,7 +118,7 @@ func NewEngine(strUrl string, options ...*Options) (*Engine, error) {
 		adapterSqlx:   types.AdapterSqlx_MySQL,
 	}
 	e.dbTags = append(e.dbTags, types.TAG_NAME_DB, types.TAG_NAME_SQLCA, types.TAG_NAME_PROTOBUF, types.TAG_NAME_JSON)
-	return e.Open(strUrl, options...)
+	return e.open(strUrl, options...)
 }
 
 // get data base driver name and data source name
@@ -138,22 +145,23 @@ func (e *Engine) getDriverNameAndDSN(adapterType types.AdapterType, strUrl strin
 //
 //  1. data source name
 //
-//     [mysql]    Open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
-//     [postgres] Open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable")
-//     [mssql]    Open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
-//     [sqlite]   Open("sqlite:///var/lib/test.db")
+//     [mysql]    open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
+//     [postgres] open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable")
+//     [mssql]    open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
+//     [sqlite]   open("sqlite:///var/lib/test.db")
 //
 // options:
 //  1. specify master or slave, MySQL/Postgres (optional)
-func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
+func (e *Engine) open(strUrl string, options ...*Options) (*Engine, error) {
 
 	var err error
 	var adapter types.AdapterType
 	if len(options) == 0 {
 		options = append(options, &Options{
-			Debug: false,
-			Max:   DefaultConnMax,
-			Idle:  DefaultConnIdle,
+			Debug:        false,
+			Max:          DefaultConnMax,
+			Idle:         DefaultConnIdle,
+			DefaultLimit: DefaultLimit,
 		})
 	}
 	//var strDriverName, strDSN string
@@ -194,7 +202,6 @@ func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 		if opt != nil {
 			dsn.SetMax(opt.Max)
 			dsn.SetIdle(opt.Idle)
-			dsn.SetSlave(opt.Slave)
 		}
 
 		if param.max != 0 {
@@ -203,12 +210,7 @@ func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 		if param.idle != 0 {
 			db.SetMaxIdleConns(param.idle)
 		}
-
-		if param.slave {
-			e.appendSlave(db)
-		} else {
-			e.appendMaster(db)
-		}
+		e.setDB(db)
 	default:
 		err = fmt.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
 		return nil, err
@@ -220,7 +222,9 @@ func (e *Engine) Open(strUrl string, options ...*Options) (*Engine, error) {
 		}
 	}
 	e.strDSN = strUrl
-	e.options = *opt
+	if opt != nil {
+		e.options = *opt
+	}
 	return e, nil
 }
 
@@ -241,7 +245,7 @@ func (e *Engine) Use(strDatabaseName string) (*Engine, error) {
 
 // Attach attach from a exist sqlx db instance
 func (e *Engine) Attach(strDatabaseName string, db *sqlx.DB) *Engine {
-	e.appendMaster(db)
+	e.setDB(db)
 	e.setDatabaseName(strDatabaseName)
 	return e
 }
@@ -458,12 +462,6 @@ func (e *Engine) GroupBy(strColumns ...string) *Engine {
 	return e
 }
 
-// Slave orm query from a slave db
-func (e *Engine) Slave() *Engine {
-	e.slave = true
-	return e
-}
-
 // Query orm query
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
@@ -483,7 +481,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 
 	var rows *sql.Rows
 
-	db := e.getQueryDB()
+	db := e.getDB()
 	if rows, err = db.Query(strSql); err != nil {
 		if !e.noVerbose {
 			log.Errorf("query [%v] error [%v]", strSql, err.Error())
@@ -522,7 +520,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 		}
 	} else {
 		var rowsQuery, rowsCount *sql.Rows
-		dbQuery := e.getQueryDB()
+		dbQuery := e.getDB()
 		if rowsQuery, err = dbQuery.Query(strSql); err != nil {
 			if !e.noVerbose {
 				log.Errorf("query [%v] error [%v]", strSql, err.Error())
@@ -536,7 +534,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 		}
 
 		strCountSql := e.makeSqlxQueryCount()
-		dbCount := e.getQueryDB()
+		dbCount := e.getDB()
 		if rowsCount, err = dbCount.Query(strCountSql); err != nil {
 			if !e.noVerbose {
 				log.Errorf("query [%v] error [%v]", strSql, err.Error())
@@ -552,12 +550,13 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	return
 }
 
-// Find orm find with customer conditions (map[string]interface{})
-func (e *Engine) Find(conditions map[string]interface{}) (rowsAffected int64, err error) {
-	for k, v := range conditions {
-		e.And("%v=%v", e.getQuoteColumnName(k), e.getQuoteColumnValue(v))
+// Find orm find data records, returns error if data model is not slice
+func (e *Engine) Find() (rowsAffected int64, err error) {
+	rowsAffected, err = e.Query()
+	if rowsAffected == 0 && e.modelType != types.ModelType_Slice {
+		return 0, ErrRecordNotFound
 	}
-	return e.Query()
+	return rowsAffected, err
 }
 
 // Insert orm insert
@@ -659,7 +658,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	}
 	var r sql.Result
 
-	db := e.getMaster()
+	db := e.getDB()
 	r, err = db.Exec(strSql)
 	if err != nil {
 		if !e.noVerbose {
@@ -691,7 +690,7 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 		return
 	}
 	var r sql.Result
-	db := e.getMaster()
+	db := e.getDB()
 	r, err = db.Exec(strSql)
 	if err != nil {
 		if !e.noVerbose {
@@ -725,7 +724,7 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 		return e.TxGet(e.model, strQuery)
 	}
 
-	db := e.getQueryDB()
+	db := e.getDB()
 	if rows, err = db.Queryx(strQuery); err != nil {
 		if !e.noVerbose {
 			log.Errorf("query [%v] error [%v]", strQuery, err.Error())
@@ -754,7 +753,7 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 
 	var rows *sqlx.Rows
 
-	db := e.getQueryDB()
+	db := e.getDB()
 	if rows, err = db.Queryx(strQuery); err != nil {
 		if !e.noVerbose {
 			log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
@@ -787,7 +786,7 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("ExecRaw [%s]", strQuery))
 
-	db := e.getMaster()
+	db := e.getDB()
 	if r, err = db.Exec(strQuery); err != nil {
 		if !e.noVerbose {
 			log.Errorf("error [%v] model [%+v]", err, e.model)
@@ -814,12 +813,7 @@ func (e *Engine) Force() *Engine {
 
 // Close disconnect all database connections
 func (e *Engine) Close() *Engine {
-	for _, db := range e.dbMasters {
-		_ = db.Close()
-	}
-	for _, db := range e.dbSlaves {
-		_ = db.Close()
-	}
+	_ = e.db.Close()
 	return e
 }
 
@@ -928,21 +922,11 @@ func (e *Engine) SetCustomTag(tagNames ...string) *Engine {
 
 // Ping ping database
 func (e *Engine) Ping() (err error) {
-
-	for _, m := range e.dbMasters {
-		if err = m.Ping(); err != nil {
-			log.Errorf("ping master database error [%v]", err.Error())
-			return
-		}
+	if err = e.db.Ping(); err != nil {
+		log.Errorf("ping database error [%v]", err.Error())
+		return
 	}
-
-	for _, s := range e.dbSlaves {
-		if err = s.Ping(); err != nil {
-			log.Errorf("ping slave database error [%v]", err.Error())
-			return
-		}
-	}
-	return
+	return nil
 }
 
 // SetReadOnly set read only columns
@@ -1188,6 +1172,16 @@ func (e *Engine) Like(strColumn, strSub string) *Engine {
 	return e
 }
 
+func (e *Engine) Likes(kvs map[string]interface{}) *Engine {
+	var likes []string
+	for k, v := range kvs {
+		likes = append(likes, fmt.Sprintf(" %s LIKE '%%%v%%' ", k, v))
+	}
+	strLikes := strings.Join(likes, types.DATABASE_KEY_NAME_OR)
+	strLikes = "(" + strLikes + ")"
+	return e.And(strLikes)
+}
+
 func (e *Engine) IsNull(strColumn string) *Engine {
 	e.And("%s IS NULL", strColumn)
 	return e
@@ -1299,11 +1293,24 @@ func (e *Engine) NewID() ID {
 	return e.idgen.Generate()
 }
 
-//func (e *Engine) PrepareEx(query string, args ...interface{}) (stmt *sqlx.Stmt, err error) {
-//	db := e.getMaster()
-//	stmt, err = db.Preparex(query)
-//	defer stmt.Close()
-//
-//	return
-//}
+func (e *Engine) NewFromTx(tx *sql.Tx) *Engine {
+	engine := e.clone()
+	engine.tx = tx
+	engine.operType = types.OperType_Tx
+	return engine
+}
+
+func (e *Engine) ForUpdate() *Engine {
+	if e.operType != types.OperType_Tx {
+		log.Panic("this method is only for transaction")
+	}
+	return e.setForUpdate()
+}
+
+func (e *Engine) LockShareMode() *Engine {
+	if e.operType != types.OperType_Tx {
+		log.Panic("this method is only for transaction")
+	}
+	return e.setLockShareMode()
+}
 

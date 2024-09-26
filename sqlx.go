@@ -27,45 +27,13 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func (e *Engine) appendMaster(db *sqlx.DB) {
-	e.dbMasters = append(e.dbMasters, db)
-	log.Debugf("db masters [%v]", len(e.dbMasters))
+func (e *Engine) setDB(db *sqlx.DB) {
+	e.db = db
 }
 
-func (e *Engine) appendSlave(db *sqlx.DB) {
-	e.dbSlaves = append(e.dbSlaves, db)
-	log.Debugf("db slaves [%v]", len(e.dbSlaves))
-}
-
-// get slave db instance if use Slave() method to query, if not exist return a master db instance
-func (e *Engine) getQueryDB() (db *sqlx.DB) {
-	if e.slave {
-		db = e.getSlave()
-		if db != nil {
-			return
-		}
-	}
-	return e.getMaster()
-}
-
-// get a master db instance
-func (e *Engine) getMaster() *sqlx.DB {
-
-	n := len(e.dbMasters)
-	if n > 0 {
-		return e.dbMasters[rand.Intn(n)]
-	}
-	log.Errorf("db instance not found")
-	return nil
-}
-
-// get a slave db instance
-func (e *Engine) getSlave() *sqlx.DB {
-	n := len(e.dbSlaves)
-	if n > 0 {
-		return e.dbSlaves[rand.Intn(n)]
-	}
-	return e.getMaster()
+// get db instance for query
+func (e *Engine) getDB() (db *sqlx.DB) {
+	return e.db
 }
 
 func (e *Engine) setModel(models ...interface{}) *Engine {
@@ -129,7 +97,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 					}
 				}
 			} else {
-				e.model = models //built-in types, eg int/string/float32...
+				e.model = models //built-in types
 			}
 		}
 		if strCamelTableName != "" {
@@ -155,8 +123,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 	engine := &Engine{
 		strDSN:          e.strDSN,
 		dsn:             e.dsn,
-		dbMasters:       e.dbMasters,
-		dbSlaves:        e.dbSlaves,
+		db:              e.db,
 		adapterSqlx:     e.adapterSqlx,
 		adapterCache:    e.adapterCache,
 		strPkName:       e.strPkName,
@@ -173,7 +140,11 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		idgen:           e.idgen,
 		options:         e.options,
 	}
-
+	if e.options.DefaultLimit <= 0 {
+		engine.setLimit(fmt.Sprintf("LIMIT %v", DefaultLimit))
+	} else {
+		engine.setLimit(fmt.Sprintf("LIMIT %v", e.options.DefaultLimit))
+	}
 	engine.setModel(models...)
 	return engine
 }
@@ -188,7 +159,7 @@ func (e *Engine) genSnowflakeId() ID {
 func (e *Engine) newTx() (txEngine *Engine, err error) {
 
 	txEngine = e.clone()
-	db := e.getMaster()
+	db := e.getDB()
 	if txEngine.tx, err = db.Begin(); err != nil {
 		log.Errorf("newTx error [%+v]", err.Error())
 		return nil, err
@@ -211,7 +182,7 @@ func (e *Engine) mysqlQueryUpsert(strSQL string) (lastInsertId int64, err error)
 		}
 	} else {
 		var r sql.Result
-		db := e.getMaster()
+		db := e.getDB()
 		r, err = db.Exec(strSQL)
 		if err != nil {
 			if !e.noVerbose {
@@ -233,7 +204,7 @@ func (e *Engine) mysqlQueryUpsert(strSQL string) (lastInsertId int64, err error)
 func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err error) {
 	var rows *sql.Rows
 	log.Debugf("[%v]", strSQL)
-	db := e.getMaster()
+	db := e.getDB()
 	if rows, err = db.Query(strSQL); err != nil {
 		log.Errorf("tx.Query error [%v]", err.Error())
 		return
@@ -251,13 +222,10 @@ func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err err
 func (e *Engine) mysqlExec(strSQL string) (lastInsertId, rowsAffected int64, err error) {
 	var r sql.Result
 	var db *sqlx.DB
-	db = e.getMaster()
+	db = e.getDB()
 	r, err = db.Exec(strSQL)
 	if err != nil {
-		if !e.noVerbose {
-			err = log.Errorf("exec sql [%s] error [%s]", strSQL, err)
-		}
-		return
+		return 0, 0, err
 	}
 	rowsAffected, _ = r.RowsAffected()
 	lastInsertId, _ = r.LastInsertId()
@@ -1298,5 +1266,15 @@ func (e *Engine) roundFunc(strColumn string, round int, strAS ...string) string 
 		strAlias = strAS[0]
 	}
 	return fmt.Sprintf("%s(%s, %d) AS %s", types.DATABASE_KEY_NAME_ROUND, strColumn, round, strAlias)
+}
+
+func (e *Engine) setForUpdate() *Engine {
+	e.strForUpdate = types.DATABASE_KEY_NAME_FOR_UPDATE
+	return e
+}
+
+func (e *Engine) setLockShareMode() *Engine {
+	e.strLockShareMode = types.DATABASE_KEY_NAME_LOCK_SHARE_MODE
+	return e
 }
 

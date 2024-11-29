@@ -14,14 +14,13 @@ import (
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
 	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
-	//_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
+	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
 	"strings"
 )
 
 const (
 	DefaultConnMax  = 150
 	DefaultConnIdle = 5
-	DefaultLimit    = 1000
 )
 
 var (
@@ -38,7 +37,7 @@ type Options struct {
 	SSH           *SSH       //ssh tunnel server config
 	SnowFlake     *SnowFlake //snowflake id config
 	DisableOffset bool       //disable page offset for LIMIT (default page no is 1, if true then page no start from 0)
-	DefaultLimit  int32      //limit default 1000
+	DefaultLimit  int32      //limit default (0 means no limit)
 }
 
 type SnowFlake struct {
@@ -161,7 +160,7 @@ func (e *Engine) open(strUrl string, options ...*Options) (*Engine, error) {
 			Debug:        false,
 			Max:          DefaultConnMax,
 			Idle:         DefaultConnIdle,
-			DefaultLimit: DefaultLimit,
+			DefaultLimit: 0,
 		})
 	}
 	//var strDriverName, strDSN string
@@ -325,20 +324,50 @@ func (e *Engine) Distinct() *Engine {
 }
 
 // Where orm where condition
-func (e *Engine) Where(strWhere string, args ...interface{}) *Engine {
-	assert(strWhere, "string is nil")
-	strWhere = e.formatString(strWhere, args...)
-	e.setWhere(strWhere)
+func (e *Engine) Where(query interface{}, args ...interface{}) *Engine {
+	var strQuery string
+	qt := parseQueryInterface(query)
+	switch qt {
+	case queryInterface_String:
+		strQuery = query.(string)
+		assert(strQuery, "query statement is empty")
+		strQuery = e.formatString(strQuery, args...)
+		e.setWhere(strQuery)
+	case queryInterface_Map:
+		e.parseQueryAndMap(query)
+	}
 	return e
 }
 
-func (e *Engine) And(strFmt string, args ...interface{}) *Engine {
-	e.andConditions = append(e.andConditions, e.formatString(strFmt, args...))
+func (e *Engine) And(query interface{}, args ...interface{}) *Engine {
+	var strQuery string
+	qt := parseQueryInterface(query)
+	switch qt {
+	case queryInterface_String:
+		strQuery = query.(string)
+		assert(strQuery, "query statement is empty")
+		strQuery = e.formatString(strQuery, args...)
+		e.andConditions = append(e.andConditions, strQuery)
+	case queryInterface_Map:
+		e.parseQueryAndMap(query)
+	}
 	return e
 }
 
-func (e *Engine) Or(strFmt string, args ...interface{}) *Engine {
-	e.orConditions = append(e.orConditions, e.formatString(strFmt, args...))
+func (e *Engine) Or(query interface{}, args ...interface{}) *Engine {
+	var strQuery string
+	qt := parseQueryInterface(query)
+	switch qt {
+	case queryInterface_String:
+		strQuery = query.(string)
+		assert(strQuery, "query statement is empty")
+		e.setOr(&queryStatement{
+			query: strQuery,
+			args:  args,
+		})
+	case queryInterface_Map:
+		e.parseQueryOrMap(query)
+	}
 	return e
 }
 
@@ -470,7 +499,9 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	defer e.cleanWhereCondition()
-
+	if e.options.DefaultLimit > 0 && e.strLimit == "" {
+		e.setLimit(fmt.Sprintf("LIMIT %v", e.options.DefaultLimit))
+	}
 	if e.operType == types.OperType_Tx {
 		return e.TxGet(e.model, e.ToSQL(types.OperType_Query))
 	}
@@ -502,7 +533,9 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	defer e.cleanWhereCondition()
-
+	if e.options.DefaultLimit > 0 && e.strLimit == "" {
+		e.setLimit(fmt.Sprintf("LIMIT %v", e.options.DefaultLimit))
+	}
 	strSql := e.makeSQL(types.OperType_Query)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))

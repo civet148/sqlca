@@ -23,6 +23,11 @@ type condition struct {
 	ColumnValues []interface{}
 }
 
+type queryStatement struct {
+	query string
+	args  []interface{}
+}
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
@@ -139,11 +144,6 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		operType:        e.operType,
 		idgen:           e.idgen,
 		options:         e.options,
-	}
-	if e.options.DefaultLimit <= 0 {
-		engine.setLimit(fmt.Sprintf("LIMIT %v", DefaultLimit))
-	} else {
-		engine.setLimit(fmt.Sprintf("LIMIT %v", e.options.DefaultLimit))
 	}
 	engine.setModel(models...)
 	return engine
@@ -1146,7 +1146,11 @@ func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
 	}
 	//OR conditions
 	for _, v := range e.orConditions {
-		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_OR, v)
+		if strings.Contains(v, "(") && strings.Contains(v, ")") {
+			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v) //multiple OR condition append
+		} else {
+			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_OR, v) //single OR condition append
+		}
 	}
 
 	if strWhere != "" {
@@ -1276,5 +1280,62 @@ func (e *Engine) setForUpdate() *Engine {
 func (e *Engine) setLockShareMode() *Engine {
 	e.strLockShareMode = types.DATABASE_KEY_NAME_LOCK_SHARE_MODE
 	return e
+}
+
+func (e *Engine) setAnd(query string, args ...interface{}) *Engine {
+	assert(query, "query statement is empty")
+	query = e.formatString(query, args...)
+	e.andConditions = append(e.andConditions, query)
+	return e
+}
+
+func (e *Engine) setOr(queries ...*queryStatement) *Engine {
+	if len(queries) == 1 {
+		v := queries[0]
+		strQuery := e.formatString(v.query, v.args...)
+		e.orConditions = append(e.orConditions, strQuery)
+		return e
+	}
+
+	var ors []string
+	for _, v := range queries {
+		strQuery := e.formatString(v.query, v.args...)
+		ors = append(ors, strQuery)
+	}
+	strConditions := " ( " + strings.Join(ors, " OR ") + " ) "
+	e.orConditions = append(e.orConditions, strConditions)
+	return e
+}
+
+func (e *Engine) parseQueryAndMap(query interface{}) {
+	where := query.(map[string]interface{})
+	for k, v := range where {
+		if strings.Contains(k, "?") {
+			e.setAnd(k, v)
+		} else {
+			cond := fmt.Sprintf("%s = ?", k)
+			e.setAnd(cond, v)
+		}
+	}
+}
+
+func (e *Engine) parseQueryOrMap(query interface{}) {
+	var qss []*queryStatement
+	where := query.(map[string]interface{})
+	for k, v := range where {
+		if strings.Contains(k, "?") {
+			qss = append(qss, &queryStatement{
+				query: k,
+				args:  []interface{}{v},
+			})
+		} else {
+			cond := fmt.Sprintf("%s = ?", k)
+			qss = append(qss, &queryStatement{
+				query: cond,
+				args:  []interface{}{v},
+			})
+		}
+	}
+	e.setOr(qss...)
 }
 

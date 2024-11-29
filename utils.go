@@ -1,9 +1,18 @@
 package sqlca
 
 import (
+	"github.com/civet148/log"
 	"regexp"
 	"strconv"
 	"strings"
+)
+
+type queryInterfaceType int
+
+const (
+	queryInterface_Unknown queryInterfaceType = 0
+	queryInterface_String  queryInterfaceType = 1
+	queryInterface_Map     queryInterfaceType = 2
 )
 
 // convertCamelToSnake converts a CamelCase string to snake_case
@@ -83,5 +92,16 @@ func toString(value interface{}) string {
 		return strconv.FormatUint(v, 10)
 	}
 	return ""
+}
+
+func parseQueryInterface(query interface{}) queryInterfaceType {
+	switch query.(type) {
+	case map[string]interface{}:
+		return queryInterface_Map
+	case string:
+		return queryInterface_String
+	}
+	log.Panic("query interface type just support 'string' or 'map[string]interface{}'")
+	return queryInterface_Unknown
 }
 

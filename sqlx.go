@@ -1070,9 +1070,9 @@ func (e *Engine) makeSQL(operType types.OperType) (strSql string) {
 		log.Errorf("operation illegal")
 	}
 	strSql = strings.TrimSpace(strSql)
-	if !e.noVerbose {
-		log.Debugf("[%v] SQL [%s]", e.getCaller(3), strSql)
-	}
+	//if !e.noVerbose {
+	//	log.Debugf("[%v] SQL [%s]", e.getCaller(3), strSql)
+	//}
 	return
 }
 

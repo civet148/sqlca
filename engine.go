@@ -522,7 +522,14 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 
 	defer rows.Close()
 
-	return e.fetchRows(rows)
+	rowsAffected, err = e.fetchRows(rows)
+	if err != nil {
+		return 0, err
+	}
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	}
+	return rowsAffected, nil
 }
 
 // QueryEx orm query with total count
@@ -580,6 +587,9 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 			total++
 		}
 	}
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	}
 	return
 }
 
@@ -620,6 +630,9 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 		lastInsertId, _, err = e.TxExec(strSql)
 	} else {
 		lastInsertId, _, err = e.mysqlExec(strSql)
+	}
+	if !e.noVerbose {
+		log.Debugf("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	}
 	return
 }
@@ -667,7 +680,9 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 			lastInsertId, err = e.mysqlQueryUpsert(strSql)
 		}
 	}
-
+	if !e.noVerbose {
+		log.Debugf("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
+	}
 	return
 }
 
@@ -706,8 +721,10 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 		}
 		return
 	}
-	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSql)
-	return
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	}
+	return rowsAffected, nil
 }
 
 // Delete orm delete record(s) from db
@@ -736,7 +753,9 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSql, e.model)
 		return
 	}
-	log.Debugf("RowsAffected [%v] query [%v]", rowsAffected, strSql)
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	}
 	return
 }
 
@@ -800,6 +819,9 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 		fetcher, _ := e.getFetcher(rows.Rows)
 		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
 	}
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strQuery)
+	}
 	return
 }
 
@@ -835,7 +857,10 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 		return
 	}
 	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
-	return
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strQuery)
+	}
+	return rowsAffected, lastInsertId, nil
 }
 
 // Force force update/insert read only column(s)
@@ -886,7 +911,9 @@ func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (
 		e.autoRollback()
 		return
 	}
-	//log.Debugf("TxGet query [%v] ok", strQuery)
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), count, strQuery)
+	}
 	return
 }
 
@@ -909,6 +936,9 @@ func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, row
 	}
 	lastInsertId, _ = result.LastInsertId()
 	rowsAffected, _ = result.RowsAffected()
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strQuery)
+	}
 	return
 }
 

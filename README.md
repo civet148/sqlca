@@ -1,293 +1,690 @@
-# SQLCA
-The simplest ORM for gopher which supports mysql/sqlite/mssql-server/postgresql
----------------------------------------------------------------
 
-# Quick start
+# 快速开始
 
-## database models generation
+## 数据库表模型生成
 
-- create database
+- 创建数据库
 
 ```sql
-/*
-MySQL - 8.0.23 : Database - sqlca-db
-*********************************************************************
-*/
+CREATE DATABASE `test` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `test`;
 
-/*!40101 SET NAMES utf8 */;
 
-/*!40101 SET SQL_MODE=''*/;
+CREATE TABLE `inventory_data` (
+                                `id` bigint unsigned NOT NULL COMMENT '产品ID',
+                                `create_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建人ID',
+                                `create_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '创建人姓名',
+                                `create_time` datetime NOT NULL COMMENT '创建时间',
+                                `update_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新人ID',
+                                `update_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '更新人姓名',
+                                `update_time` datetime NOT NULL COMMENT '更新时间',
+                                `is_frozen` tinyint(1) NOT NULL DEFAULT '0' COMMENT '冻结状态(0: 未冻结 1: 已冻结)',
+                                `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '产品名称',
+                                `serial_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '产品编号',
+                                `quantity` decimal(16,3) NOT NULL DEFAULT '0.000' COMMENT '产品库存',
+                                `price` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT '产品均价',
+                                `product_extra` json DEFAULT NULL COMMENT '产品附带数据(JSON文本)',
+                                PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存数据表';
 
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-CREATE DATABASE /*!32312 IF NOT EXISTS*/`sqlca-db` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+CREATE TABLE `inventory_in` (
+                              `id` bigint unsigned NOT NULL COMMENT '主键ID',
+                              `create_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建人ID',
+                              `create_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '创建人姓名',
+                              `create_time` datetime NOT NULL COMMENT '创建时间',
+                              `update_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新人ID',
+                              `update_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '更新人姓名',
+                              `update_time` datetime NOT NULL COMMENT '更新时间',
+                              `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '删除状态(0: 未删除 1: 已删除)',
+                              `delete_time` datetime DEFAULT NULL COMMENT '删除时间',
+                              `product_id` bigint unsigned NOT NULL COMMENT '产品ID',
+                              `order_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '入库单号',
+                              `user_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '交货人ID',
+                              `user_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '交货人姓名',
+                              `quantity` decimal(16,6) NOT NULL DEFAULT '0.000000' COMMENT '数量',
+                              `weight` decimal(16,6) NOT NULL DEFAULT '0.000000' COMMENT '净重',
+                              `remark` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '备注',
+                              PRIMARY KEY (`id`) USING BTREE,
+                              UNIQUE KEY `UNIQ_ORDER_NO` (`order_no`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='入库主表';
 
-USE `sqlca-db`;
-
-/*Table structure for table `user` */
-
-CREATE TABLE `user` (
-                        `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'auto inc id',
-                        `name` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'user name',
-                        `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'phone number',
-                        `sex` tinyint unsigned NOT NULL DEFAULT '0' COMMENT 'user sex',
-                        `email` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'email',
-                        `disable` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'disabled(0=false 1=true)',
-                        `balance` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'balance of decimal',
-                        `sex_name` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT 'sex name',
-                        `data_size` bigint NOT NULL DEFAULT '0' COMMENT 'data size',
-                        `extra_data` json DEFAULT NULL COMMENT 'extra data (json)',
-                        `created_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'created time',
-                        `updated_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'updated time',
-                        PRIMARY KEY (`id`) USING BTREE,
-                        KEY `phone` (`phone`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+CREATE TABLE `inventory_out` (
+                               `id` bigint unsigned NOT NULL COMMENT '主键ID',
+                               `create_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '创建人ID',
+                               `create_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '创建人姓名',
+                               `create_time` datetime NOT NULL COMMENT '创建时间',
+                               `update_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '更新人ID',
+                               `update_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '更新人姓名',
+                               `update_time` datetime NOT NULL COMMENT '更新时间',
+                               `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '删除状态(0: 未删除 1: 已删除)',
+                               `delete_time` datetime DEFAULT NULL COMMENT '删除时间',
+                               `product_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '产品ID',
+                               `order_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '出库单号',
+                               `user_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '收货人ID',
+                               `user_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '收货人姓名',
+                               `quantity` decimal(16,6) NOT NULL DEFAULT '0.000000' COMMENT '数量',
+                               `weight` decimal(16,6) NOT NULL DEFAULT '0.000000' COMMENT '净重',
+                               `remark` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '备注',
+                               PRIMARY KEY (`id`) USING BTREE,
+                               UNIQUE KEY `UNIQ_ORDER_NO` (`order_no`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='出库主表';
 
 
 ```
 
-- **install db2go**
+- **安装db2go工具**
 
 ```shell
 $ go install github.com/civet148/db2go@latest
 ```
 
-- **script to generate**
+- **自动生成go代码脚本**
 
-```shell
-#!/bin/sh
+```bat
+@echo off
 
-# output directory
-OUT_DIR=..
-# golang package name of models
-PACK_NAME=models
-# model file suffix
-SUFFIX_NAME=do
-# set columns to readonly, they will be ignored when insert or update
-READ_ONLY=created_time,updated_time
-# more tags separated by colon
-TAGS=bson
-# database source name
-DSN_URL='mysql://root:123456@127.0.0.1:3306/sqlca-db?charset=utf8'
-# customized types for table columns
-SPEC_TYPES='user.is_admin=bool, user.extra_data=UserExtra'
-# tiny int columns as boolean when exporting for all tables
-TINYINT_TO_BOOL=deleted,disabled,banned,is_admin
-# the models import path for --dao flag
-IMPORT_MODELS=/path/to/models
 
-db2go --url "${DSN_URL}" --out "${OUT_DIR}" --enable-decimal --spec-type "${SPEC_TYPES}" \
-      --suffix "${SUFFIX_NAME}" --package "${PACK_NAME}" --readonly "${READ_ONLY}" --tag "${TAGS}" --tinyint-as-bool "${TINYINT_TO_BOOL}" \
-      --dao dao --import-models "${IMPORT_MODELS}"
+rem 数据模型(models)和数据库操作对象(dao)文件输出基础目录
+set OUT_DIR=.
+rem 数据模型包名(数据模型文件目录名)
+set PACK_NAME="models"
+rem 指定某表的某字段为指定类型,多个表字段以英文逗号分隔（例如：user.create_time=time.Time表示指定user表create_time字段为time.Time类型; 如果不指定表名则所有表的create_time字段均为time.Time类型；支持第三方包类型，例如：user.weight=github.com/shopspring/decimal.Decimal）
+set SPEC_TYPES=""
+rem 指定其他orm的标签和值(以空格分隔)
+set COMMON_TAGS="id=gorm:\"primarykey\" create_time=gorm:\"autoCreateTime\" update_time=gorm:\"autoUpdateTime\""
+set DEPLOY_SQL="test.sql"
 
-gofmt -w "${OUT_DIR}"/"${PACK_NAME}"
+rem 判断本地系统是否已安装db2go工具，没有则进行安装
+echo "searching db2go.exe ..."
+echo "--------------------------------------------"
+where db2go.exe
+echo "--------------------------------------------"
+
+IF "%errorlevel%" == "0" (
+    echo db2go already installed.
+) ELSE (
+    echo db2go not found in system %%PATH%%, installing...
+    go install github.com/civet148/db2go@latest
+    If "%errorlevel%" == "0" (
+        echo db2go install successfully.
+    ) ELSE (
+        rem 安装失败: Linux/Mac请安装gcc工具链，Windows系统可以安装msys64进行源码编译或通过链接直接下载二进制(最新版本v2.13 https://github.com/civet148/release/tree/master/db2go/v2)
+        echo ERROR: Linux/Mac please install gcc tool-chain and windows download from https://github.com/civet148/release/tree/master/db2go/v2 (latest version is v2.13)
+    )
+)
+
+rem ---------------------- 导出数据库表结构-------------------------
+set DSN_URL="mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=true&loc=Local"
+db2go   --url %DSN_URL% --out %OUT_DIR% --spec-type %SPEC_TYPES% --package %PACK_NAME%  --common-tags %COMMON_TAGS% --export %DEPLOY_SQL%
+gofmt -w %OUT_DIR%/%PACK_NAME%
+
+pause
 ```
 
-- **model sample**
-
-  /path/to/models/user_do.go
+- **生成的代码示例**
 
 ```go
 // Code generated by db2go. DO NOT EDIT.
-// https://github.com/civet148/sqlca
+// https://github.com/civet148/db2go
 
 package models
 
-import "github.com/civet148/sqlca/v2"
-
-const TableNameUser = "user" 
+const TableNameInventoryData = "`inventory_data`" //库存数据表
 
 const (
-	USER_COLUMN_ID           = "id"
-	USER_COLUMN_NAME         = "name"
-	USER_COLUMN_PHONE        = "phone"
-	USER_COLUMN_SEX          = "sex"
-	USER_COLUMN_EMAIL        = "email"
-	USER_COLUMN_DISABLE      = "disable"
-	USER_COLUMN_BALANCE      = "balance"
-	USER_COLUMN_SEX_NAME     = "sex_name"
-	USER_COLUMN_DATA_SIZE    = "data_size"
-	USER_COLUMN_EXTRA_DATA   = "extra_data"
-	USER_COLUMN_CREATED_TIME = "created_time"
-	USER_COLUMN_UPDATED_TIME = "updated_time"
+	INVENTORY_DATA_COLUMN_ID            = "id"
+	INVENTORY_DATA_COLUMN_CREATE_ID     = "create_id"
+	INVENTORY_DATA_COLUMN_CREATE_NAME   = "create_name"
+	INVENTORY_DATA_COLUMN_CREATE_TIME   = "create_time"
+	INVENTORY_DATA_COLUMN_UPDATE_ID     = "update_id"
+	INVENTORY_DATA_COLUMN_UPDATE_NAME   = "update_name"
+	INVENTORY_DATA_COLUMN_UPDATE_TIME   = "update_time"
+	INVENTORY_DATA_COLUMN_IS_FROZEN     = "is_frozen"
+	INVENTORY_DATA_COLUMN_NAME          = "name"
+	INVENTORY_DATA_COLUMN_SERIAL_NO     = "serial_no"
+	INVENTORY_DATA_COLUMN_QUANTITY      = "quantity"
+	INVENTORY_DATA_COLUMN_PRICE         = "price"
+	INVENTORY_DATA_COLUMN_PRODUCT_EXTRA = "product_extra"
 )
 
-type UserDO struct {
-	Id          uint64        `json:"id" db:"id" bson:"_id"`                                               //auto inc id
-	Name        string        `json:"name" db:"name" bson:"name"`                                          //user name
-	Phone       string        `json:"phone" db:"phone" bson:"phone"`                                       //phone number
-	Sex         uint8         `json:"sex" db:"sex" bson:"sex"`                                             //user sex
-	Email       string        `json:"email" db:"email" bson:"email"`                                       //email
-	Disable     int8          `json:"disable" db:"disable" bson:"disable"`                                 //disabled(0=false 1=true)
-	Balance     sqlca.Decimal `json:"balance" db:"balance" bson:"balance"`                                 //balance of decimal
-	SexName     string        `json:"sex_name" db:"sex_name" bson:"sex_name"`                              //sex name
-	DataSize    int64         `json:"data_size" db:"data_size" bson:"data_size"`                           //data size
-	ExtraData   UserExtra     `json:"extra_data" db:"extra_data" sqlca:"isnull" bson:"extra_data"`         //extra data (json)
-	CreatedTime string        `json:"created_time" db:"created_time" sqlca:"readonly" bson:"created_time"` //created time
-	UpdatedTime string        `json:"updated_time" db:"updated_time" sqlca:"readonly" bson:"updated_time"` //updated time
+type InventoryData struct {
+	Id           uint64   `json:"id" db:"id" gorm:"primarykey"`                       //产品ID
+	CreateId     uint64   `json:"create_id" db:"create_id" `                          //创建人ID
+	CreateName   string   `json:"create_name" db:"create_name" `                      //创建人姓名
+	CreateTime   string   `json:"create_time" db:"create_time" gorm:"autoCreateTime"` //创建时间
+	UpdateId     uint64   `json:"update_id" db:"update_id" `                          //更新人ID
+	UpdateName   string   `json:"update_name" db:"update_name" `                      //更新人姓名
+	UpdateTime   string   `json:"update_time" db:"update_time" gorm:"autoUpdateTime"` //更新时间
+	IsFrozen     int8     `json:"is_frozen" db:"is_frozen" `                          //冻结状态(0: 未冻结 1: 已冻结)
+	Name         string   `json:"name" db:"name" `                                    //产品名称
+	SerialNo     string   `json:"serial_no" db:"serial_no" `                          //产品编号
+	Quantity     float64  `json:"quantity" db:"quantity" `                            //产品库存
+	Price        float64  `json:"price" db:"price" `                                  //产品均价
+	ProductExtra struct{} `json:"product_extra" db:"product_extra" sqlca:"isnull"`    //产品附带数据(JSON文本)
 }
 
-type UserExtra struct {
-	HomeAddress string `json:"home_address"`
-}
+func (do *InventoryData) GetId() uint64              { return do.Id }
+func (do *InventoryData) SetId(v uint64)             { do.Id = v }
+func (do *InventoryData) GetCreateId() uint64        { return do.CreateId }
+func (do *InventoryData) SetCreateId(v uint64)       { do.CreateId = v }
+func (do *InventoryData) GetCreateName() string      { return do.CreateName }
+func (do *InventoryData) SetCreateName(v string)     { do.CreateName = v }
+func (do *InventoryData) GetCreateTime() string      { return do.CreateTime }
+func (do *InventoryData) SetCreateTime(v string)     { do.CreateTime = v }
+func (do *InventoryData) GetUpdateId() uint64        { return do.UpdateId }
+func (do *InventoryData) SetUpdateId(v uint64)       { do.UpdateId = v }
+func (do *InventoryData) GetUpdateName() string      { return do.UpdateName }
+func (do *InventoryData) SetUpdateName(v string)     { do.UpdateName = v }
+func (do *InventoryData) GetUpdateTime() string      { return do.UpdateTime }
+func (do *InventoryData) SetUpdateTime(v string)     { do.UpdateTime = v }
+func (do *InventoryData) GetIsFrozen() int8          { return do.IsFrozen }
+func (do *InventoryData) SetIsFrozen(v int8)         { do.IsFrozen = v }
+func (do *InventoryData) GetName() string            { return do.Name }
+func (do *InventoryData) SetName(v string)           { do.Name = v }
+func (do *InventoryData) GetSerialNo() string        { return do.SerialNo }
+func (do *InventoryData) SetSerialNo(v string)       { do.SerialNo = v }
+func (do *InventoryData) GetQuantity() float64       { return do.Quantity }
+func (do *InventoryData) SetQuantity(v float64)      { do.Quantity = v }
+func (do *InventoryData) GetPrice() float64          { return do.Price }
+func (do *InventoryData) SetPrice(v float64)         { do.Price = v }
+func (do *InventoryData) GetProductExtra() struct{}  { return do.ProductExtra }
+func (do *InventoryData) SetProductExtra(v struct{}) { do.ProductExtra = v }
+
+
 ```
 
-## database connection
+## 连接数据库
 
 ```golang
 package main
 
 import (
     "github.com/civet148/log"
-    "github.com/civet148/sqlca-bench/models"
     "github.com/civet148/sqlca/v2"
 )
 
 const (
-    MysqlDSN = "mysql://root:123456@127.0.0.1:3306/sqlca-db?charset=utf8mb4"
+    MysqlDSN = "mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4"
 )
 
-var db *sqlca.Engine
-
 func main() {
+	var err error
+	var db *sqlca.Engine
+	var options = &sqlca.Options{
+		Debug: true, //是否开启调试日志输出
+		Max:   150,  //最大连接数
+		Idle:  5,    //空闲连接数
+		//DefaultLimit: 100,  //默认查询条数限制
+		SnowFlake: &sqlca.SnowFlake{ //雪花算法配置（不使用可以赋值nil）
+			NodeId: 1, //雪花算法节点ID 1-1023
+		},
+	}
+	db, err = sqlca.NewEngine(MysqlDSN, options)
+	if err != nil {
+		log.Errorf("connect database error: %s", err)
+		return
+	}
+	_ = db
+}
+
+```
+
+# 数据库CURD示例
+
+## 单条插入
+
+```go
+func insertSingle(db *sqlca.Engine) error {
+	
+	now := time.Now().Format("2006-01-02 15:04:05")
+	var do = &models.InventoryData{
+		Id:         uint64(db.NewID()),
+		CreateId:   1,
+		CreateName: "admin",
+		CreateTime: now,
+		UpdateId:   1,
+		UpdateName: "admin",
+		UpdateTime: now,
+		IsFrozen:   0,
+		Name:       "齿轮",
+		SerialNo:   "SNO_001",
+		Quantity:   1000,
+		Price:      10.5,
+	}
+
+	var err error
+	/*
+		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
+		VALUES ('1859078192380252161','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','轮胎','SNO_002','2000','210','{}')
+	*/
+	_, err = db.Model(&do).Insert()
+	if err != nil {
+		return log.Errorf("数据插入错误: %s", err)
+	}
+	return nil
+}
+```
+
+## 批量插入
+
+```go
+func insertBatch(db *sqlca.Engine) error {
+	
+	now := time.Now().Format("2006-01-02 15:04:05")
+	var dos = []*models.InventoryData{
+		{
+			Id:         uint64(db.NewID()),
+			CreateId:   1,
+			CreateName: "admin",
+			CreateTime: now,
+			UpdateId:   1,
+			UpdateName: "admin",
+			UpdateTime: now,
+			IsFrozen:   0,
+			Name:       "齿轮",
+			SerialNo:   "SNO_001",
+			Quantity:   1000,
+			Price:      10.5,
+		},
+		{
+			Id:         uint64(db.NewID()),
+			CreateId:   1,
+			CreateName: "admin",
+			CreateTime: now,
+			UpdateId:   1,
+			UpdateName: "admin",
+			UpdateTime: now,
+			IsFrozen:   0,
+			Name:       "轮胎",
+			SerialNo:   "SNO_002",
+			Quantity:   2000,
+			Price:      210,
+		},
+	}
+
+	var err error
+	/*
+		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
+		VALUES ('1859078192380252160','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','齿轮','SNO_001','1000','10.5','{}'),
+		       ('1859078192380252161','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','轮胎','SNO_002','2000','210','{}')
+	*/
+	_, err = db.Model(&dos).Insert()
+	if err != nil {
+		return log.Errorf("数据插入错误: %s", err)
+	}
+	return nil
+}
+```
+
+## 普通查询带LIMIT限制
+```go
+func queryLimit(db *sqlca.Engine) error {
+	
     var err error
-    db, err = sqlca.NewEngine(MysqlDSN)
-    if err != nil {
-        log.Panic(err.Error())
-    }
-    //db.Debug(true) //open debug mode
-}
-
-```
-
-## query by id
-
-```go
-func QueryById(db *sqlca.Engine) (err error) {
-    var rows int64
-    var user *models.UserDO
+    var count int64
+    var dos []*models.InventoryData
     
-    //SELECT * FROM user WHERE id=1
-    var userId = 1
-    rows, err = db.Model(&user).
-                    Table(models.TableNameUser).
-                    Id(userId).
-                    Query()
-    if err != nil {
-        return log.Errorf(err.Error())
-    }
-    if rows == 0 || user.Id == 0 {
-        return log.Errorf("query user by id %v not found", userId)
-    }
-    log.Infof("[SELECT * FROM user WHERE id=1] query result: [%+v]", user)
-    return nil
+        //SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 1000
+        count, err = db.Model(&dos).
+            Limit(1000).
+            Desc("create_time").
+            Query()
+        if err != nil {
+            return log.Errorf("数据查询错误：%s", err)
+        }
+        log.Infof("查询结果数据条数: %d", count)
+        return nil
+}
+
+```
+
+## 查询无数据则报错
+
+```go
+func queryErrNotFound(db *sqlca.Engine) error {
+	
+	var err error
+	var count int64
+	var do *models.InventoryData //如果取数对象是切片则不报错
+
+	//SELECT * FROM inventory_data WHERE id=1899078192380252160
+	count, err = db.Model(&do).Id(1899078192380252160).Find()
+	if err != nil {
+		if errors.Is(err, sqlca.ErrRecordNotFound) {
+			return log.Errorf("根据ID查询数据库记录无结果：%s", err)
+		}
+		return log.Errorf("数据库错误：%s", err)
+	}
+	log.Infof("查询结果数据条数: %d", count)
+	return nil
 }
 ```
 
-## query by page
+## 分页查询
 
 ```go
+func queryByPage(db *sqlca.Engine) error {
+	
+	var err error
+	var count, total int64
+	var dos []*models.InventoryData
 
-func QueryByPage(db *sqlca.Engine) (err error) {
-	var rows, total int64
-	var users []*models.UserDO
-
-	//SELECT id, name, sex_name, balance, created_time, updated_time FROM user LIMIT 0, 100
-	rows, total, err = db.Model(&users).
-		Table(models.TableNameUser).
-		Select(models.USER_COLUMN_ID, models.USER_COLUMN_NAME, models.USER_COLUMN_SEX_NAME, models.USER_COLUMN_CREATED_TIME, models.USER_COLUMN_UPDATED_TIME, models.USER_COLUMN_BALANCE).
-		Page(0, 100).
+	//SELECT  * FROM inventory_data WHERE 1=1 ORDER BY create_time DESC LIMIT 0,20
+	count, total, err = db.Model(&dos).
+		Page(1, 20).
+		Desc("create_time").
 		QueryEx()
 	if err != nil {
-		return log.Errorf(err.Error())
+		return log.Errorf("数据查询错误：%s", err)
 	}
-	log.Infof("[SELECT id, name, sex_name, balance, created_time, updated_time FROM user LIMIT 0, 100] query result: rows [%v] total [%v]", rows, total)
+	log.Infof("查询结果条数: %d 数据库总数：%v", count, total)
 	return nil
 }
 
 ```
 
-## query by conditions
+## 多条件查询
 
 ```go
-func QueryByConditions(db *sqlca.Engine, id int64, name, createdTime string) (err error) {
-    var rows int64
-    var users []*models.UserDO
-    
-    //SELECT id, name, sex_name, balance, created_time, updated_time FROM user WHERE id = ? AND name = ? AND created_time >= ?
-    e := db.Model(&users).
-            Table(models.TableNameUser).
-            Select(models.USER_COLUMN_ID, models.USER_COLUMN_NAME, models.USER_COLUMN_SEX_NAME, models.USER_COLUMN_CREATED_TIME, models.USER_COLUMN_UPDATED_TIME, models.USER_COLUMN_BALANCE)
-    if id != 0 {
-        e.Eq(models.USER_COLUMN_ID, id)
-    }
-    if name != "" {
-        e.Eq(models.USER_COLUMN_NAME, name)
-    }
-    if createdTime != "" {
-        e.Gte(models.USER_COLUMN_CREATED_TIME, createdTime)
-    }
-    if rows, err = e.Query(); err != nil {
-        return log.Errorf(err.Error())
-    }
-    log.Infof("[SELECT id, name, sex_name, balance, created_time, updated_time FROM user  WHERE id = ? AND name = ? AND created_time >= ?] query result: rows [%v] users [%+v]", rows, users)
-    return nil
-}
-```
-
-## insert 
-
-```go
-func Insert(db *sqlca.Engine) (err error) {
-	//INSERT INTO user(name, phone, sex_name, balance) VALUES('john', '+0014155787342', 'male', '12423.32356')
-	var user = &models.UserDO{
-		Name:    "john",
-		Phone:   "+0014155787342",
-		Balance: sqlca.NewDecimal("12423.32356"),
-		SexName: "male",
-	}
-	var id int64
-	id, err = db.Model(&user).Table(models.TableNameUser).Insert()
+func queryByCondition(db *sqlca.Engine) error {
+	
+	var err error
+	var count int64
+	var dos []*models.InventoryData
+	//SELECT * FROM inventory_data WHERE `quantity` > 0 and is_frozen=0 AND create_time >= '2024-10-01 11:35:14' ORDER BY create_time DESC
+	count, err = db.Model(&dos).
+		Gt("quantity", 0).
+		Eq("is_frozen", 0).
+		Gte("create_time", "2024-10-01 11:35:14").
+		Desc("create_time").
+		Query()
 	if err != nil {
-		return log.Errorf(err.Error())
+		return log.Errorf("数据查询错误：%s", err)
 	}
-	log.Infof("[INSERT INTO user(name, phone, sex_name, balance) VALUES('john', '+0014155787342', 'male', '12423.32356')] result: last insert id [%v]", id)
+	log.Infof("查询结果数据条数: %d", count)
 	return nil
 }
 ```
-
-## insert batch
+## 常规SQL查询
 
 ```go
-func InsertBatch(db *sqlca.Engine) (err error) {
-	//INSERT INTO user(name, phone, sex_name, balance) VALUES('john', '+0014155787342', 'male', '12423.32356'),('rose', '+0014155787343', 'female', '423.006')
-	var users = []*models.UserDO{
-		{
-			Name:    "john",
-			Phone:   "+0014155787342",
-			Balance: sqlca.NewDecimal("12423.32356"),
-			SexName: "male",
-		},
-		{
-			Name:    "rose",
-			Phone:   "+0014155787343",
-			Balance: sqlca.NewDecimal("423.006"),
-			SexName: "female",
-		},
-	}
-	_, err = db.Model(&users).Table(models.TableNameUser).Insert()
+func queryRawSQL(db *sqlca.Engine) error {
+	
+	var rows []*models.InventoryData
+	var sb = sqlca.NewStringBuilder()
+
+	//SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
+
+	sb.Append("SELECT * FROM %s", "inventory_data")
+	sb.Append("WHERE is_frozen = ?", 0)
+	sb.Append("AND quantity > ?", 10)
+	strQuery := sb.String()
+	_, err := db.Model(&rows).QueryRaw(strQuery)
 	if err != nil {
-		return log.Errorf(err.Error())
+		return log.Errorf("数据查询错误：%s", err)
 	}
-	log.Infof("[INSERT INTO user(name, phone, sex_name, balance) VALUES('john', '+0014155787342', 'male', '12423.32356'),('rose', '+0014155787343', 'female', '423.006')] successful")
 	return nil
 }
 ```
+
+## 查询带多个OR条件(map类型)
+
+```go
+func queryOr(db *sqlca.Engine) error {
+	
+	var err error
+	var count int64
+	var dos []*models.InventoryData
+
+	//SELECT * FROM inventory_data WHERE create_id=1 AND name = '配件' OR serial_no = 'SNO_001' ORDER BY create_time DESC
+	count, err = db.Model(&dos).
+		And("create_id = ?", 1).
+		Or("name = ?", "配件").
+		Or("serial_no = ?", "SNO_001").
+		Desc("create_time").
+		Query()
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("查询结果数据条数: %d", count)
+
+	//SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY create_time DESC
+	var andConditions = make(map[string]interface{})
+	var orConditions = make(map[string]interface{})
+
+	andConditions["create_id = ?"] = 1
+	andConditions["is_frozen = ?"] = 0
+
+	orConditions["name = ?"] = "配件"
+	orConditions["serial_no = ?"] = "SNO_001"
+
+	count, err = db.Model(&dos).
+		And(andConditions).
+		Or(orConditions).
+		Desc("create_time").
+		Query()
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("查询结果数据条数: %d", count)
+	return nil
+}
+```
+
+## 分组查询
+
+```go
+func queryByGroup(db *sqlca.Engine) error {
+	
+	var err error
+	var count int64
+	var dos []*models.InventoryData
+	/*
+		SELECT  create_id, SUM(quantity) AS quantity
+		FROM inventory_data
+		WHERE 1=1 AND quantity>'0' AND is_frozen='0' AND create_time>='2024-10-01 11:35:14'
+		GROUP BY create_id
+	*/
+	count, err = db.Model(&dos).
+		Select("create_id", "SUM(quantity) AS quantity").
+		Gt("quantity", 0).
+		Eq("is_frozen", 0).
+		Gte("create_time", "2024-10-01 11:35:14").
+		GroupBy("create_id").
+		Query()
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("查询结果数据条数: %d", count)
+	return nil
+}
+```
+
+
+## 联表查询
+
+```go
+func queryJoins(db *sqlca.Engine) error {
+	
+	/*
+		SELECT a.id as product_id, a.name AS product_name, b.quantity, b.weight
+		FROM inventory_data a
+		LEFT JOIN inventory_in b
+		ON a.id=b.product_id
+		WHERE a.quantity > 0 AND a.is_frozen=0 AND a.create_time>='2024-10-01 11:35:14'
+	*/
+	var do struct{}
+	count, err := db.Model(&do).
+		Select("a.id as product_id", "a.name AS product_name", "b.quantity", "b.weight").
+		Table("inventory_data a").
+		LeftJoin("inventory_in b").
+		On("a.id=b.product_id").
+		Gt("a.quantity", 0).
+		Eq("a.is_frozen", 0).
+		Gte("a.create_time", "2024-10-01 11:35:14").
+		Query()
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("查询结果数据条数: %d", count)
+	return nil
+}
+```
+
+
+## 数据更新
+
+```go
+/*
+[数据更新]
+
+SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
+UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1858759254329004032'
+*/
+func update(db *sqlca.Engine) error {
+	
+	var err error
+	var do *models.InventoryData
+	var id = uint64(1858759254329004032)
+	_, err = db.Model(&do).Id(id).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+
+	do.Quantity = 2300 //更改库存
+	_, err = db.Model(do).Select("quantity").Update()
+	if err != nil {
+		return log.Errorf("更新错误：%s", err)
+	}
+	return nil
+}
+```
+
+## 事务处理
+
+```go
+func transaction(db *sqlca.Engine) error {
+
+	/*
+		-- TRANSACTION BEGIN
+
+			INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1858759254329004032','1861614736295071744','admin','1','2024-11-27 1114','202407090000001')
+			SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
+			UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1858759254329004032'
+
+		-- TRANSACTION END
+	*/
+
+	now := time.Now().Format("2006-01-02 15:04:05")
+	tx, err := db.TxBegin()
+	if err != nil {
+		return log.Errorf("开启事务失败：%s", err)
+	}
+	defer tx.TxRollback()
+
+	productId := uint64(1858759254329004032)
+	strOrderNo := time.Now().Format("20060102150405.000000000")
+	//***************** 执行事务操作 *****************
+	quantity := float64(20)
+	weight := float64(200.3)
+	_, err = tx.Model(&models.InventoryIn{
+		Id:         uint64(db.NewID()),
+		CreateId:   1,
+		CreateName: "admin",
+		CreateTime: now,
+		UpdateId:   1,
+		UpdateName: "admin",
+		UpdateTime: now,
+		ProductId:  productId,
+		OrderNo:    strOrderNo,
+		UserId:     3,
+		UserName:   "lazy",
+		Quantity:   quantity,
+		Weight:     weight,
+		Remark:     "产品入库",
+	}).Insert()
+	if err != nil {
+		return log.Errorf("数据插入错误: %s", err)
+	}
+	var inventoryData = &models.InventoryData{}
+	_, err = db.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	inventoryData.Quantity += quantity
+	_, err = tx.Model(&inventoryData).Id(productId).Select("quantity").Update()
+	if err != nil {
+		return log.Errorf("更新错误：%s", err)
+	}
+	//***************** 提交事务 *****************
+	err = tx.TxCommit()
+	if err != nil {
+		return log.Errorf("提交事务失败：%s", err)
+	}
+	return nil
+}
+
+```
+
+## 事务处理封装
+
+```go
+/*
+	   -- TRANSACTION BEGIN
+
+	   	INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1858759254329004032','1861614736295071744','admin','1','2024-11-27 1114','202407090000002')
+	   	SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
+	   	UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1858759254329004032'
+
+	   -- TRANSACTION END
+	*/
+	strOrderNo := time.Now().Format("20060102150405.000000000")
+	err := db.TxFunc(func(tx *sqlca.Engine) error {
+		var err error
+		productId := uint64(1858759254329004032)
+		now := time.Now().Format("2006-01-02 15:04:05")
+
+		//***************** 执行事务操作 *****************
+		quantity := float64(20)
+		weight := float64(200.3)
+		_, err = tx.Model(&models.InventoryIn{
+			Id:         uint64(db.NewID()),
+			CreateId:   1,
+			CreateName: "admin",
+			CreateTime: now,
+			UpdateId:   1,
+			UpdateName: "admin",
+			UpdateTime: now,
+			ProductId:  productId,
+			OrderNo:    strOrderNo,
+			UserId:     3,
+			UserName:   "lazy",
+			Quantity:   quantity,
+			Weight:     weight,
+			Remark:     "产品入库",
+		}).Insert()
+		if err != nil {
+			return log.Errorf("数据插入错误: %s", err)
+		}
+		var inventoryData = &models.InventoryData{}
+		_, err = db.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+		if err != nil {
+			return log.Errorf("数据查询错误：%s", err)
+		}
+		inventoryData.Quantity += quantity
+		_, err = tx.Model(&inventoryData).Id(productId).Select("quantity").Update()
+		if err != nil {
+			return log.Errorf("更新错误：%s", err)
+		}
+		return nil
+	})
+
+	//***************** 事务处理结果 *****************
+	if err != nil {
+		return log.Errorf("事务失败：%s", err)
+	}
+	return nil
+}
+```
+
 

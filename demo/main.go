@@ -25,9 +25,10 @@ func main() {
 		log.Errorf("connect database error: %s", err)
 		return
 	}
-	//requireNoError(insert(db))
+	_ = db
+	//requireNoError(insertSingle(db))
 	////requireNoError(insertBatch(db))
-	//requireNoError(query(db))
+	//requireNoError(queryLimit(db))
 	//requireNoError(queryErrNotFound(db))
 	//requireNoError(queryByPage(db))
 	//requireNoError(queryByCondition(db))
@@ -49,7 +50,7 @@ func requireNoError(err error) {
 /*
 [单条插入]
 */
-func insert(db *sqlca.Engine) error {
+func insertSingle(db *sqlca.Engine) error {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	var do = &models.InventoryData{
 		Id:         uint64(db.NewID()),
@@ -130,7 +131,7 @@ func insertBatch(db *sqlca.Engine) error {
 /*
 [普通查询带LIMIT限制]
 */
-func query(db *sqlca.Engine) error {
+func queryLimit(db *sqlca.Engine) error {
 	var err error
 	var count int64
 	var dos []*models.InventoryData
@@ -457,6 +458,9 @@ func transactionWrapper(db *sqlca.Engine) error {
 	return nil
 }
 
+/*
+[常规SQL查询]
+*/
 func queryRawSQL(db *sqlca.Engine) error {
 	var rows []*models.InventoryData
 	var sb = sqlca.NewStringBuilder()

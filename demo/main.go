@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v2"
 	"github.com/civet148/sqlca/v2/demo/models"
@@ -19,20 +20,24 @@ func main() {
 			NodeId: 1, //雪花算法节点ID 1-1023
 		},
 	}
-	db, err = sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", options)
+	db, err = sqlca.NewEngine("mysql://root:123456@192.168.6.115:3306/test?charset=utf8mb4", options)
 	if err != nil {
 		log.Errorf("connect database error: %s", err)
 		return
 	}
 	//requireNoError(insert(db))
-	requireNoError(query(db))
-	requireNoError(queryByPage(db))
-	requireNoError(queryByCondition(db))
-	requireNoError(queryByGroup(db))
-	requireNoError(update(db))
+	////requireNoError(insertBatch(db))
+	//requireNoError(query(db))
+	//requireNoError(queryErrNotFound(db))
+	//requireNoError(queryByPage(db))
+	//requireNoError(queryByCondition(db))
+	//requireNoError(queryByGroup(db))
+	//requireNoError(queryJoins(db))
+	//requireNoError(update(db))
 	//requireNoError(transaction(db))
 	//requireNoError(transactionWrapper(db))
-	requireNoError(queryOr(db))
+	//requireNoError(queryOr(db))
+	requireNoError(queryRawSQL(db))
 }
 
 func requireNoError(err error) {
@@ -42,9 +47,41 @@ func requireNoError(err error) {
 }
 
 /*
-[批量插入]
+[单条插入]
 */
 func insert(db *sqlca.Engine) error {
+	now := time.Now().Format("2006-01-02 15:04:05")
+	var do = &models.InventoryData{
+		Id:         uint64(db.NewID()),
+		CreateId:   1,
+		CreateName: "admin",
+		CreateTime: now,
+		UpdateId:   1,
+		UpdateName: "admin",
+		UpdateTime: now,
+		IsFrozen:   0,
+		Name:       "齿轮",
+		SerialNo:   "SNO_001",
+		Quantity:   1000,
+		Price:      10.5,
+	}
+
+	var err error
+	/*
+		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
+		VALUES ('1859078192380252161','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','轮胎','SNO_002','2000','210','{}')
+	*/
+	_, err = db.Model(&do).Insert()
+	if err != nil {
+		return log.Errorf("数据插入错误: %s", err)
+	}
+	return nil
+}
+
+/*
+[批量插入]
+*/
+func insertBatch(db *sqlca.Engine) error {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	var dos = []*models.InventoryData{
 		{
@@ -55,7 +92,7 @@ func insert(db *sqlca.Engine) error {
 			UpdateId:   1,
 			UpdateName: "admin",
 			UpdateTime: now,
-			IsFrozen:   false,
+			IsFrozen:   0,
 			Name:       "齿轮",
 			SerialNo:   "SNO_001",
 			Quantity:   1000,
@@ -69,7 +106,7 @@ func insert(db *sqlca.Engine) error {
 			UpdateId:   1,
 			UpdateName: "admin",
 			UpdateTime: now,
-			IsFrozen:   false,
+			IsFrozen:   0,
 			Name:       "轮胎",
 			SerialNo:   "SNO_002",
 			Quantity:   2000,
@@ -105,6 +142,27 @@ func query(db *sqlca.Engine) error {
 		Query()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("查询结果数据条数: %d", count)
+	//log.Json("查询结果(JSON)", dos)
+	return nil
+}
+
+/*
+[查询无数据则报错]
+*/
+func queryErrNotFound(db *sqlca.Engine) error {
+	var err error
+	var count int64
+	var do *models.InventoryData
+
+	//SELECT * FROM inventory_data WHERE id=1899078192380252160
+	count, err = db.Model(&do).Id(1899078192380252160).Find()
+	if err != nil {
+		if errors.Is(err, sqlca.ErrRecordNotFound) {
+			return log.Errorf("根据ID查询数据库记录无结果：%s", err)
+		}
+		return log.Errorf("数据库错误：%s", err)
 	}
 	log.Infof("查询结果数据条数: %d", count)
 	//log.Json("查询结果(JSON)", dos)
@@ -232,8 +290,22 @@ func queryJoins(db *sqlca.Engine) error {
 		FROM inventory_data a
 		LEFT JOIN inventory_in b
 		ON a.id=b.product_id
-		WHERE quantity > 0 AND is_frozen=0 AND create_time>='2024-10-01 11:35:14'
+		WHERE a.quantity > 0 AND a.is_frozen=0 AND a.create_time>='2024-10-01 11:35:14'
 	*/
+	var do struct{}
+	count, err := db.Model(&do).
+		Select("a.id as product_id", "a.name AS product_name", "b.quantity", "b.weight").
+		Table("inventory_data a").
+		LeftJoin("inventory_in b").
+		On("a.id=b.product_id").
+		Gt("a.quantity", 0).
+		Eq("a.is_frozen", 0).
+		Gte("a.create_time", "2024-10-01 11:35:14").
+		Query()
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("查询结果数据条数: %d", count)
 	return nil
 }
 
@@ -283,7 +355,7 @@ func transaction(db *sqlca.Engine) error {
 	defer tx.TxRollback()
 
 	productId := uint64(1858759254329004032)
-
+	strOrderNo := time.Now().Format("20060102150405.000000000")
 	//***************** 执行事务操作 *****************
 	quantity := float64(20)
 	weight := float64(200.3)
@@ -296,7 +368,7 @@ func transaction(db *sqlca.Engine) error {
 		UpdateName: "admin",
 		UpdateTime: now,
 		ProductId:  productId,
-		OrderNo:    "202407090000001",
+		OrderNo:    strOrderNo,
 		UserId:     3,
 		UserName:   "lazy",
 		Quantity:   quantity,
@@ -337,6 +409,7 @@ func transactionWrapper(db *sqlca.Engine) error {
 
 	   -- TRANSACTION END
 	*/
+	strOrderNo := time.Now().Format("20060102150405.000000000")
 	err := db.TxFunc(func(tx *sqlca.Engine) error {
 		var err error
 		productId := uint64(1858759254329004032)
@@ -354,7 +427,7 @@ func transactionWrapper(db *sqlca.Engine) error {
 			UpdateName: "admin",
 			UpdateTime: now,
 			ProductId:  productId,
-			OrderNo:    "202407090000002",
+			OrderNo:    strOrderNo,
 			UserId:     3,
 			UserName:   "lazy",
 			Quantity:   quantity,
@@ -380,6 +453,23 @@ func transactionWrapper(db *sqlca.Engine) error {
 	//***************** 事务处理结果 *****************
 	if err != nil {
 		return log.Errorf("事务失败：%s", err)
+	}
+	return nil
+}
+
+func queryRawSQL(db *sqlca.Engine) error {
+	var rows []*models.InventoryData
+	var sb = sqlca.NewStringBuilder()
+
+	//SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
+
+	sb.Append("SELECT * FROM %s", "inventory_data")
+	sb.Append("WHERE is_frozen = ?", 0)
+	sb.Append("AND quantity > ?", 10)
+	strQuery := sb.String()
+	_, err := db.Model(&rows).QueryRaw(strQuery)
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
 	}
 	return nil
 }

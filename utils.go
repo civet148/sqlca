@@ -1,6 +1,7 @@
 package sqlca
 
 import (
+	"fmt"
 	"github.com/civet148/log"
 	"regexp"
 	"strconv"
@@ -103,5 +104,36 @@ func parseQueryInterface(query interface{}) queryInterfaceType {
 	}
 	log.Panic("query interface type just support 'string' or 'map[string]interface{}'")
 	return queryInterface_Unknown
+}
+
+func isQuestionPlaceHolder(query string, args ...interface{}) bool {
+	count := strings.Count(query, "?")
+	if count > 0 && count == len(args) {
+		return true
+	}
+	return false
+}
+
+type StringBuilder struct {
+	builder strings.Builder
+}
+
+func NewStringBuilder() *StringBuilder {
+	return &StringBuilder{}
+}
+
+func (s *StringBuilder) Append(query string, args ...interface{}) *StringBuilder {
+	var strQuery string
+	if isQuestionPlaceHolder(query, args...) { //question placeholder exist
+		query = strings.Replace(query, "?", " '%v' ", -1)
+		strQuery = " " + fmt.Sprintf(query, args...) + " "
+	}
+	strQuery = " " + fmt.Sprintf(query, args...) + " "
+	s.builder.WriteString(strQuery)
+	return s
+}
+
+func (s *StringBuilder) String() string {
+	return s.builder.String()
 }
 

@@ -267,10 +267,10 @@ func (e *Engine) Model(args ...interface{}) *Engine {
 	return e.clone(args...)
 }
 
-// Table set orm query table name(s)
+// Table set orm query table name(s) expression
 // when your struct type name is not a table name
-func (e *Engine) Table(strNames ...string) *Engine {
-	return e.From(strNames...)
+func (e *Engine) Table(exprs ...string) *Engine {
+	return e.From(exprs...)
 }
 
 // From alias of Table method
@@ -298,22 +298,22 @@ func (e *Engine) Id(value interface{}) *Engine {
 }
 
 // Select orm select/update columns
-func (e *Engine) Select(strColumns ...string) *Engine {
-	if e.setSelectColumns(strColumns...) {
+func (e *Engine) Select(columns ...string) *Engine {
+	if e.setSelectColumns(columns...) {
 		e.selected = true
 	}
 	return e
 }
 
 // Exclude exclude orm select/update columns
-func (e *Engine) Exclude(strColumns ...string) *Engine {
-	e.setExcludeColumns(strColumns...)
+func (e *Engine) Exclude(columns ...string) *Engine {
+	e.setExcludeColumns(columns...)
 	return e
 }
 
 // Omit same as Exclude
-func (e *Engine) Omit(strColumns ...string) *Engine {
-	e.setExcludeColumns(strColumns...)
+func (e *Engine) Omit(columns ...string) *Engine {
+	e.setExcludeColumns(columns...)
 	return e
 }
 
@@ -373,9 +373,9 @@ func (e *Engine) Or(query interface{}, args ...interface{}) *Engine {
 
 // OnConflict set the conflict columns for upsert
 // only for postgresql
-func (e *Engine) OnConflict(strColumns ...string) *Engine {
+func (e *Engine) OnConflict(columns ...string) *Engine {
 
-	e.setConflictColumns(strColumns...)
+	e.setConflictColumns(columns...)
 	return e
 }
 
@@ -444,23 +444,23 @@ func (e *Engine) OrderBy(orders ...string) *Engine {
 }
 
 // Asc order by [field1,field2...] asc
-func (e *Engine) Asc(strColumns ...string) *Engine {
+func (e *Engine) Asc(columns ...string) *Engine {
 
-	if len(strColumns) == 0 {
+	if len(columns) == 0 {
 		e.setAscColumns(e.orderByColumns...) // default order by columns as asc
 	} else {
-		e.setAscColumns(strColumns...) //custom order by asc columns
+		e.setAscColumns(columns...) //custom order by asc columns
 	}
 	return e
 }
 
 // Desc order by [field1,field2...] desc
-func (e *Engine) Desc(strColumns ...string) *Engine {
+func (e *Engine) Desc(columns ...string) *Engine {
 
-	if len(strColumns) == 0 {
+	if len(columns) == 0 {
 		e.setDescColumns(e.orderByColumns...) // default order by columns as desc
 	} else {
-		e.setDescColumns(strColumns...) //custom order by desc columns
+		e.setDescColumns(columns...) //custom order by desc columns
 	}
 	return e
 }
@@ -486,8 +486,8 @@ func (e *Engine) NotIn(strColumn string, args ...interface{}) *Engine {
 }
 
 // GroupBy group by [field1,field2...]
-func (e *Engine) GroupBy(strColumns ...string) *Engine {
-	e.setGroupBy(strColumns...)
+func (e *Engine) GroupBy(columns ...string) *Engine {
+	e.setGroupBy(columns...)
 	return e
 }
 
@@ -687,7 +687,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 }
 
 // Update orm update from model
-// strColumns... if set, columns will be updated, if none all columns in model will be updated except primary key
+// columns... if set, columns will be updated, if none all columns in model will be updated except primary key
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
 func (e *Engine) Update() (rowsAffected int64, err error) {
@@ -785,7 +785,15 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 	}
 
 	defer rows.Close()
-	return e.fetchRows(rows.Rows)
+	rowsAffected, err = e.fetchRows(rows.Rows)
+	if err != nil {
+		log.Errorf(err.Error())
+		return 0, err
+	}
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strQuery)
+	}
+	return rowsAffected, nil
 }
 
 // QueryMap use raw sql to query results into a map slice (model type is []map[string]string)

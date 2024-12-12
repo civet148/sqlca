@@ -1010,8 +1010,8 @@ func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) 
 
 func (e *Engine) formatString(strIn string, args ...interface{}) (strFmt string) {
 	strFmt = strIn
-	if e.isQuestionPlaceHolder(strIn, args...) { //question placeholder exist
-		strFmt = strings.Replace(strFmt, "?", "'%v'", -1)
+	if isQuestionPlaceHolder(strIn, args...) { //question placeholder exist
+		strFmt = strings.Replace(strFmt, "?", " '%v' ", -1)
 	}
 	return e.preventInjectionFmt(strFmt, args...)
 }
@@ -1230,14 +1230,6 @@ func (e *Engine) makeSqlxDelete() (strSqlx string) {
 	}
 	strSqlx = fmt.Sprintf("%v %v %v %v %v", types.DATABASE_KEY_NAME_DELETE, types.DATABASE_KEY_NAME_FROM, e.getTableName(), strWhere, e.getLimit())
 	return
-}
-
-func (e *Engine) isQuestionPlaceHolder(query string, args ...interface{}) bool {
-	count := strings.Count(query, "?")
-	if count > 0 && count == len(args) {
-		return true
-	}
-	return false
 }
 
 func (e *Engine) cleanWhereCondition() {

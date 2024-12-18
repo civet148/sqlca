@@ -6,7 +6,7 @@ set OUT_DIR=.
 rem 数据模型包名(数据模型文件目录名)
 set PACK_NAME="models"
 rem 指定某表的某字段为指定类型,多个表字段以英文逗号分隔（例如：user.create_time=time.Time表示指定user表create_time字段为time.Time类型; 如果不指定表名则所有表的create_time字段均为time.Time类型；支持第三方包类型，例如：user.weight=github.com/shopspring/decimal.Decimal）
-set SPEC_TYPES=""
+set SPEC_TYPES="inventory_data.product_extra=ProductExtraData"
 rem 指定其他orm的标签和值(以空格分隔)
 set COMMON_TAGS="id=gorm:\"primarykey\" create_time=gorm:\"autoCreateTime\" update_time=gorm:\"autoUpdateTime\""
 set DEPLOY_SQL="test.sql"

@@ -89,7 +89,7 @@ set OUT_DIR=.
 rem 数据模型包名(数据模型文件目录名)
 set PACK_NAME="models"
 rem 指定某表的某字段为指定类型,多个表字段以英文逗号分隔（例如：user.create_time=time.Time表示指定user表create_time字段为time.Time类型; 如果不指定表名则所有表的create_time字段均为time.Time类型；支持第三方包类型，例如：user.weight=github.com/shopspring/decimal.Decimal）
-set SPEC_TYPES=""
+set SPEC_TYPES="inventory_data.product_extra=ProductExtraData"
 rem 指定其他orm的标签和值(以空格分隔)
 set COMMON_TAGS="id=gorm:\"primarykey\" create_time=gorm:\"autoCreateTime\" update_time=gorm:\"autoUpdateTime\""
 set DEPLOY_SQL="test.sql"
@@ -148,47 +148,47 @@ const (
 )
 
 type InventoryData struct {
-	Id           uint64   `json:"id" db:"id" gorm:"primarykey"`                       //产品ID
-	CreateId     uint64   `json:"create_id" db:"create_id" `                          //创建人ID
-	CreateName   string   `json:"create_name" db:"create_name" `                      //创建人姓名
-	CreateTime   string   `json:"create_time" db:"create_time" gorm:"autoCreateTime"` //创建时间
-	UpdateId     uint64   `json:"update_id" db:"update_id" `                          //更新人ID
-	UpdateName   string   `json:"update_name" db:"update_name" `                      //更新人姓名
-	UpdateTime   string   `json:"update_time" db:"update_time" gorm:"autoUpdateTime"` //更新时间
-	IsFrozen     int8     `json:"is_frozen" db:"is_frozen" `                          //冻结状态(0: 未冻结 1: 已冻结)
-	Name         string   `json:"name" db:"name" `                                    //产品名称
-	SerialNo     string   `json:"serial_no" db:"serial_no" `                          //产品编号
-	Quantity     float64  `json:"quantity" db:"quantity" `                            //产品库存
-	Price        float64  `json:"price" db:"price" `                                  //产品均价
-	ProductExtra struct{} `json:"product_extra" db:"product_extra" sqlca:"isnull"`    //产品附带数据(JSON文本)
+	Id           uint64           `json:"id" db:"id" gorm:"primarykey"`                       //产品ID
+	CreateId     uint64           `json:"create_id" db:"create_id" `                          //创建人ID
+	CreateName   string           `json:"create_name" db:"create_name" `                      //创建人姓名
+	CreateTime   string           `json:"create_time" db:"create_time" gorm:"autoCreateTime"` //创建时间
+	UpdateId     uint64           `json:"update_id" db:"update_id" `                          //更新人ID
+	UpdateName   string           `json:"update_name" db:"update_name" `                      //更新人姓名
+	UpdateTime   string           `json:"update_time" db:"update_time" gorm:"autoUpdateTime"` //更新时间
+	IsFrozen     int8             `json:"is_frozen" db:"is_frozen" `                          //冻结状态(0: 未冻结 1: 已冻结)
+	Name         string           `json:"name" db:"name" `                                    //产品名称
+	SerialNo     string           `json:"serial_no" db:"serial_no" `                          //产品编号
+	Quantity     float64          `json:"quantity" db:"quantity" `                            //产品库存
+	Price        float64          `json:"price" db:"price" `                                  //产品均价
+	ProductExtra ProductExtraData `json:"product_extra" db:"product_extra" sqlca:"isnull"`    //产品附带数据(JSON文本)
 }
 
-func (do *InventoryData) GetId() uint64              { return do.Id }
-func (do *InventoryData) SetId(v uint64)             { do.Id = v }
-func (do *InventoryData) GetCreateId() uint64        { return do.CreateId }
-func (do *InventoryData) SetCreateId(v uint64)       { do.CreateId = v }
-func (do *InventoryData) GetCreateName() string      { return do.CreateName }
-func (do *InventoryData) SetCreateName(v string)     { do.CreateName = v }
-func (do *InventoryData) GetCreateTime() string      { return do.CreateTime }
-func (do *InventoryData) SetCreateTime(v string)     { do.CreateTime = v }
-func (do *InventoryData) GetUpdateId() uint64        { return do.UpdateId }
-func (do *InventoryData) SetUpdateId(v uint64)       { do.UpdateId = v }
-func (do *InventoryData) GetUpdateName() string      { return do.UpdateName }
-func (do *InventoryData) SetUpdateName(v string)     { do.UpdateName = v }
-func (do *InventoryData) GetUpdateTime() string      { return do.UpdateTime }
-func (do *InventoryData) SetUpdateTime(v string)     { do.UpdateTime = v }
-func (do *InventoryData) GetIsFrozen() int8          { return do.IsFrozen }
-func (do *InventoryData) SetIsFrozen(v int8)         { do.IsFrozen = v }
-func (do *InventoryData) GetName() string            { return do.Name }
-func (do *InventoryData) SetName(v string)           { do.Name = v }
-func (do *InventoryData) GetSerialNo() string        { return do.SerialNo }
-func (do *InventoryData) SetSerialNo(v string)       { do.SerialNo = v }
-func (do *InventoryData) GetQuantity() float64       { return do.Quantity }
-func (do *InventoryData) SetQuantity(v float64)      { do.Quantity = v }
-func (do *InventoryData) GetPrice() float64          { return do.Price }
-func (do *InventoryData) SetPrice(v float64)         { do.Price = v }
-func (do *InventoryData) GetProductExtra() struct{}  { return do.ProductExtra }
-func (do *InventoryData) SetProductExtra(v struct{}) { do.ProductExtra = v }
+func (do *InventoryData) GetId() uint64                      { return do.Id }
+func (do *InventoryData) SetId(v uint64)                     { do.Id = v }
+func (do *InventoryData) GetCreateId() uint64                { return do.CreateId }
+func (do *InventoryData) SetCreateId(v uint64)               { do.CreateId = v }
+func (do *InventoryData) GetCreateName() string              { return do.CreateName }
+func (do *InventoryData) SetCreateName(v string)             { do.CreateName = v }
+func (do *InventoryData) GetCreateTime() string              { return do.CreateTime }
+func (do *InventoryData) SetCreateTime(v string)             { do.CreateTime = v }
+func (do *InventoryData) GetUpdateId() uint64                { return do.UpdateId }
+func (do *InventoryData) SetUpdateId(v uint64)               { do.UpdateId = v }
+func (do *InventoryData) GetUpdateName() string              { return do.UpdateName }
+func (do *InventoryData) SetUpdateName(v string)             { do.UpdateName = v }
+func (do *InventoryData) GetUpdateTime() string              { return do.UpdateTime }
+func (do *InventoryData) SetUpdateTime(v string)             { do.UpdateTime = v }
+func (do *InventoryData) GetIsFrozen() int8                  { return do.IsFrozen }
+func (do *InventoryData) SetIsFrozen(v int8)                 { do.IsFrozen = v }
+func (do *InventoryData) GetName() string                    { return do.Name }
+func (do *InventoryData) SetName(v string)                   { do.Name = v }
+func (do *InventoryData) GetSerialNo() string                { return do.SerialNo }
+func (do *InventoryData) SetSerialNo(v string)               { do.SerialNo = v }
+func (do *InventoryData) GetQuantity() float64               { return do.Quantity }
+func (do *InventoryData) SetQuantity(v float64)              { do.Quantity = v }
+func (do *InventoryData) GetPrice() float64                  { return do.Price }
+func (do *InventoryData) SetPrice(v float64)                 { do.Price = v }
+func (do *InventoryData) GetProductExtra() ProductExtraData  { return do.ProductExtra }
+func (do *InventoryData) SetProductExtra(v ProductExtraData) { do.ProductExtra = v }
 
 
 ```
@@ -234,7 +234,7 @@ func main() {
 ## 单条插入
 
 ```go
-func insertSingle(db *sqlca.Engine) error {
+func InsertSingle(db *sqlca.Engine) error {
 	
 	now := time.Now().Format("2006-01-02 15:04:05")
 	var do = &models.InventoryData{
@@ -268,57 +268,66 @@ func insertSingle(db *sqlca.Engine) error {
 ## 批量插入
 
 ```go
-func insertBatch(db *sqlca.Engine) error {
-	
-	now := time.Now().Format("2006-01-02 15:04:05")
-	var dos = []*models.InventoryData{
-		{
-			Id:         uint64(db.NewID()),
-			CreateId:   1,
-			CreateName: "admin",
-			CreateTime: now,
-			UpdateId:   1,
-			UpdateName: "admin",
-			UpdateTime: now,
-			IsFrozen:   0,
-			Name:       "齿轮",
-			SerialNo:   "SNO_001",
-			Quantity:   1000,
-			Price:      10.5,
-		},
-		{
-			Id:         uint64(db.NewID()),
-			CreateId:   1,
-			CreateName: "admin",
-			CreateTime: now,
-			UpdateId:   1,
-			UpdateName: "admin",
-			UpdateTime: now,
-			IsFrozen:   0,
-			Name:       "轮胎",
-			SerialNo:   "SNO_002",
-			Quantity:   2000,
-			Price:      210,
-		},
-	}
+func InsertBatch(db *sqlca.Engine) error {
+now := time.Now().Format("2006-01-02 15:04:05")
+var dos = []*models.InventoryData{
+        {
+            Id:         uint64(db.NewID()),
+            CreateId:   1,
+            CreateName: "admin",
+            CreateTime: now,
+            UpdateId:   1,
+            UpdateName: "admin",
+            UpdateTime: now,
+            IsFrozen:   0,
+            Name:       "齿轮",
+            SerialNo:   "SNO_001",
+            Quantity:   1000,
+            Price:      10.5,
+            ProductExtra: models.ProductExtraData{
+                SpecsValue: "齿数：32",
+                AvgPrice:   sqlca.NewDecimal(30.8),
+            },
+        },
+        {
+            Id:         uint64(db.NewID()),
+            CreateId:   1,
+            CreateName: "admin",
+            CreateTime: now,
+            UpdateId:   1,
+            UpdateName: "admin",
+            UpdateTime: now,
+            IsFrozen:   0,
+            Name:       "轮胎",
+            SerialNo:   "SNO_002",
+            Quantity:   2000,
+            Price:      210,
+            ProductExtra: models.ProductExtraData{
+                SpecsValue: "17英寸",
+                AvgPrice:   sqlca.NewDecimal(450.5),
+            },
+        },
+    }
 
-	var err error
-	/*
-		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
-		VALUES ('1859078192380252160','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','齿轮','SNO_001','1000','10.5','{}'),
-		       ('1859078192380252161','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','轮胎','SNO_002','2000','210','{}')
-	*/
-	_, err = db.Model(&dos).Insert()
-	if err != nil {
-		return log.Errorf("数据插入错误: %s", err)
-	}
-	return nil
+    var err error
+    /*
+        INSERT INTO inventory_data
+            (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
+        VALUES
+            ('1867379968636358656','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','齿轮','SNO_001','1000','10.5','{\"avg_price\":\".8\",\"specs_value\":\"齿数：32\"}'),
+            ('1867379968636358657','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','轮胎','SNO_002','2000','210','{\"avg_price\":\"450.5\",\"specs_value\":\"17英寸\"}')
+    */
+    _, err = db.Model(&dos).Insert()
+    if err != nil {
+        return log.Errorf("数据插入错误: %s", err)
+    }
+    return nil
 }
 ```
 
 ## 普通查询带LIMIT限制
 ```go
-func queryLimit(db *sqlca.Engine) error {
+func QueryLimit(db *sqlca.Engine) error {
 	
     var err error
     var count int64
@@ -341,7 +350,7 @@ func queryLimit(db *sqlca.Engine) error {
 ## 查询无数据则报错
 
 ```go
-func queryErrNotFound(db *sqlca.Engine) error {
+func QueryErrNotFound(db *sqlca.Engine) error {
 	
 	var err error
 	var count int64
@@ -363,7 +372,7 @@ func queryErrNotFound(db *sqlca.Engine) error {
 ## 分页查询
 
 ```go
-func queryByPage(db *sqlca.Engine) error {
+func QueryByPage(db *sqlca.Engine) error {
 	
 	var err error
 	var count, total int64
@@ -386,7 +395,7 @@ func queryByPage(db *sqlca.Engine) error {
 ## 多条件查询
 
 ```go
-func queryByCondition(db *sqlca.Engine) error {
+func QueryByCondition(db *sqlca.Engine) error {
 	
 	var err error
 	var count int64
@@ -405,10 +414,51 @@ func queryByCondition(db *sqlca.Engine) error {
 	return nil
 }
 ```
+
+## 查询JSON内容字段到数据对象
+```go
+/*
+   models.InventoryData对象的ProductExtra是一个跟数据库JSON内容对应的结构体, 数据库中product_extra字段是json类型或text文本
+
+    type ProductExtraData struct {
+        AvgPrice   sqlca.Decimal `json:"avg_price"`   //均价
+        SpecsValue string        `json:"specs_value"` //规格
+    }
+*/
+func QueryWithJsonColumn(db *sqlca.Engine) error {
+    var err error
+    var do models.InventoryData
+    var id = uint64(1867379968636358657)
+    
+    /*
+        SELECT * FROM inventory_data WHERE id=1867379968636358657
+    
+        +-----------------------+-----------------------+-----------------------+------------------------------------------------+
+        | id	                | name	| serial_no	    | quantity	| price	    |                 product_extra                  |
+        +-----------------------+-------+---------------+-----------+-----------+------------------------------------------------+
+        | 1867379968636358657	| 轮胎  	| SNO_002		| 2000.000 	| 210.00	| {"avg_price": "450.5", "specs_value": "17英寸"} |
+        +------------------------------------------------------------------------------------------------------------------------+
+    */
+    _, err = db.Model(&do).
+    Table("inventory_data").
+    Select("id", "name", "serial_no", "quantity","price", "product_extra").
+    Id(id).
+    Find()
+    if err != nil {
+    return log.Errorf("数据查询错误：%s", err)
+    }
+    log.Infof("ID: %v 数据：%+v", id, do)
+    /*
+        2024-12-18 15:15:03.560732 PID:64764 [INFO] {goroutine 1} <main.go:373 QueryWithJsonColumn()> ID: 1867379968636358657 数据：{Id:1867379968636358657 Name:轮胎 SerialNo:SNO_002 Quantity:2000 Price:210 ProductExtra:{AvgPrice:450.5 SpecsValue:17英寸}}
+    */
+    return nil
+}
+```
+
 ## 常规SQL查询
 
 ```go
-func queryRawSQL(db *sqlca.Engine) error {
+func QueryRawSQL(db *sqlca.Engine) error {
 	
 	var rows []*models.InventoryData
 	var sb = sqlca.NewStringBuilder()
@@ -430,7 +480,7 @@ func queryRawSQL(db *sqlca.Engine) error {
 ## 查询带多个OR条件(map类型)
 
 ```go
-func queryOr(db *sqlca.Engine) error {
+func QueryOr(db *sqlca.Engine) error {
 	
 	var err error
 	var count int64
@@ -474,7 +524,7 @@ func queryOr(db *sqlca.Engine) error {
 ## 分组查询
 
 ```go
-func queryByGroup(db *sqlca.Engine) error {
+func QueryByGroup(db *sqlca.Engine) error {
 	
 	var err error
 	var count int64
@@ -504,7 +554,7 @@ func queryByGroup(db *sqlca.Engine) error {
 ## 联表查询
 
 ```go
-func queryJoins(db *sqlca.Engine) error {
+func QueryJoins(db *sqlca.Engine) error {
 	
 	/*
 		SELECT a.id as product_id, a.name AS product_name, b.quantity, b.weight
@@ -530,7 +580,27 @@ func queryJoins(db *sqlca.Engine) error {
 	return nil
 }
 ```
+## 普通变量取值查询
 
+```go
+func QueryByNormalVars(db *sqlca.Engine) error {
+	
+    var err error
+    var name, serialNo string
+    var id = uint64(1859078192380252160)
+    //SELECT name, serial_no FROM inventory_data WHERE id=1859078192380252160
+    _, err = db.Model(&name, &serialNo).
+                Table("inventory_data").
+                Select("name, serial_no").
+                Id(id).
+                Find()
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    log.Infof("数据ID: %v name=%s serial_no=%s", id, name, serialNo)
+    return nil
+}
+```
 
 ## 数据更新
 
@@ -541,7 +611,7 @@ func queryJoins(db *sqlca.Engine) error {
 SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
 UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1858759254329004032'
 */
-func update(db *sqlca.Engine) error {
+func UpdateSingle(db *sqlca.Engine) error {
 	
 	var err error
 	var do *models.InventoryData
@@ -563,7 +633,7 @@ func update(db *sqlca.Engine) error {
 ## 事务处理
 
 ```go
-func transaction(db *sqlca.Engine) error {
+func Transaction(db *sqlca.Engine) error {
 
 	/*
 		-- TRANSACTION BEGIN
@@ -629,7 +699,9 @@ func transaction(db *sqlca.Engine) error {
 ## 事务处理封装
 
 ```go
-/*
+func TransactionWrapper(db *sqlca.Engine) error {
+
+    /*
 	   -- TRANSACTION BEGIN
 
 	   	INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1858759254329004032','1861614736295071744','admin','1','2024-11-27 1114','202407090000002')

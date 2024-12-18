@@ -26,19 +26,21 @@ func main() {
 		return
 	}
 	_ = db
-	//requireNoError(insertSingle(db))
-	////requireNoError(insertBatch(db))
-	//requireNoError(queryLimit(db))
-	//requireNoError(queryErrNotFound(db))
-	//requireNoError(queryByPage(db))
-	//requireNoError(queryByCondition(db))
-	//requireNoError(queryByGroup(db))
-	//requireNoError(queryJoins(db))
-	//requireNoError(update(db))
-	//requireNoError(transaction(db))
-	//requireNoError(transactionWrapper(db))
-	//requireNoError(queryOr(db))
-	requireNoError(queryRawSQL(db))
+	//requireNoError(InsertSingle(db))
+	//requireNoError(InsertBatch(db))
+	//requireNoError(QueryLimit(db))
+	//requireNoError(QueryErrNotFound(db))
+	//requireNoError(QueryByPage(db))
+	//requireNoError(QueryByCondition(db))
+	//requireNoError(QueryByGroup(db))
+	//requireNoError(QueryJoins(db))
+	//requireNoError(QueryByNormalVars(db))
+	//requireNoError(Update(db))
+	//requireNoError(Transaction(db))
+	//requireNoError(TransactionWrapper(db))
+	//requireNoError(QueryOr(db))
+	//requireNoError(QueryRawSQL(db))
+	requireNoError(QueryWithJsonColumn(db))
 }
 
 func requireNoError(err error) {
@@ -50,7 +52,7 @@ func requireNoError(err error) {
 /*
 [单条插入]
 */
-func insertSingle(db *sqlca.Engine) error {
+func InsertSingle(db *sqlca.Engine) error {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	var do = &models.InventoryData{
 		Id:         uint64(db.NewID()),
@@ -82,7 +84,7 @@ func insertSingle(db *sqlca.Engine) error {
 /*
 [批量插入]
 */
-func insertBatch(db *sqlca.Engine) error {
+func InsertBatch(db *sqlca.Engine) error {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	var dos = []*models.InventoryData{
 		{
@@ -98,6 +100,10 @@ func insertBatch(db *sqlca.Engine) error {
 			SerialNo:   "SNO_001",
 			Quantity:   1000,
 			Price:      10.5,
+			ProductExtra: models.ProductExtraData{
+				SpecsValue: "齿数：32",
+				AvgPrice:   sqlca.NewDecimal(30.8),
+			},
 		},
 		{
 			Id:         uint64(db.NewID()),
@@ -112,14 +118,20 @@ func insertBatch(db *sqlca.Engine) error {
 			SerialNo:   "SNO_002",
 			Quantity:   2000,
 			Price:      210,
+			ProductExtra: models.ProductExtraData{
+				SpecsValue: "17英寸",
+				AvgPrice:   sqlca.NewDecimal(450.5),
+			},
 		},
 	}
 
 	var err error
 	/*
-		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
-		VALUES ('1859078192380252160','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','齿轮','SNO_001','1000','10.5','{}'),
-		       ('1859078192380252161','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','轮胎','SNO_002','2000','210','{}')
+		INSERT INTO inventory_data
+			(`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
+		VALUES
+			('1867379968636358656','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','齿轮','SNO_001','1000','10.5','{\"avg_price\":\".8\",\"specs_value\":\"齿数：32\"}'),
+			('1867379968636358657','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','轮胎','SNO_002','2000','210','{\"avg_price\":\"450.5\",\"specs_value\":\"17英寸\"}')
 	*/
 	_, err = db.Model(&dos).Insert()
 	if err != nil {
@@ -131,7 +143,7 @@ func insertBatch(db *sqlca.Engine) error {
 /*
 [普通查询带LIMIT限制]
 */
-func queryLimit(db *sqlca.Engine) error {
+func QueryLimit(db *sqlca.Engine) error {
 	var err error
 	var count int64
 	var dos []*models.InventoryData
@@ -152,7 +164,7 @@ func queryLimit(db *sqlca.Engine) error {
 /*
 [查询无数据则报错]
 */
-func queryErrNotFound(db *sqlca.Engine) error {
+func QueryErrNotFound(db *sqlca.Engine) error {
 	var err error
 	var count int64
 	var do *models.InventoryData
@@ -173,7 +185,7 @@ func queryErrNotFound(db *sqlca.Engine) error {
 /*
 [分页查询]
 */
-func queryByPage(db *sqlca.Engine) error {
+func QueryByPage(db *sqlca.Engine) error {
 	var err error
 	var count, total int64
 	var dos []*models.InventoryData
@@ -194,7 +206,7 @@ func queryByPage(db *sqlca.Engine) error {
 /*
 [复杂查询]
 */
-func queryByCondition(db *sqlca.Engine) error {
+func QueryByCondition(db *sqlca.Engine) error {
 	var err error
 	var count int64
 	var dos []*models.InventoryData
@@ -215,7 +227,7 @@ func queryByCondition(db *sqlca.Engine) error {
 /*
 [查询带多个OR条件]
 */
-func queryOr(db *sqlca.Engine) error {
+func QueryOr(db *sqlca.Engine) error {
 	var err error
 	var count int64
 	var dos []*models.InventoryData
@@ -258,7 +270,7 @@ func queryOr(db *sqlca.Engine) error {
 /*
 [分组查询]
 */
-func queryByGroup(db *sqlca.Engine) error {
+func QueryByGroup(db *sqlca.Engine) error {
 	var err error
 	var count int64
 	var dos []*models.InventoryData
@@ -285,7 +297,7 @@ func queryByGroup(db *sqlca.Engine) error {
 /*
 [联表查询]
 */
-func queryJoins(db *sqlca.Engine) error {
+func QueryJoins(db *sqlca.Engine) error {
 	/*
 		SELECT a.id as product_id, a.name AS product_name, b.quantity, b.weight
 		FROM inventory_data a
@@ -311,12 +323,86 @@ func queryJoins(db *sqlca.Engine) error {
 }
 
 /*
+[普通变量取值查询]
+*/
+
+func QueryByNormalVars(db *sqlca.Engine) error {
+	var err error
+	var name, serialNo string
+	var id = uint64(1859078192380252160)
+	//SELECT name, serial_no FROM inventory_data WHERE id=1859078192380252160
+	_, err = db.Model(&name, &serialNo).
+		Table("inventory_data").
+		Select("name, serial_no").
+		Id(id).
+		Find()
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("数据ID: %v name=%s serial_no=%s", id, name, serialNo)
+	return nil
+}
+
+/*
+[查询保存JSON内容的字段到结构体]
+models.InventoryData对象的ProductExtra是一个跟数据库JSON内容对应的结构体
+*/
+func QueryWithJsonColumn(db *sqlca.Engine) error {
+	var err error
+	var do models.InventoryData
+	var id = uint64(1867379968636358657)
+
+	/*
+		SELECT * FROM inventory_data WHERE id=1867379968636358657
+
+		+-----------------------+-----------------------+-----------------------+------------------------------------------------+
+		| id	                | name	| serial_no	    | quantity	| price	    |                 product_extra                  |
+		+-----------------------+-------+---------------+-----------+-----------+------------------------------------------------+
+		| 1867379968636358657	| 轮胎  	| SNO_002		| 2000.000 	| 210.00	| {"avg_price": "450.5", "specs_value": "17英寸"} |
+		+------------------------------------------------------------------------------------------------------------------------+
+	*/
+	_, err = db.Model(&do).
+		Table("inventory_data").
+		Select("id", "name", "serial_no", "quantity", "price", "product_extra").
+		Id(id).
+		Find()
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("ID: %v 数据：%+v", id, do)
+	/*
+		2024-12-18 15:15:03.560732 PID:64764 [INFO] {goroutine 1} <main.go:373 QueryWithJsonColumn()> ID: 1867379968636358657 数据：{Id:1867379968636358657 Name:轮胎 SerialNo:SNO_002 Quantity:2000 Price:210 ProductExtra:{AvgPrice:450.5 SpecsValue:17英寸}}
+	*/
+	return nil
+}
+
+/*
+[常规SQL查询]
+*/
+func QueryRawSQL(db *sqlca.Engine) error {
+	var rows []*models.InventoryData
+	var sb = sqlca.NewStringBuilder()
+
+	//SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
+
+	sb.Append("SELECT * FROM %s", "inventory_data")
+	sb.Append("WHERE is_frozen = ?", 0)
+	sb.Append("AND quantity > ?", 10)
+	strQuery := sb.String()
+	_, err := db.Model(&rows).QueryRaw(strQuery)
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	return nil
+}
+
+/*
 [数据更新]
 
 SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
 UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1858759254329004032'
 */
-func update(db *sqlca.Engine) error {
+func UpdateSingle(db *sqlca.Engine) error {
 	var err error
 	var do *models.InventoryData
 	var id = uint64(1858759254329004032)
@@ -336,7 +422,7 @@ func update(db *sqlca.Engine) error {
 /*
 [事务处理]
 */
-func transaction(db *sqlca.Engine) error {
+func Transaction(db *sqlca.Engine) error {
 
 	/*
 		-- TRANSACTION BEGIN
@@ -400,7 +486,7 @@ func transaction(db *sqlca.Engine) error {
 /*
 [事务处理封装]
 */
-func transactionWrapper(db *sqlca.Engine) error {
+func TransactionWrapper(db *sqlca.Engine) error {
 	/*
 	   -- TRANSACTION BEGIN
 
@@ -454,26 +540,6 @@ func transactionWrapper(db *sqlca.Engine) error {
 	//***************** 事务处理结果 *****************
 	if err != nil {
 		return log.Errorf("事务失败：%s", err)
-	}
-	return nil
-}
-
-/*
-[常规SQL查询]
-*/
-func queryRawSQL(db *sqlca.Engine) error {
-	var rows []*models.InventoryData
-	var sb = sqlca.NewStringBuilder()
-
-	//SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
-
-	sb.Append("SELECT * FROM %s", "inventory_data")
-	sb.Append("WHERE is_frozen = ?", 0)
-	sb.Append("AND quantity > ?", 10)
-	strQuery := sb.String()
-	_, err := db.Model(&rows).QueryRaw(strQuery)
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
 	}
 	return nil
 }

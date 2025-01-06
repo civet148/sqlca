@@ -603,6 +603,17 @@ func QueryByNormalVars(db *sqlca.Engine) error {
         return log.Errorf("数据查询错误：%s", err)
     }
     log.Infof("数据ID: %v name=%s serial_no=%s", id, name, serialNo)
+	
+	var ids []uint64
+    //SELECT id FROM inventory_data LIMIT 10
+    _, err = db.Model(&ids).
+                Table("inventory_data").
+                Select("id").
+                Limit(10).
+                Query()
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
     return nil
 }
 ```

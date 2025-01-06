@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	_ "gitee.com/opengauss/openGauss-connector-go-pq" //open gauss golang driver of gitee.com
 	"github.com/bwmarrin/snowflake"
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v2/types"
@@ -15,6 +16,7 @@ import (
 	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
 	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
+	//_ "github.com/opengauss-mirror/openGauss-connector-go-pq" //open gauss golang driver of github.com
 	"strings"
 )
 
@@ -109,6 +111,13 @@ type Engine struct {
 func init() {
 }
 
+/*
+// [mysql]    "mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4"
+// [postgres] "postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public"
+// [opengauss] "opengauss://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public"
+// [mssql]    "mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false"
+// [sqlite]   "sqlite:///var/lib/test.db"
+*/
 func NewEngine(strUrl string, options ...*Options) (*Engine, error) {
 	e := &Engine{
 		strPkName:     types.DEFAULT_PRIMARY_KEY_NAME,
@@ -127,7 +136,7 @@ func (e *Engine) getDriverNameAndDSN(adapterType types.AdapterType, strUrl strin
 	switch adapterType {
 	case types.AdapterSqlx_MySQL:
 		driver.parameter = e.parseMysqlUrl(strUrl)
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		driver.parameter = e.parsePostgresUrl(strUrl)
 	case types.AdapterSqlx_Sqlite:
 		driver.parameter = e.parseSqliteUrl(strUrl)
@@ -145,7 +154,8 @@ func (e *Engine) getDriverNameAndDSN(adapterType types.AdapterType, strUrl strin
 //  1. data source name
 //
 //     [mysql]    open("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4")
-//     [postgres] open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable")
+//     [postgres] open("postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public")
+//     [opengauss] open("opengauss://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public")
 //     [mssql]    open("mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
 //     [sqlite]   open("sqlite:///var/lib/test.db")
 //
@@ -175,45 +185,41 @@ func (e *Engine) open(strUrl string, options ...*Options) (*Engine, error) {
 	var dsn = &e.dsn
 	var opt *Options
 	var param = &dsn.parameter
-	switch adapter {
-	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Postgres, types.AdapterSqlx_Sqlite, types.AdapterSqlx_Mssql:
-		e.adapterSqlx = adapter
-		var db *sqlx.DB
-		if len(options) != 0 {
-			opt = options[0]
-			if opt.Debug {
-				e.Debug(true)
-			}
-			if opt.SSH != nil { //SSH tunnel enable
-				dsn = opt.SSH.openSSHTunnel(dsn)
-			}
-		}
 
-		if db, err = sqlx.Open(dsn.strDriverName, param.strDSN); err != nil {
-			//log.Errorf("open database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
-			return nil, err
+	e.adapterSqlx = adapter
+	var db *sqlx.DB
+	if len(options) != 0 {
+		opt = options[0]
+		if opt.Debug {
+			e.Debug(true)
 		}
-		if err = db.Ping(); err != nil {
-			//log.Errorf("ping database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
-			return nil, err
+		if opt.SSH != nil { //SSH tunnel enable
+			dsn = opt.SSH.openSSHTunnel(dsn)
 		}
+	}
 
-		if opt != nil {
-			dsn.SetMax(opt.Max)
-			dsn.SetIdle(opt.Idle)
-		}
-
-		if param.max != 0 {
-			db.SetMaxOpenConns(param.max)
-		}
-		if param.idle != 0 {
-			db.SetMaxIdleConns(param.idle)
-		}
-		e.setDB(db)
-	default:
-		err = fmt.Errorf("adapter instance type [%v] url [%s] not support", adapter, strUrl)
+	if db, err = sqlx.Open(dsn.strDriverName, param.strDSN); err != nil {
+		//log.Errorf("open database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
 		return nil, err
 	}
+	if err = db.Ping(); err != nil {
+		//log.Errorf("ping database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
+		return nil, err
+	}
+
+	if opt != nil {
+		dsn.SetMax(opt.Max)
+		dsn.SetIdle(opt.Idle)
+	}
+
+	if param.max != 0 {
+		db.SetMaxOpenConns(param.max)
+	}
+	if param.idle != 0 {
+		db.SetMaxIdleConns(param.idle)
+	}
+	e.setDB(db)
+
 	if opt != nil && opt.SnowFlake != nil {
 		e.idgen, err = snowflake.NewNode(opt.SnowFlake.NodeId)
 		if err != nil {
@@ -620,7 +626,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 		{
 			strSql = e.mssqlQueryInsert(strSql)
 		}
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		{
 			strSql = e.postgresQueryInsert(strSql)
 		}
@@ -668,7 +674,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 			}
 			lastInsertId, err = e.mssqlUpsert(e.makeSqlxInsert())
 		}
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		{
 			if e.operType == types.OperType_Tx {
 				return 0, log.Errorf("Postgres can not use upsert on tx mode")

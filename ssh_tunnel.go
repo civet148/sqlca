@@ -53,7 +53,7 @@ func (s *SSH) openSSHTunnel(dsn *dsnDriver) (d *dsnDriver) {
 	switch adapter {
 	case types.AdapterSqlx_MySQL:
 		d = s.buildMysqlTunnelDSN(dsn)
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		d = s.buildPostgresTunnelDSN(dsn)
 	case types.AdapterSqlx_Mssql:
 		d = s.buildMssqlTunnelDSN(dsn)
@@ -194,3 +194,4 @@ func (s *SSH) buildMssqlTunnelDSN(dsn *dsnDriver) *dsnDriver {
 	parameter.strDSN = buildMssqlDSN(s.listenIP, strListenPort, parameter.user, parameter.password, parameter.db, parameter.queries)
 	return dsn
 }
+

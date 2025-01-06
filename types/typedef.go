@@ -28,11 +28,11 @@ const (
 )
 
 const (
-	DRIVER_NAME_MYSQL    = "mysql"
-	DRIVER_NAME_POSTGRES = "postgres"
-	DRIVER_NAME_SQLITE   = "sqlite3"
-	DRIVER_NAME_MSSQL    = "mssql"
-	DRIVER_NAME_REDIS    = "redis"
+	DRIVER_NAME_MYSQL      = "mysql"
+	DRIVER_NAME_POSTGRES   = "postgres"
+	DRIVER_NAME_SQLITE     = "sqlite3"
+	DRIVER_NAME_MSSQL      = "mssql"
+	DRIVER_NAME_OPEN_GUASS = "opengauss"
 )
 
 const (
@@ -85,11 +85,11 @@ const (
 )
 
 const (
-	AdapterSqlx_MySQL    AdapterType = 1  //mysql
-	AdapterSqlx_Postgres AdapterType = 2  //postgresql
-	AdapterSqlx_Sqlite   AdapterType = 3  //sqlite
-	AdapterSqlx_Mssql    AdapterType = 4  //mssql server
-	AdapterCache_Redis   AdapterType = 11 //redis
+	AdapterSqlx_MySQL     AdapterType = 1 //mysql
+	AdapterSqlx_Postgres  AdapterType = 2 //postgresql
+	AdapterSqlx_Sqlite    AdapterType = 3 //sqlite
+	AdapterSqlx_Mssql     AdapterType = 4 //mssql server
+	AdapterSqlx_OpenGauss AdapterType = 5 //open gauss
 )
 
 func (a AdapterType) GoString() string {
@@ -107,8 +107,8 @@ func (a AdapterType) String() string {
 		return "Sqlite"
 	case AdapterSqlx_Mssql:
 		return "Mssql"
-	case AdapterCache_Redis:
-		return "Redis"
+	case AdapterSqlx_OpenGauss:
+		return "OpenGauss"
 	}
 	return "<Unknown>"
 }
@@ -123,24 +123,27 @@ func (a AdapterType) DriverName() string {
 		return DRIVER_NAME_SQLITE
 	case AdapterSqlx_Mssql:
 		return DRIVER_NAME_MSSQL
-	case AdapterCache_Redis:
-		return DRIVER_NAME_REDIS
+	case AdapterSqlx_OpenGauss:
+		return DRIVER_NAME_OPEN_GUASS
 	default:
 	}
 	return "unknown"
 }
 
 var adapterNames = map[string]AdapterType{
-	DRIVER_NAME_MYSQL:    AdapterSqlx_MySQL,
-	DRIVER_NAME_POSTGRES: AdapterSqlx_Postgres,
-	DRIVER_NAME_SQLITE:   AdapterSqlx_Sqlite,
-	DRIVER_NAME_MSSQL:    AdapterSqlx_Mssql,
-	DRIVER_NAME_REDIS:    AdapterCache_Redis,
+	DRIVER_NAME_MYSQL:      AdapterSqlx_MySQL,
+	DRIVER_NAME_POSTGRES:   AdapterSqlx_Postgres,
+	DRIVER_NAME_SQLITE:     AdapterSqlx_Sqlite,
+	DRIVER_NAME_MSSQL:      AdapterSqlx_Mssql,
+	DRIVER_NAME_OPEN_GUASS: AdapterSqlx_OpenGauss,
 }
 
 func GetAdapterType(name string) AdapterType {
+	name = strings.ToLower(name)
 	if strings.EqualFold(name, "sqlite") {
 		name = DRIVER_NAME_SQLITE
+	} else if strings.EqualFold(name, "gauss") {
+		name = DRIVER_NAME_OPEN_GUASS
 	}
 	return adapterNames[name]
 }

@@ -515,7 +515,7 @@ func (e *Engine) getSingleQuote() (strQuote string) {
 	switch e.adapterSqlx {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "'"
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		return "'"
 	case types.AdapterSqlx_Mssql:
 		return "'"
@@ -527,7 +527,7 @@ func (e *Engine) getForwardQuote() (strQuote string) {
 	switch e.adapterSqlx {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "`"
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		return "\""
 	case types.AdapterSqlx_Mssql:
 		return "["
@@ -539,7 +539,7 @@ func (e *Engine) getBackQuote() (strQuote string) {
 	switch e.adapterSqlx {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "`"
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		return "\""
 	case types.AdapterSqlx_Mssql:
 		return "]"
@@ -551,7 +551,7 @@ func (e *Engine) getOnConflictForwardKey() (strKey string) {
 	switch e.adapterSqlx {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "ON DUPLICATE"
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		return "ON CONFLICT ("
 	case types.AdapterSqlx_Mssql:
 		return ""
@@ -563,7 +563,7 @@ func (e *Engine) getOnConflictBackKey() (strKey string) {
 	switch e.adapterSqlx {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "KEY UPDATE"
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		return ") DO UPDATE SET"
 	case types.AdapterSqlx_Mssql:
 		return ""
@@ -723,7 +723,7 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 
 func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 
-	if e.adapterSqlx != types.AdapterSqlx_Postgres {
+	if e.adapterSqlx != types.AdapterSqlx_Postgres && e.adapterSqlx != types.AdapterSqlx_OpenGauss {
 		return //only postgres need conflicts fields
 	}
 
@@ -797,7 +797,7 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 				e.setHaving(fmt.Sprintf("%s <= %v", nb.strAS, nb.distance))
 			}
 		}
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		{
 			/* -- Postgres
 			SELECT  a.* FROM
@@ -821,12 +821,11 @@ func (e *Engine) handleSpecialChars(strIn string) (strOut string) {
 		strIn = strings.Replace(strIn, `\`, `\\`, -1)
 		strIn = strings.Replace(strIn, `'`, `\'`, -1)
 		strIn = strings.Replace(strIn, `"`, `\"`, -1)
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		strIn = strings.Replace(strIn, `'`, `''`, -1)
 	case types.AdapterSqlx_Mssql:
 		strIn = strings.Replace(strIn, `'`, `''`, -1)
 	case types.AdapterSqlx_Sqlite:
-	case types.AdapterCache_Redis:
 	}
 
 	return strIn
@@ -901,7 +900,7 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 				}
 			}
 		}
-	case types.AdapterSqlx_Postgres:
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		{
 			if len(strCustomizeUpdates) != 0 {
 				strUpdates = strings.Join(strCustomizeUpdates, ",")

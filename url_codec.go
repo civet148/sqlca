@@ -234,10 +234,8 @@ func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 
 // DSN="host=127.0.0.1 port=5432 user=root password=123456 dbname=mydb sslmode=disable"
 func (e *Engine) parsePostgresUrl(strUrl string) (parameter dsnParameter) {
-
 	ui := ParseUrl(strUrl)
 	parameter.parseUrlInfo(ui)
-
 	e.setDatabaseName(parseDatabaseName(ui.Path))
 	strDatabase := e.getDatabaseName()
 	strIP, strPort := getHostPort(ui.Host)

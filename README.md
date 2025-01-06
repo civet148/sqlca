@@ -204,7 +204,12 @@ import (
 )
 
 const (
+	//MysslDSN = "root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4"
     MysqlDSN = "mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4"
+	//PostgresDSN  = "postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public")
+	//GaussDSN  = "opengauss://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public")
+	//MssqlDSN  = "mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
+	//SqliteDSN  = "sqlite:///var/lib/test.db")
 )
 
 func main() {

@@ -338,16 +338,16 @@ func QueryLimit(db *sqlca.Engine) error {
     var count int64
     var dos []*models.InventoryData
     
-        //SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 1000
-        count, err = db.Model(&dos).
-            Limit(1000).
-            Desc("create_time").
-            Query()
-        if err != nil {
-            return log.Errorf("数据查询错误：%s", err)
-        }
-        log.Infof("查询结果数据条数: %d", count)
-        return nil
+    //SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 1000
+    count, err = db.Model(&dos).
+        Limit(1000).
+        Desc("create_time").
+        Query()
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    log.Infof("查询结果数据条数: %d", count)
+    return nil
 }
 
 ```
@@ -445,10 +445,10 @@ func QueryWithJsonColumn(db *sqlca.Engine) error {
         +------------------------------------------------------------------------------------------------------------------------+
     */
     _, err = db.Model(&do).
-    Table("inventory_data").
-    Select("id", "name", "serial_no", "quantity","price", "product_extra").
-    Id(id).
-    Find()
+                Table("inventory_data").
+                Select("id", "name", "serial_no", "quantity","price", "product_extra").
+                Id(id).
+                Find()
     if err != nil {
     return log.Errorf("数据查询错误：%s", err)
     }

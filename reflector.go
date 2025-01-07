@@ -13,9 +13,10 @@ import (
 )
 
 type ModelReflector struct {
-	value  interface{}            //value
-	engine *Engine                // database engine
-	dict   map[string]interface{} //dictionary of structure tag and value
+	value   interface{}            //value
+	engine  *Engine                //database engine
+	Dict    map[string]interface{} //dictionary of structure tag and value
+	Columns []string               //column names
 }
 
 type Fetcher struct {
@@ -32,7 +33,7 @@ func newReflector(e *Engine, v interface{}) *ModelReflector {
 	return &ModelReflector{
 		value:  v,
 		engine: e,
-		dict:   make(map[string]interface{}),
+		Dict:   make(map[string]interface{}),
 	}
 }
 
@@ -46,7 +47,7 @@ func mapToBytesSlice(m map[string]string) (arrays [][]byte) {
 }
 
 // parse struct tag and value to map
-func (s *ModelReflector) ToMap(tagNames ...string) map[string]interface{} {
+func (s *ModelReflector) ParseModel(tagNames ...string) *ModelReflector {
 
 	typ := reflect.TypeOf(s.value)
 	val := reflect.ValueOf(s.value)
@@ -74,26 +75,29 @@ func (s *ModelReflector) ToMap(tagNames ...string) map[string]interface{} {
 	case reflect.Map:
 		{
 			if v, ok := s.value.(*map[string]interface{}); ok {
-				s.dict = *v
+				s.Dict = *v
 				break
 			}
 			if v, ok := s.value.(map[string]interface{}); ok {
-				s.dict = v
+				s.Dict = v
 				break
 			}
 			if v, ok := s.value.(*map[string]string); ok {
-				s.dict = s.convertMapString(*v)
+				s.Dict = s.convertMapString(*v)
 				break
 			}
 			if v, ok := s.value.(map[string]string); ok {
-				s.dict = s.convertMapString(v)
+				s.Dict = s.convertMapString(v)
 				break
 			}
 		}
 	default:
 		log.Warnf("kind [%v] not support yet", typ.Kind())
 	}
-	return s.dict
+	if len(s.Columns) == 0 {
+		s.Columns = []string{"*"}
+	}
+	return s
 }
 
 func (s *ModelReflector) convertMapString(ms map[string]string) (mi map[string]interface{}) {
@@ -154,18 +158,19 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 							fmt.Printf("[sqlca] marshal struct failed error [%s]\n", err.Error())
 							continue
 						}
-						s.dict[tagVal] = string(data)
+						s.Dict[tagVal] = string(data)
+						s.Columns = append(s.Columns, tagVal)
 					}
 				}
 			} else if typField.Type.Kind() == reflect.Slice || typField.Type.Kind() == reflect.Map {
 				if tagVal != "" {
-
 					data, err := json.Marshal(valField.Interface())
 					if err != nil {
 						fmt.Printf("[sqlca] marshal struct failed error [%s]\n", err.Error())
 						continue
 					}
-					s.dict[tagVal] = string(data)
+					s.Dict[tagVal] = string(data)
+					s.Columns = append(s.Columns, tagVal)
 				}
 			} else {
 				s.setValueByField(typField, valField, tagNames...) // save field tag value and field value to map
@@ -204,10 +209,11 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 		if tagVal != "" {
 			//log.Debugf("ModelReflector.setValueByField tag [%v] value [%+v]", tagVal, val.Interface())
 			if d, ok := val.Interface().(driver.Valuer); ok {
-				s.dict[tagVal], _ = d.Value()
+				s.Dict[tagVal], _ = d.Value()
 			} else {
-				s.dict[tagVal] = val.Interface()
+				s.Dict[tagVal] = val.Interface()
 			}
+			s.Columns = append(s.Columns, tagVal)
 			break
 		}
 	}
@@ -772,3 +778,4 @@ func convertBoolString(strVal string) string {
 	}
 	return strVal
 }
+

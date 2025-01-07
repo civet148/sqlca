@@ -716,7 +716,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	r, err = db.Exec(strSql)
 	if err != nil {
 		if !e.noVerbose {
-			log.Errorf("error %v model %+v", err, e.model)
+			log.Errorf("SQL [%s] error: %v", strSql, err.Error())
 		}
 		return
 	}

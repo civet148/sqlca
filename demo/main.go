@@ -26,25 +26,31 @@ func main() {
 		return
 	}
 	_ = db
-	//requireNoError(InsertSingle(db))
-	//requireNoError(InsertBatch(db))
-	//requireNoError(QueryLimit(db))
-	//requireNoError(QueryErrNotFound(db))
-	//requireNoError(QueryByPage(db))
-	//requireNoError(QueryByCondition(db))
-	//requireNoError(QueryByGroup(db))
-	//requireNoError(QueryJoins(db))
-	//requireNoError(QueryByNormalVars(db))
-	//requireNoError(Update(db))
-	//requireNoError(Transaction(db))
-	//requireNoError(TransactionWrapper(db))
-	//requireNoError(QueryOr(db))
-	//requireNoError(QueryRawSQL(db))
+	requireNoError(InsertSingle(db))
+	requireNoError(InsertBatch(db))
+	requireNoError(QueryLimit(db))
+	requireError(QueryErrNotFound(db))
+	requireNoError(QueryByPage(db))
+	requireNoError(QueryByCondition(db))
+	requireNoError(QueryByGroup(db))
+	requireNoError(QueryJoins(db))
+	requireNoError(QueryByNormalVars(db))
+	requireNoError(UpdateSingle(db))
+	requireNoError(Transaction(db))
+	requireNoError(TransactionWrapper(db))
+	requireNoError(QueryOr(db))
+	requireNoError(QueryRawSQL(db))
 	requireNoError(QueryWithJsonColumn(db))
 }
 
 func requireNoError(err error) {
 	if err != nil {
+		log.Panic(err)
+	}
+}
+
+func requireError(err error) {
+	if err == nil {
 		log.Panic(err)
 	}
 }
@@ -412,7 +418,7 @@ func UpdateSingle(db *sqlca.Engine) error {
 	}
 
 	do.Quantity = 2300 //更改库存
-	_, err = db.Model(do).Select("quantity").Update()
+	_, err = db.Model(&do).Select("quantity").Update()
 	if err != nil {
 		return log.Errorf("更新错误：%s", err)
 	}

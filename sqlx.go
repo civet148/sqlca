@@ -110,9 +110,11 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 			e.setTableName(strings.ToLower(name))
 		}
 		var selectColumns []string
-		e.dict = newReflector(e, e.model).ToMap(e.dbTags...)
-		for k, _ := range e.dict {
-			selectColumns = append(selectColumns, k)
+		ref := newReflector(e, e.model)
+		ref = ref.ParseModel(e.dbTags...)
+		e.dict = ref.Dict
+		for _, col := range ref.Columns {
+			selectColumns = append(selectColumns, col)
 		}
 		if len(selectColumns) > 0 {
 			e.setSelectColumns(selectColumns...)

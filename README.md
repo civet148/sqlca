@@ -620,6 +620,8 @@ func QueryByNormalVars(db *sqlca.Engine) error {
 
 ## 数据更新
 
+- **通过数据模型对象更新数据**
+
 ```go
 /*
 [数据更新]
@@ -627,21 +629,47 @@ func QueryByNormalVars(db *sqlca.Engine) error {
 SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
 UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1858759254329004032'
 */
-func UpdateSingle(db *sqlca.Engine) error {
+func UpdateSingleByModel(db *sqlca.Engine) error {
 	
-	var err error
-	var do *models.InventoryData
-	var id = uint64(1858759254329004032)
-	_, err = db.Model(&do).Id(id).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
+    var err error
+    var do *models.InventoryData
+    var id = uint64(1858759254329004032)
+    _, err = db.Model(&do).Id(id).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    
+    do.Quantity = 2300 //更改库存
+    _, err = db.Model(do).Select("quantity").Update()
+    if err != nil {
+        return log.Errorf("更新错误：%s", err)
+    }
+	return nil
+}
+```
 
-	do.Quantity = 2300 //更改库存
-	_, err = db.Model(do).Select("quantity").Update()
-	if err != nil {
-		return log.Errorf("更新错误：%s", err)
-	}
+- **通过变量/常量更新数据**
+
+```go
+/*
+[数据更新]
+*/
+func UpdateSingleByVars(db *sqlca.Engine) error {
+	
+    var err error
+    var id = uint64(1858759254329004032)
+    var quantity = 2300 //更改库存数
+	
+	//UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1858759254329004032'
+    _, err = db.Model(&quantity).Table("inventory_data").Id(id).Select("quantity").Update()
+    if err != nil {
+        return log.Errorf("更新错误：%s", err)
+    }
+    //UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1858759254329004032'
+    _, err = db.Model(2300).Table("inventory_data").Id(id).Select("quantity").Update()
+    if err != nil {
+        return log.Errorf("更新错误：%s", err)
+    }
 	return nil
 }
 ```

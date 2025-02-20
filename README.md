@@ -1,6 +1,6 @@
 # 简介
 sqlca 是一个基于Go语言的ORM框架，它提供了一种简单的方式来生成数据库表模型，并支持多种数据库类型，如MySQL、PostgreSQL、Opengauss、MS-SQLServer、Sqlite v3等。
-内置雪花算法生成主键ID、SSH隧道连接以及防SQL注入功能。支持各种数据库聚合方法和联表查询，例如: Sum/Max/Avg/Min/Count/GroupBy/Having/OrderBy/Limit等等。同时将常用的操作符进行了包装，例如等于Eq、大于Gt、小于Lt等等，简化操作代码。其中And和Or方法既支持常规的字符串格式化（含占位符?方式）
+内置雪花算法生成主键ID、SSH隧道连接以及防SQL注入功能。支持各种数据库聚合方法和联表查询，例如: Sum/Max/Avg/Min/Count/GroupBy/Having/OrderBy/Limit等等。同时将常用的操作符进行了包装，例如等于Eq、大于Gt、小于Lt等等，简化操作代码。其中And和Or方法既支持常规的字符串格式化（含占位符?方式），同时也支持map类型传参。
 
 # 快速开始
 

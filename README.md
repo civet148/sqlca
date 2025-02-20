@@ -1,6 +1,32 @@
 
 # 快速开始
 
+## 支持数据库类型
+
+- **MySQL**
+
+```text
+"root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4"
+"mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4"
+```
+
+- **PostgreSQL**
+```text
+"postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public"
+```
+- **Opengauss**
+```text
+"opengauss://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public"
+```
+- **MS-SQLServer**
+```text
+"mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false"
+```
+- **Sqlite v3**
+```text
+"sqlite:///var/lib/test.db"
+```
+
 ## 数据库表模型生成
 
 - 创建数据库

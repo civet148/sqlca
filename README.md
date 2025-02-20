@@ -14,6 +14,10 @@ sqlca 是一个基于Go语言的ORM框架，它提供了一种简单的方式来
 - `sqlca:"readonly"` 只读标签，指定该标签的字段插入和更新操作均不参与
 - `sqlca:"isnull"`  允许为空标签，指定该标签的字段允许为空(数据库字段允许为NULL)
 
+## db2go工具
+[db2go](https://github.com/civet148/db2go) 是一个支持从MySQL、PostgreSQL、Opengauss数据库导出表结构到.go文件或.proto文件的命令行工具。支持将表字段指定为自定义类型并生成model文件和dao文件。
+
+
 # 快速开始
 
 ## 支持数据库类型

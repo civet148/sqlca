@@ -2,6 +2,18 @@
 sqlca 是一个基于Go语言的ORM框架，它提供了一种简单的方式来生成数据库表模型，并支持多种数据库类型，如MySQL、PostgreSQL、Opengauss、MS-SQLServer、Sqlite v3等。
 内置雪花算法生成主键ID、SSH隧道连接以及防SQL注入功能。支持各种数据库聚合方法和联表查询，例如: Sum/Max/Avg/Min/Count/GroupBy/Having/OrderBy/Limit等等。同时将常用的操作符进行了包装，例如等于Eq、大于Gt、小于Lt等等，简化操作代码。其中And和Or方法既支持常规的字符串格式化（含占位符?方式），同时也支持map类型传参。
 
+
+## sqlca与gorm差异
+
+- sqlca不支持通过数据模型自动生成创建/更新时间（可由MySQL等数据库创建表时设置为由数据库自动维护生成/更新时间），当数据库自动维护创建/更新时间时，可通过 `sqlca:"readonly"` 标签将数据字段设置为只读
+
+- sqlca由Model方法调用后，会自动克隆一个对象，后续所有的操作均不影响宿主对象。每当一个完整语句执行完毕（例如调用Query/Update/Delete方法后)，db对象会清理掉所有的查询/更新条件。
+
+## sqlca标签说明
+
+- `sqlca:"readonly"` 只读标签，指定该标签的字段插入和更新操作均不参与
+- `sqlca:"isnull"`  允许为空标签，指定该标签的字段允许为空(数据库字段允许为NULL)
+
 # 快速开始
 
 ## 支持数据库类型

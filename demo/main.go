@@ -472,7 +472,7 @@ func Transaction(db *sqlca.Engine) error {
 		return log.Errorf("数据插入错误: %s", err)
 	}
 	var inventoryData = &models.InventoryData{}
-	_, err = db.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+	_, err = tx.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
@@ -531,7 +531,7 @@ func TransactionWrapper(db *sqlca.Engine) error {
 			return log.Errorf("数据插入错误: %s", err)
 		}
 		var inventoryData = &models.InventoryData{}
-		_, err = db.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+		_, err = tx.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
 		if err != nil {
 			return log.Errorf("数据查询错误：%s", err)
 		}

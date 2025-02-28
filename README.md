@@ -13,9 +13,9 @@ sqlca 是一个基于Go语言的ORM框架，它提供了一种简单的方式来
 
 ```go
 type CommonFields struct {
-	Id         int64  `db:"id"`          //数据库主键ID
-	UpdateTime string `db:"update_time"` //更新时间
-	CreateTime string `db:"create_time"` //创建时间
+    Id         int64  `db:"id"`          //数据库主键ID
+    UpdateTime string `db:"update_time"` //更新时间
+    CreateTime string `db:"create_time"` //创建时间
 }
 
 type User struct {
@@ -28,8 +28,8 @@ type User struct {
 
 ```go
 type ExtraData struct {
-	Address     string `json:"address"` //家庭住址
-	Email       string `json:"email"`   //电子邮箱地址
+    Address     string `json:"address"` //家庭住址
+    Email       string `json:"email"`   //电子邮箱地址
 }
 
 type User struct {
@@ -42,7 +42,7 @@ type User struct {
 }
 ```
 对于上面的User结构，ExtraData成员变量因为有db标签，sqlca把ExtraData作为user表的一个字段进行处理，插入时把ExtraData序列化为JSON文本存入extra_data字段。查询时反序列化到ExtraData结构中。
-而gorm把ExtraData作为外键处理。
+而gorm把ExtraData作为外键处理从而可能会导致查询失败。
 
 ## sqlca标签说明
 
@@ -292,23 +292,23 @@ const (
 )
 
 func main() {
-	var err error
-	var db *sqlca.Engine
-	var options = &sqlca.Options{
-		Debug: true, //是否开启调试日志输出
-		Max:   150,  //最大连接数
-		Idle:  5,    //空闲连接数
-		//DefaultLimit: 100,  //默认查询条数限制
-		SnowFlake: &sqlca.SnowFlake{ //雪花算法配置（不使用可以赋值nil）
-			NodeId: 1, //雪花算法节点ID 1-1023
-		},
-	}
-	db, err = sqlca.NewEngine(MysqlDSN, options)
-	if err != nil {
-		log.Errorf("connect database error: %s", err)
-		return
-	}
-	_ = db
+    var err error
+    var db *sqlca.Engine
+    var options = &sqlca.Options{
+        Debug: true, //是否开启调试日志输出
+        Max:   150,  //最大连接数
+        Idle:  5,    //空闲连接数
+        //DefaultLimit: 100,  //默认查询条数限制
+        SnowFlake: &sqlca.SnowFlake{ //雪花算法配置（不使用可以赋值nil）
+            NodeId: 1, //雪花算法节点ID 1-1023
+        },
+    }
+    db, err = sqlca.NewEngine(MysqlDSN, options)
+    if err != nil {
+        log.Errorf("connect database error: %s", err)
+        return
+    }
+    _ = db
 }
 
 ```
@@ -325,10 +325,8 @@ func InsertSingle(db *sqlca.Engine) error {
 		Id:         uint64(db.NewID()),
 		CreateId:   1,
 		CreateName: "admin",
-		CreateTime: now,
 		UpdateId:   1,
 		UpdateName: "admin",
-		UpdateTime: now,
 		IsFrozen:   0,
 		Name:       "齿轮",
 		SerialNo:   "SNO_001",
@@ -353,16 +351,14 @@ func InsertSingle(db *sqlca.Engine) error {
 
 ```go
 func InsertBatch(db *sqlca.Engine) error {
-now := time.Now().Format("2006-01-02 15:04:05")
-var dos = []*models.InventoryData{
+
+    var dos = []*models.InventoryData{
         {
             Id:         uint64(db.NewID()),
             CreateId:   1,
             CreateName: "admin",
-            CreateTime: now,
             UpdateId:   1,
             UpdateName: "admin",
-            UpdateTime: now,
             IsFrozen:   0,
             Name:       "齿轮",
             SerialNo:   "SNO_001",
@@ -377,10 +373,8 @@ var dos = []*models.InventoryData{
             Id:         uint64(db.NewID()),
             CreateId:   1,
             CreateName: "admin",
-            CreateTime: now,
             UpdateId:   1,
             UpdateName: "admin",
-            UpdateTime: now,
             IsFrozen:   0,
             Name:       "轮胎",
             SerialNo:   "SNO_002",
@@ -457,21 +451,21 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 
 ```go
 func QueryByPage(db *sqlca.Engine) error {
-	
-	var err error
-	var count, total int64
-	var dos []*models.InventoryData
-
-	//SELECT  * FROM inventory_data WHERE 1=1 ORDER BY create_time DESC LIMIT 0,20
-	count, total, err = db.Model(&dos).
-		Page(1, 20).
-		Desc("create_time").
-		QueryEx()
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-	log.Infof("查询结果条数: %d 数据库总数：%v", count, total)
-	return nil
+    	
+    var err error
+    var count, total int64
+    var dos []*models.InventoryData
+    
+    //SELECT  * FROM inventory_data WHERE 1=1 ORDER BY create_time DESC LIMIT 0,20
+    count, total, err = db.Model(&dos).
+        Page(1, 20).
+        Desc("create_time").
+        QueryEx()
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    log.Infof("查询结果条数: %d 数据库总数：%v", count, total)
+    return nil
 }
 
 ```
@@ -481,21 +475,21 @@ func QueryByPage(db *sqlca.Engine) error {
 ```go
 func QueryByCondition(db *sqlca.Engine) error {
 	
-	var err error
-	var count int64
-	var dos []*models.InventoryData
-	//SELECT * FROM inventory_data WHERE `quantity` > 0 and is_frozen=0 AND create_time >= '2024-10-01 11:35:14' ORDER BY create_time DESC
-	count, err = db.Model(&dos).
-		Gt("quantity", 0).
-		Eq("is_frozen", 0).
-		Gte("create_time", "2024-10-01 11:35:14").
-		Desc("create_time").
-		Query()
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-	log.Infof("查询结果数据条数: %d", count)
-	return nil
+    var err error
+    var count int64
+    var dos []*models.InventoryData
+    //SELECT * FROM inventory_data WHERE `quantity` > 0 and is_frozen=0 AND create_time >= '2024-10-01 11:35:14' ORDER BY create_time DESC
+    count, err = db.Model(&dos).
+        Gt("quantity", 0).
+        Eq("is_frozen", 0).
+        Gte("create_time", "2024-10-01 11:35:14").
+        Desc("create_time").
+        Query()
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    log.Infof("查询结果数据条数: %d", count)
+    return nil
 }
 ```
 
@@ -543,21 +537,21 @@ func QueryWithJsonColumn(db *sqlca.Engine) error {
 
 ```go
 func QueryRawSQL(db *sqlca.Engine) error {
-	
-	var rows []*models.InventoryData
-	var sb = sqlca.NewStringBuilder()
-
-	//SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
-
-	sb.Append("SELECT * FROM %s", "inventory_data")
-	sb.Append("WHERE is_frozen = ?", 0)
-	sb.Append("AND quantity > ?", 10)
-	strQuery := sb.String()
-	_, err := db.Model(&rows).QueryRaw(strQuery)
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-	return nil
+    
+    var rows []*models.InventoryData
+    var sb = sqlca.NewStringBuilder()
+    
+    //SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
+    
+    sb.Append("SELECT * FROM %s", "inventory_data")
+    sb.Append("WHERE is_frozen = ?", 0)
+    sb.Append("AND quantity > ?", 10)
+    strQuery := sb.String()
+    _, err := db.Model(&rows).QueryRaw(strQuery)
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    return nil
 }
 ```
 
@@ -588,43 +582,43 @@ func ExecRawSQL(db *sqlca.Engine) error {
 ```go
 func QueryOr(db *sqlca.Engine) error {
 	
-	var err error
-	var count int64
-	var dos []*models.InventoryData
-
-	//SELECT * FROM inventory_data WHERE create_id=1 AND name = '配件' OR serial_no = 'SNO_001' ORDER BY create_time DESC
-	count, err = db.Model(&dos).
-		And("create_id = ?", 1).
-		Or("name = ?", "配件").
-		Or("serial_no = ?", "SNO_001").
-		Desc("create_time").
-		Query()
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-	log.Infof("查询结果数据条数: %d", count)
-
-	//SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND quantity > 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY create_time DESC
-	var andConditions = make(map[string]interface{})
-	var orConditions = make(map[string]interface{})
-
-	andConditions["create_id"] = 1      //create_id = 1
-	andConditions["is_frozen"] = 0      //is_frozen = 0
+    var err error
+    var count int64
+    var dos []*models.InventoryData
+    
+    //SELECT * FROM inventory_data WHERE create_id=1 AND name = '配件' OR serial_no = 'SNO_001' ORDER BY create_time DESC
+    count, err = db.Model(&dos).
+        And("create_id = ?", 1).
+        Or("name = ?", "配件").
+        Or("serial_no = ?", "SNO_001").
+        Desc("create_time").
+        Query()
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    log.Infof("查询结果数据条数: %d", count)
+    
+    //SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND quantity > 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY create_time DESC
+    var andConditions = make(map[string]interface{})
+    var orConditions = make(map[string]interface{})
+    
+    andConditions["create_id"] = 1      //create_id = 1
+    andConditions["is_frozen"] = 0      //is_frozen = 0
     andConditions["quantity > ?"] = 0   //quantity > 0
-
-	orConditions["name = ?"] = "配件"
-	orConditions["serial_no = ?"] = "SNO_001"
-
-	count, err = db.Model(&dos).
-		And(andConditions).
-		Or(orConditions).
-		Desc("create_time").
-		Query()
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-	log.Infof("查询结果数据条数: %d", count)
-	return nil
+    
+    orConditions["name = ?"] = "配件"
+    orConditions["serial_no = ?"] = "SNO_001"
+    
+    count, err = db.Model(&dos).
+        And(andConditions).
+        Or(orConditions).
+        Desc("create_time").
+        Query()
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    log.Infof("查询结果数据条数: %d", count)
+    return nil
 }
 ```
 
@@ -633,27 +627,27 @@ func QueryOr(db *sqlca.Engine) error {
 ```go
 func QueryByGroup(db *sqlca.Engine) error {
 	
-	var err error
-	var count int64
-	var dos []*models.InventoryData
-	/*
-		SELECT  create_id, SUM(quantity) AS quantity
-		FROM inventory_data
-		WHERE 1=1 AND quantity>'0' AND is_frozen='0' AND create_time>='2024-10-01 11:35:14'
-		GROUP BY create_id
-	*/
-	count, err = db.Model(&dos).
-		Select("create_id", "SUM(quantity) AS quantity").
-		Gt("quantity", 0).
-		Eq("is_frozen", 0).
-		Gte("create_time", "2024-10-01 11:35:14").
-		GroupBy("create_id").
-		Query()
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-	log.Infof("查询结果数据条数: %d", count)
-	return nil
+    var err error
+    var count int64
+    var dos []*models.InventoryData
+    /*
+        SELECT  create_id, SUM(quantity) AS quantity
+        FROM inventory_data
+        WHERE 1=1 AND quantity>'0' AND is_frozen='0' AND create_time>='2024-10-01 11:35:14'
+        GROUP BY create_id
+    */
+    count, err = db.Model(&dos).
+        Select("create_id", "SUM(quantity) AS quantity").
+        Gt("quantity", 0).
+        Eq("is_frozen", 0).
+        Gte("create_time", "2024-10-01 11:35:14").
+        GroupBy("create_id").
+        Query()
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    log.Infof("查询结果数据条数: %d", count)
+    return nil
 }
 ```
 
@@ -669,28 +663,28 @@ type Product struct {
 }
 func QueryJoins(db *sqlca.Engine) error {
 	
-	/*
-		SELECT a.id as product_id, a.name AS product_name, b.quantity, b.weight
-		FROM inventory_data a
-		LEFT JOIN inventory_in b
-		ON a.id=b.product_id
-		WHERE a.quantity > 0 AND a.is_frozen=0 AND a.create_time>='2024-10-01 11:35:14'
-	*/
-	var dos []*Product
-	count, err := db.Model(&dos).
-		Select("a.id as product_id", "a.name AS product_name", "b.quantity", "b.weight").
-		Table("inventory_data a").
-		LeftJoin("inventory_in b").
-		On("a.id=b.product_id").
-		Gt("a.quantity", 0).
-		Eq("a.is_frozen", 0).
-		Gte("a.create_time", "2024-10-01 11:35:14").
-		Query()
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-	log.Infof("查询结果数据条数: %d", count)
-	return nil
+    /*
+        SELECT a.id as product_id, a.name AS product_name, b.quantity, b.weight
+        FROM inventory_data a
+        LEFT JOIN inventory_in b
+        ON a.id=b.product_id
+        WHERE a.quantity > 0 AND a.is_frozen=0 AND a.create_time>='2024-10-01 11:35:14'
+    */
+    var dos []*Product
+    count, err := db.Model(&dos).
+        Select("a.id as product_id", "a.name AS product_name", "b.quantity", "b.weight").
+        Table("inventory_data a").
+        LeftJoin("inventory_in b").
+        On("a.id=b.product_id").
+        Gt("a.quantity", 0).
+        Eq("a.is_frozen", 0).
+        Gte("a.create_time", "2024-10-01 11:35:14").
+        Query()
+    if err != nil {
+        return log.Errorf("数据查询错误：%s", err)
+    }
+    log.Infof("查询结果数据条数: %d", count)
+    return nil
 }
 ```
 ## 普通变量取值查询
@@ -889,60 +883,60 @@ func Transaction(db *sqlca.Engine) error {
 func TransactionWrapper(db *sqlca.Engine) error {
 
     /*
-	   -- TRANSACTION BEGIN
-
-	   	INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1858759254329004032','1861614736295071744','admin','1','2024-11-27 1114','202407090000002')
-	   	SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
-	   	UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1858759254329004032'
-
-	   -- TRANSACTION END
-	*/
-	strOrderNo := time.Now().Format("20060102150405.000000000")
-	err := db.TxFunc(func(tx *sqlca.Engine) error {
-		var err error
-		productId := uint64(1858759254329004032)
-		now := time.Now().Format("2006-01-02 15:04:05")
-
-		//***************** 执行事务操作 *****************
-		quantity := float64(20)
-		weight := float64(200.3)
-		_, err = tx.Model(&models.InventoryIn{
-			Id:         uint64(db.NewID()),
-			CreateId:   1,
-			CreateName: "admin",
-			CreateTime: now,
-			UpdateId:   1,
-			UpdateName: "admin",
-			UpdateTime: now,
-			ProductId:  productId,
-			OrderNo:    strOrderNo,
-			UserId:     3,
-			UserName:   "lazy",
-			Quantity:   quantity,
-			Weight:     weight,
-			Remark:     "产品入库",
-		}).Insert()
-		if err != nil {
-			return log.Errorf("数据插入错误: %s", err)
-		}
-		var inventoryData = &models.InventoryData{}
-		_, err = tx.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
-		if err != nil {
-			return log.Errorf("数据查询错误：%s", err)
-		}
-		inventoryData.Quantity += quantity
-		_, err = tx.Model(&inventoryData).Id(productId).Select("quantity").Update()
-		if err != nil {
-			return log.Errorf("更新错误：%s", err)
-		}
-		return nil
-	})
-
-	//***************** 事务处理结果 *****************
-	if err != nil {
-		return log.Errorf("事务失败：%s", err)
-	}
-	return nil
+       -- TRANSACTION BEGIN
+    
+        INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1858759254329004032','1861614736295071744','admin','1','2024-11-27 1114','202407090000002')
+        SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
+        UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1858759254329004032'
+    
+       -- TRANSACTION END
+    */
+    strOrderNo := time.Now().Format("20060102150405.000000000")
+    err := db.TxFunc(func(tx *sqlca.Engine) error {
+        var err error
+        productId := uint64(1858759254329004032)
+        now := time.Now().Format("2006-01-02 15:04:05")
+    
+        //***************** 执行事务操作 *****************
+        quantity := float64(20)
+        weight := float64(200.3)
+        _, err = tx.Model(&models.InventoryIn{
+            Id:         uint64(db.NewID()),
+            CreateId:   1,
+            CreateName: "admin",
+            CreateTime: now,
+            UpdateId:   1,
+            UpdateName: "admin",
+            UpdateTime: now,
+            ProductId:  productId,
+            OrderNo:    strOrderNo,
+            UserId:     3,
+            UserName:   "lazy",
+            Quantity:   quantity,
+            Weight:     weight,
+            Remark:     "产品入库",
+        }).Insert()
+        if err != nil {
+            return log.Errorf("数据插入错误: %s", err)
+        }
+        var inventoryData = &models.InventoryData{}
+        _, err = tx.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+        if err != nil {
+            return log.Errorf("数据查询错误：%s", err)
+        }
+        inventoryData.Quantity += quantity
+        _, err = tx.Model(&inventoryData).Id(productId).Select("quantity").Update()
+        if err != nil {
+            return log.Errorf("更新错误：%s", err)
+        }
+        return nil
+    })
+    
+    //***************** 事务处理结果 *****************
+    if err != nil {
+        return log.Errorf("事务失败：%s", err)
+    }
+    return nil
 }
 ```
 ## 其他方法说明
@@ -963,11 +957,11 @@ type Restaurant struct {
 
 //附近的餐馆和距离结构定义
 type RestaurantLocation struct {
-	Id          uint64  `db:"id"`       //主键ID
-	Lng         float64 `db:"lng"`      //经度
-	Lat         float64 `db:"lat"`      //纬度
-	Name        string  `db:"name"`     //餐馆名称
-	Distance    float64 `db:"distance"` //距离（米）
+    Id          uint64  `db:"id"`       //主键ID
+    Lng         float64 `db:"lng"`      //经度
+    Lat         float64 `db:"lat"`      //纬度
+    Name        string  `db:"name"`     //餐馆名称
+    Distance    float64 `db:"distance"` //距离（米）
 }
 
 func QueryNearBy(db *sqlca.Engine) error {

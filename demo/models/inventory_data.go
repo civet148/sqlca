@@ -22,19 +22,19 @@ const (
 )
 
 type InventoryData struct {
-	Id           uint64           `json:"id" db:"id" gorm:"primarykey"`                       //产品ID
-	CreateId     uint64           `json:"create_id" db:"create_id" `                          //创建人ID
-	CreateName   string           `json:"create_name" db:"create_name" `                      //创建人姓名
-	CreateTime   string           `json:"create_time" db:"create_time" gorm:"autoCreateTime"` //创建时间
-	UpdateId     uint64           `json:"update_id" db:"update_id" `                          //更新人ID
-	UpdateName   string           `json:"update_name" db:"update_name" `                      //更新人姓名
-	UpdateTime   string           `json:"update_time" db:"update_time" gorm:"autoUpdateTime"` //更新时间
-	IsFrozen     int8             `json:"is_frozen" db:"is_frozen" `                          //冻结状态(0: 未冻结 1: 已冻结)
-	Name         string           `json:"name" db:"name" `                                    //产品名称
-	SerialNo     string           `json:"serial_no" db:"serial_no" `                          //产品编号
-	Quantity     float64          `json:"quantity" db:"quantity" `                            //产品库存
-	Price        float64          `json:"price" db:"price" `                                  //产品均价
-	ProductExtra ProductExtraData `json:"product_extra" db:"product_extra" sqlca:"isnull"`    //产品附带数据(JSON文本)
+	Id           uint64           `json:"id" db:"id" gorm:"primarykey"`                                        //产品ID
+	CreateId     uint64           `json:"create_id" db:"create_id" `                                           //创建人ID
+	CreateName   string           `json:"create_name" db:"create_name" `                                       //创建人姓名
+	CreateTime   string           `json:"create_time" db:"create_time" gorm:"autoCreateTime" sqlca:"readonly"` //创建时间
+	UpdateId     uint64           `json:"update_id" db:"update_id" `                                           //更新人ID
+	UpdateName   string           `json:"update_name" db:"update_name" `                                       //更新人姓名
+	UpdateTime   string           `json:"update_time" db:"update_time" gorm:"autoUpdateTime" sqlca:"readonly"` //更新时间
+	IsFrozen     int8             `json:"is_frozen" db:"is_frozen" `                                           //冻结状态(0: 未冻结 1: 已冻结)
+	Name         string           `json:"name" db:"name" `                                                     //产品名称
+	SerialNo     string           `json:"serial_no" db:"serial_no" `                                           //产品编号
+	Quantity     float64          `json:"quantity" db:"quantity" `                                             //产品库存
+	Price        float64          `json:"price" db:"price" `                                                   //产品均价
+	ProductExtra ProductExtraData `json:"product_extra" db:"product_extra" sqlca:"isnull"`                     //产品附带数据(JSON文本)
 }
 
 func (do *InventoryData) GetId() uint64                      { return do.Id }

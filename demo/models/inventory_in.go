@@ -25,22 +25,22 @@ const (
 )
 
 type InventoryIn struct {
-	Id         uint64  `json:"id" db:"id" gorm:"primarykey"`                       //主键ID
-	CreateId   uint64  `json:"create_id" db:"create_id" `                          //创建人ID
-	CreateName string  `json:"create_name" db:"create_name" `                      //创建人姓名
-	CreateTime string  `json:"create_time" db:"create_time" gorm:"autoCreateTime"` //创建时间
-	UpdateId   uint64  `json:"update_id" db:"update_id" `                          //更新人ID
-	UpdateName string  `json:"update_name" db:"update_name" `                      //更新人姓名
-	UpdateTime string  `json:"update_time" db:"update_time" gorm:"autoUpdateTime"` //更新时间
-	IsDeleted  int8    `json:"is_deleted" db:"is_deleted" `                        //删除状态(0: 未删除 1: 已删除)
-	DeleteTime string  `json:"delete_time" db:"delete_time" sqlca:"isnull"`        //删除时间
-	ProductId  uint64  `json:"product_id" db:"product_id" `                        //产品ID
-	OrderNo    string  `json:"order_no" db:"order_no" `                            //入库单号
-	UserId     uint64  `json:"user_id" db:"user_id" `                              //交货人ID
-	UserName   string  `json:"user_name" db:"user_name" `                          //交货人姓名
-	Quantity   float64 `json:"quantity" db:"quantity" `                            //数量
-	Weight     float64 `json:"weight" db:"weight" `                                //净重
-	Remark     string  `json:"remark" db:"remark" `                                //备注
+	Id         uint64  `json:"id" db:"id" gorm:"primarykey"`                                        //主键ID
+	CreateId   uint64  `json:"create_id" db:"create_id" `                                           //创建人ID
+	CreateName string  `json:"create_name" db:"create_name" `                                       //创建人姓名
+	CreateTime string  `json:"create_time" db:"create_time" gorm:"autoCreateTime" sqlca:"readonly"` //创建时间
+	UpdateId   uint64  `json:"update_id" db:"update_id" `                                           //更新人ID
+	UpdateName string  `json:"update_name" db:"update_name" `                                       //更新人姓名
+	UpdateTime string  `json:"update_time" db:"update_time" gorm:"autoUpdateTime" sqlca:"readonly"` //更新时间
+	IsDeleted  int8    `json:"is_deleted" db:"is_deleted" `                                         //删除状态(0: 未删除 1: 已删除)
+	DeleteTime string  `json:"delete_time" db:"delete_time" sqlca:"isnull"`                         //删除时间
+	ProductId  uint64  `json:"product_id" db:"product_id" `                                         //产品ID
+	OrderNo    string  `json:"order_no" db:"order_no" `                                             //入库单号
+	UserId     uint64  `json:"user_id" db:"user_id" `                                               //交货人ID
+	UserName   string  `json:"user_name" db:"user_name" `                                           //交货人姓名
+	Quantity   float64 `json:"quantity" db:"quantity" `                                             //数量
+	Weight     float64 `json:"weight" db:"weight" `                                                 //净重
+	Remark     string  `json:"remark" db:"remark" `                                                 //备注
 }
 
 func (do *InventoryIn) GetId() uint64          { return do.Id }

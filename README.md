@@ -530,7 +530,7 @@ func QueryWithJsonColumn(db *sqlca.Engine) error {
                 Id(id).
                 Find()
     if err != nil {
-    return log.Errorf("数据查询错误：%s", err)
+        return log.Errorf("数据查询错误：%s", err)
     }
     log.Infof("ID: %v 数据：%+v", id, do)
     /*
@@ -713,7 +713,7 @@ func QueryByNormalVars(db *sqlca.Engine) error {
     }
     log.Infof("数据ID: %v name=%s serial_no=%s", id, name, serialNo)
 	
-	var ids []uint64
+    var ids []uint64
     //SELECT id FROM inventory_data LIMIT 10
     _, err = db.Model(&ids).
                 Table("inventory_data").
@@ -753,7 +753,7 @@ func UpdateByModel(db *sqlca.Engine) error {
     if err != nil {
         return log.Errorf("更新错误：%s", err)
     }
-	return nil
+    return nil
 }
 ```
 
@@ -761,7 +761,7 @@ func UpdateByModel(db *sqlca.Engine) error {
 
 ```go
 /*
-[数据更新]
+[通过普通变量更新数据]
 */
 func UpdateByVars(db *sqlca.Engine) error {
 	
@@ -779,7 +779,7 @@ func UpdateByVars(db *sqlca.Engine) error {
     if err != nil {
         return log.Errorf("更新错误：%s", err)
     }
-	return nil
+    return nil
 }
 ```
 
@@ -970,9 +970,17 @@ type RestaurantLocation struct {
 	Name        string  `db:"name"`     //餐馆名称
 	Distance    float64 `db:"distance"` //距离（米）
 }
-var dos []*RestaurantLocation
-//查询指定坐标点，查询距离小于1000米内的餐馆（查询出的距离取名distance）
-db.Model(&dos).Table("restaurant").NearBy("lng", "lat", "distance", 114.0545429, 22.5445741, 1000).Query()
+
+func QueryNearBy(db *sqlca.Engine) error {
+    var dos []*RestaurantLocation
+    //查询指定坐标点，查询距离小于1000米内的餐馆（查询出的距离取名distance）
+    _, err := db.Model(&dos).Table("restaurant").NearBy("lng", "lat", "distance", 114.0545429, 22.5445741, 1000).Query()
+    if err != nil {
+        return logx.Error(err.Error())
+    }
+    return nil
+}
+
 ```
 ### GeoHash
 
@@ -981,11 +989,13 @@ db.Model(&dos).Table("restaurant").NearBy("lng", "lat", "distance", 114.0545429,
 ### Like
 
 ```go
-//SELECT * FROM inventory_data WHERE `serial_no` LIKE '%0001%'
-_, err := db.Model(&models.InventoryData{}).LIKE(serial_no, "0001").Find()
-if err != nil {
-	logx.Error(err.Error())
-	return 
+func QueryLike(db *sqlca.Engine) error {
+    //SELECT * FROM inventory_data WHERE `serial_no` LIKE '%0001%'
+    _, err := db.Model(&models.InventoryData{}).LIKE(serial_no, "0001").Find()
+    if err != nil {
+        return logx.Error(err.Error())
+    }
+	return nil
 }
 ```
 
@@ -1010,23 +1020,23 @@ if err != nil {
 
 ### JSON查询方法
 
-#### jsonExpr
+#### **JsonExpr**
 MySQL数据库构造JSON查询表达式，用于查询JSON字段。
 
-#### JsonEqual
+#### **JsonEqual**
 MySQL数据库构造JSON等于查询表达式，用于查询JSON字段。
 
-#### JsonGreater
+#### **JsonGreater**
 MySQL数据库构造JSON大于查询表达式，用于查询JSON字段。
 
-#### JsonLess
+#### **JsonLess**
 MySQL数据库构造JSON小于查询表达式，用于查询JSON字段。
 
-#### JsonGreaterEqual
+#### **JsonGreaterEqual**
 MySQL数据库构造JSON大于等于查询表达式，用于查询JSON字段。
 
-#### JsonLessEqual
+#### **JsonLessEqual**
 MySQL数据库构造JSON小于等于查询表达式，用于查询JSON字段。
 
-#### JsonContainArray
+#### **JsonContainArray**
 MySQL数据库构造JSON包含数组查询表达式，用于查询JSON字段。

@@ -20,7 +20,7 @@ func main() {
 			NodeId: 1, //雪花算法节点ID 1-1023
 		},
 	}
-	db, err = sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", options)
+	db, err = sqlca.NewEngine("mysql://root:123456@192.168.6.112:3306/test?charset=utf8mb4", options)
 	if err != nil {
 		log.Errorf("connect database error: %s", err)
 		return

@@ -20,8 +20,8 @@ github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5P
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/civet148/gotools v1.4.1 h1:9E2rVOUIebQvdG/75iEc1/nqWxqmrUTSWepl0dbaGHo=
 github.com/civet148/gotools v1.4.1/go.mod h1:SfbUhBkKsnCIZ+1Ac94sQ2yTCbwkRKgVjDgGxrwPYmw=
-github.com/civet148/log v1.5.1 h1:rc54sFMBz4EfkJJlJtwytO/egLuD/bBdw1iztMywNFM=
-github.com/civet148/log v1.5.1/go.mod h1:1+dISnXR1i3HoAVd3IAzhs0TduJ7QOC50ZHEfzXGH7o=
+github.com/civet148/log v1.7.0 h1:3IQUfFgeixyaGrAtBEhT9fNZuKCEPu0Uwi7WGmK3pjU=
+github.com/civet148/log v1.7.0/go.mod h1:1+dISnXR1i3HoAVd3IAzhs0TduJ7QOC50ZHEfzXGH7o=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
@@ -341,4 +341,3 @@ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 sigs.k8s.io/yaml v1.3.0/go.mod h1:GeOyir5tyXNByN85N/dRIT9es5UQNerPYEKK56eTBm8=
-

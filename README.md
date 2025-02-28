@@ -2,12 +2,46 @@
 sqlca 是一个基于Go语言的ORM框架，它提供了一种简单的方式来生成数据库表模型，并支持多种数据库类型，如MySQL、PostgreSQL、Opengauss、MS-SQLServer、Sqlite v3等。
 内置雪花算法生成主键ID、SSH隧道连接以及防SQL注入功能。支持各种数据库聚合方法和联表查询，例如: Sum/Max/Avg/Min/Count/GroupBy/Having/OrderBy/Limit等等。同时将常用的操作符进行了包装，例如等于Eq、大于Gt、小于Lt等等，简化操作代码。其中And和Or方法既支持常规的字符串格式化（含占位符?方式），同时也支持map类型传参。
 
-
 ## sqlca与gorm差异
 
 - sqlca不支持通过数据模型自动生成创建/更新时间（可由MySQL等数据库创建表时设置为由数据库自动维护生成/更新时间），当数据库自动维护创建/更新时间时，可通过 `sqlca:"readonly"` 标签将数据字段设置为只读
 
 - sqlca由Model方法调用后，会自动克隆一个对象，后续所有的操作均不影响宿主对象。每当一个完整语句执行完毕（例如调用Query/Update/Delete方法后)，db对象会清理掉所有的查询/更新条件。
+
+- 对于model结构嵌套的差异
+
+```go
+type CommonFields struct {
+	Id         int64  `db:"id"`          //数据库主键ID
+	UpdateTime string `db:"update_time"` //更新时间
+	CreateTime string `db:"create_time"` //创建时间
+}
+
+type User struct {
+    CommonFields CommonFields //没有db标签
+    Name string `db:"name"` //姓名
+    Gender int32 `db:"gender"` //性别
+}
+```
+对于上面的User结构，对CommonFields的处理sqlca插入和查询跟gorm保持一致，都是把id/update_time/create_time字段作为跟name，gender平级的字段处理。
+
+```go
+type ExtraData struct {
+	Address     string `json:"address"` //家庭住址
+	Email       string `json:"email"`   //电子邮箱地址
+}
+
+type User struct {
+    Id          int64       `db:"id"`          //数据库主键ID
+    UpdateTime  string      `db:"update_time"` //更新时间
+    CreateTime  string      `db:"create_time"` //创建时间
+    Name        string      `db:"name"`        //姓名
+    Gender      int32       `db:"gender"`      //性别
+    ExtraData   ExtraData   `db:"extra_data"`  //额外数据
+}
+```
+对于上面的User结构，ExtraData成员变量因为有db标签，sqlca把ExtraData作为user标的一个字段进行处理，插入时把ExtraData序列化为JSON文本存入extra_data字段。查询时反序列化到ExtraData结构中。
+而gorm把ExtraData作为外键处理。
 
 ## sqlca标签说明
 
@@ -16,7 +50,6 @@ sqlca 是一个基于Go语言的ORM框架，它提供了一种简单的方式来
 
 ## db2go工具
 [db2go](https://github.com/civet148/db2go) 是一个支持从MySQL、PostgreSQL、Opengauss数据库导出表结构到.go文件或.proto文件的命令行工具。支持将表字段指定为自定义类型并生成model文件和dao文件。
-
 
 # 快速开始
 
@@ -847,5 +880,57 @@ func TransactionWrapper(db *sqlca.Engine) error {
 	return nil
 }
 ```
+## 其他方法说明
+
+### Like
+
+```go
+//SELECT * FROM inventory_data WHERE `serial_no` LIKE '%0001%'
+_, err := db.Model(&models.InventoryData{}).LIKE(serial_no, "0001").Find()
+if err != nil {
+	logx.Error(err.Error())
+	return 
+}
+```
+
+### SlowQuery 
+开启或关闭慢查询日志，默认关闭，开启后，会记录超过规定时间（毫秒ms）的sql语句，并输出到控制台。
+
+### QueryJson
+将查询结果转换为json字符串，并返回。
+
+### NewID
+当调用NewEngine时，指定SnowFlake选项后，可以用NewID生成一个雪花ID
+
+### NewFromTx
+传入一个tx对象，并返回一个Engine对象，用于在事务中执行sql操作。
+
+### ForUpdate
+在查询语句中添加FOR UPDATE关键字，用于查询时锁定记录，避免并发修改。仅用于MySQL数据库。
+
+### LockShareMode
+在查询语句中添加 LOCK IN SHARE MODE关键字。仅用于MySQL数据库。
 
 
+### JSON查询方法
+
+#### jsonExpr
+MySQL数据库构造JSON查询表达式，用于查询JSON字段。
+
+#### JsonEqual
+MySQL数据库构造JSON等于查询表达式，用于查询JSON字段。
+
+#### JsonGreater
+MySQL数据库构造JSON大于查询表达式，用于查询JSON字段。
+
+#### JsonLess
+MySQL数据库构造JSON小于查询表达式，用于查询JSON字段。
+
+#### JsonGreaterEqual
+MySQL数据库构造JSON大于等于查询表达式，用于查询JSON字段。
+
+#### JsonLessEqual
+MySQL数据库构造JSON小于等于查询表达式，用于查询JSON字段。
+
+#### JsonContainArray
+MySQL数据库构造JSON包含数组查询表达式，用于查询JSON字段。

@@ -161,7 +161,8 @@ $ go install github.com/civet148/db2go@latest
 ```bat
 @echo off
 
-
+rem 设置只读字段
+set READ_ONLY="create_time, update_time"
 rem 数据模型(models)和数据库操作对象(dao)文件输出基础目录
 set OUT_DIR=.
 rem 数据模型包名(数据模型文件目录名)
@@ -193,7 +194,7 @@ IF "%errorlevel%" == "0" (
 
 rem ---------------------- 导出数据库表结构-------------------------
 set DSN_URL="mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=true&loc=Local"
-db2go   --url %DSN_URL% --out %OUT_DIR% --spec-type %SPEC_TYPES% --package %PACK_NAME%  --common-tags %COMMON_TAGS% --export %DEPLOY_SQL%
+db2go   --url %DSN_URL% --out %OUT_DIR% --spec-type %SPEC_TYPES% --package %PACK_NAME%  --common-tags %COMMON_TAGS% --readonly %READ_ONLY% --export %DEPLOY_SQL%
 gofmt -w %OUT_DIR%/%PACK_NAME%
 
 pause

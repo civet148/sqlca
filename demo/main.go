@@ -20,7 +20,7 @@ func main() {
 			NodeId: 1, //雪花算法节点ID 1-1023
 		},
 	}
-	db, err = sqlca.NewEngine("mysql://root:123456@192.168.6.112:3306/test?charset=utf8mb4", options)
+	db, err = sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", options)
 	if err != nil {
 		log.Errorf("connect database error: %s", err)
 		return
@@ -37,10 +37,12 @@ func main() {
 	requireNoError(QueryByNormalVars(db))
 	requireNoError(UpdateByModel(db))
 	requireNoError(UpdateByMap(db))
+	requireNoError(DeleteById(db))
 	requireNoError(Transaction(db))
 	requireNoError(TransactionWrapper(db))
 	requireNoError(QueryOr(db))
 	requireNoError(QueryRawSQL(db))
+	requireNoError(ExecRawSQL(db))
 	requireNoError(QueryWithJsonColumn(db))
 }
 
@@ -252,12 +254,13 @@ func QueryOr(db *sqlca.Engine) error {
 	log.Infof("查询结果数据条数: %d", count)
 	//log.Json("查询结果(JSON)", dos)
 
-	//SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY create_time DESC
+	//SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND quantity > 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY create_time DESC
 	var andConditions = make(map[string]interface{})
 	var orConditions = make(map[string]interface{})
 
-	andConditions["create_id = ?"] = 1
-	andConditions["is_frozen = ?"] = 0
+	andConditions["create_id"] = 1    //create_id = 1
+	andConditions["is_frozen"] = 0    //is_frozen = 0
+	andConditions["quantity > ?"] = 0 //quantity > 0
 
 	orConditions["name = ?"] = "配件"
 	orConditions["serial_no = ?"] = "SNO_001"
@@ -336,8 +339,8 @@ func QueryJoins(db *sqlca.Engine) error {
 func QueryByNormalVars(db *sqlca.Engine) error {
 	var err error
 	var name, serialNo string
-	var id = uint64(1859078192380252160)
-	//SELECT name, serial_no FROM inventory_data WHERE id=1859078192380252160
+	var id = uint64(1858759254329004032)
+	//SELECT name, serial_no FROM inventory_data WHERE id=1858759254329004032
 	_, err = db.Model(&name, &serialNo).
 		Table("inventory_data").
 		Select("name, serial_no").
@@ -403,6 +406,23 @@ func QueryRawSQL(db *sqlca.Engine) error {
 	return nil
 }
 
+func ExecRawSQL(db *sqlca.Engine) error {
+	var sb = sqlca.NewStringBuilder()
+
+	//UPDATE inventory_data SET quantity = '10' WHERE id=1867379968636358657
+	sb.Append("UPDATE inventory_data")
+	sb.Append("SET quantity = ?", 10)
+	sb.Append("WHERE id = ?", 1867379968636358657)
+
+	strQuery := sb.String()
+	affectedRows, lastInsertId, err := db.Model(nil).ExecRaw(strQuery)
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("受影响的行数：%d 最后插入的ID：%d", affectedRows, lastInsertId)
+	return nil
+}
+
 /*
 [数据更新]
 
@@ -441,6 +461,21 @@ func UpdateByMap(db *sqlca.Engine) error {
 	if err != nil {
 		return log.Errorf("更新错误：%s", err)
 	}
+	return nil
+}
+
+/*
+[删除数据]
+*/
+func DeleteById(db *sqlca.Engine) error {
+	var err error
+	var id = uint64(1859078192380252160)
+	//DELETE inventory_data WHERE `id`='1859078192380252160'
+	_, err = db.Model(models.InventoryData{}).Id(id).Delete()
+	if err != nil {
+		return log.Errorf("更新错误：%s", err)
+	}
+	log.Infof("删除ID%v数据成功", id)
 	return nil
 }
 

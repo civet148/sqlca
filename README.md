@@ -40,7 +40,7 @@ type User struct {
     ExtraData   ExtraData   `db:"extra_data"`  //额外数据
 }
 ```
-对于上面的User结构，ExtraData成员变量因为有db标签，sqlca把ExtraData作为user标的一个字段进行处理，插入时把ExtraData序列化为JSON文本存入extra_data字段。查询时反序列化到ExtraData结构中。
+对于上面的User结构，ExtraData成员变量因为有db标签，sqlca把ExtraData作为user表的一个字段进行处理，插入时把ExtraData序列化为JSON文本存入extra_data字段。查询时反序列化到ExtraData结构中。
 而gorm把ExtraData作为外键处理。
 
 ## sqlca标签说明
@@ -881,6 +881,33 @@ func TransactionWrapper(db *sqlca.Engine) error {
 }
 ```
 ## 其他方法说明
+
+### NearBy
+
+```go
+//数据库表restaurant对应模型结构
+type Restaurant struct {
+    Id          uint64  `db:"id"`       //主键ID
+    Lng         float64 `db:"lng"`      //经度
+    Lat         float64 `db:"lat"`      //纬度
+    Name        string  `db:"name"`     //餐馆名称
+}
+
+//附近的餐馆和距离结构定义
+type RestaurantLocation struct {
+	Id          uint64  `db:"id"`       //主键ID
+	Lng         float64 `db:"lng"`      //经度
+	Lat         float64 `db:"lat"`      //纬度
+	Name        string  `db:"name"`     //餐馆名称
+	Distance    float64 `db:"distance"` //距离（米）
+}
+var dos []*RestaurantLocation
+//查询指定坐标点，查询距离小于1000米内的餐馆（查询出的距离取名distance）
+db.Model(&dos).Table("restaurant").NearBy("lng", "lat", "distance", 114.0545429, 22.5445741, 1000)
+```
+### GeoHash
+
+给定坐标点，查询GEO HASH
 
 ### Like
 

@@ -582,12 +582,13 @@ func QueryOr(db *sqlca.Engine) error {
 	}
 	log.Infof("查询结果数据条数: %d", count)
 
-	//SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY create_time DESC
+	//SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND quantity > 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY create_time DESC
 	var andConditions = make(map[string]interface{})
 	var orConditions = make(map[string]interface{})
 
-	andConditions["create_id = ?"] = 1
-	andConditions["is_frozen = ?"] = 0
+	andConditions["create_id"] = 1      //create_id = 1
+	andConditions["is_frozen"] = 0      //is_frozen = 0
+    andConditions["quantity > ?"] = 0   //quantity > 0
 
 	orConditions["name = ?"] = "配件"
 	orConditions["serial_no = ?"] = "SNO_001"

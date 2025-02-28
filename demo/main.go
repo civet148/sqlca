@@ -20,12 +20,12 @@ func main() {
 			NodeId: 1, //雪花算法节点ID 1-1023
 		},
 	}
-	db, err = sqlca.NewEngine("mysql://root:123456@192.168.6.115:3306/test?charset=utf8mb4", options)
+	db, err = sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", options)
 	if err != nil {
 		log.Errorf("connect database error: %s", err)
 		return
 	}
-	_ = db
+
 	requireNoError(InsertSingle(db))
 	requireNoError(InsertBatch(db))
 	requireNoError(QueryLimit(db))
@@ -35,7 +35,8 @@ func main() {
 	requireNoError(QueryByGroup(db))
 	requireNoError(QueryJoins(db))
 	requireNoError(QueryByNormalVars(db))
-	requireNoError(UpdateSingle(db))
+	requireNoError(UpdateByModel(db))
+	requireNoError(UpdateByMap(db))
 	requireNoError(Transaction(db))
 	requireNoError(TransactionWrapper(db))
 	requireNoError(QueryOr(db))
@@ -408,7 +409,7 @@ func QueryRawSQL(db *sqlca.Engine) error {
 SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
 UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1858759254329004032'
 */
-func UpdateSingle(db *sqlca.Engine) error {
+func UpdateByModel(db *sqlca.Engine) error {
 	var err error
 	var do *models.InventoryData
 	var id = uint64(1858759254329004032)
@@ -419,6 +420,24 @@ func UpdateSingle(db *sqlca.Engine) error {
 
 	do.Quantity = 2300 //更改库存
 	_, err = db.Model(&do).Select("quantity").Update()
+	if err != nil {
+		return log.Errorf("更新错误：%s", err)
+	}
+	return nil
+}
+
+/*
+[通过map进行数据更新]
+*/
+func UpdateByMap(db *sqlca.Engine) error {
+	var err error
+	var id = uint64(1858759254329004032)
+	var updates = map[string]interface{}{
+		"quantity": 2100, //更改库存
+		"Price":    300,  //更改价格
+	}
+	//UPDATE inventory_data SET `quantity`='2100',`price`=300 WHERE `id`='1858759254329004032'
+	_, err = db.Model(&updates).Table("inventory_data").Id(id).Update()
 	if err != nil {
 		return log.Errorf("更新错误：%s", err)
 	}

@@ -74,22 +74,18 @@ func (s *ModelReflector) ParseModel(tagNames ...string) *ModelReflector {
 		}
 	case reflect.Map:
 		{
+			var dict map[string]interface{}
 			if v, ok := s.value.(*map[string]interface{}); ok {
-				s.Dict = *v
-				break
+				dict = *v
 			}
 			if v, ok := s.value.(map[string]interface{}); ok {
-				s.Dict = v
-				break
+				dict = v
 			}
-			if v, ok := s.value.(*map[string]string); ok {
-				s.Dict = s.convertMapString(*v)
-				break
+			for k, v := range dict {
+				s.Columns = append(s.Columns, k)
+				_ = v
 			}
-			if v, ok := s.value.(map[string]string); ok {
-				s.Dict = s.convertMapString(v)
-				break
-			}
+			s.Dict = dict
 		}
 	default:
 		log.Warnf("kind [%v] not support yet", typ.Kind())

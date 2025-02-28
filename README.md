@@ -707,7 +707,7 @@ func QueryByNormalVars(db *sqlca.Engine) error {
 SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
 UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1858759254329004032'
 */
-func UpdateSingleByModel(db *sqlca.Engine) error {
+func UpdateByModel(db *sqlca.Engine) error {
 	
     var err error
     var do *models.InventoryData
@@ -732,7 +732,7 @@ func UpdateSingleByModel(db *sqlca.Engine) error {
 /*
 [数据更新]
 */
-func UpdateSingleByVars(db *sqlca.Engine) error {
+func UpdateByVars(db *sqlca.Engine) error {
 	
     var err error
     var id = uint64(1858759254329004032)
@@ -751,6 +751,26 @@ func UpdateSingleByVars(db *sqlca.Engine) error {
 	return nil
 }
 ```
+
+- **通过map进行数据更新**
+
+```go
+func UpdateByMap(db *sqlca.Engine) error {
+    var err error
+    var updates = map[string]interface{}{
+        "quantity": 2100, //更改库存
+        "Price":    300,  //更改价格
+    }
+    //UPDATE inventory_data SET `quantity`='2100',`price`=300 WHERE `id`='1858759254329004032'
+    _, err = db.Model(&updates).Table("inventory_data").Id(1858759254329004032).Update()
+    if err != nil {
+        return log.Errorf("更新错误：%s", err)
+    }
+    return nil
+}
+```
+
+
 
 ## 事务处理
 

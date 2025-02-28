@@ -904,6 +904,9 @@ func TransactionWrapper(db *sqlca.Engine) error {
 ```
 ## 其他方法说明
 
+### Table
+设置数据库表名，通过Model方法传参时默认将结构体名称的小写蛇形命名作为表名，当传入的结构体名称跟实际表名不一致时需要明确用Table方法指定表名
+
 ### NearBy
 
 ```go

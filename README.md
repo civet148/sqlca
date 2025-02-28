@@ -903,7 +903,7 @@ type RestaurantLocation struct {
 }
 var dos []*RestaurantLocation
 //查询指定坐标点，查询距离小于1000米内的餐馆（查询出的距离取名distance）
-db.Model(&dos).Table("restaurant").NearBy("lng", "lat", "distance", 114.0545429, 22.5445741, 1000)
+db.Model(&dos).Table("restaurant").NearBy("lng", "lat", "distance", 114.0545429, 22.5445741, 1000).Query()
 ```
 ### GeoHash
 

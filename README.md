@@ -639,6 +639,12 @@ func QueryByGroup(db *sqlca.Engine) error {
 ## 联表查询
 
 ```go
+type Product struct {
+    ProductId       uint64  `db:"product_id"`
+    ProductName     string  `db:"product_name"`
+    Quantity        float64 `db:"quantity"`
+    Weight          float64 `db:"weight"` 
+}
 func QueryJoins(db *sqlca.Engine) error {
 	
 	/*
@@ -648,8 +654,8 @@ func QueryJoins(db *sqlca.Engine) error {
 		ON a.id=b.product_id
 		WHERE a.quantity > 0 AND a.is_frozen=0 AND a.create_time>='2024-10-01 11:35:14'
 	*/
-	var do struct{}
-	count, err := db.Model(&do).
+	var dos []*Product
+	count, err := db.Model(&dos).
 		Select("a.id as product_id", "a.name AS product_name", "b.quantity", "b.weight").
 		Table("inventory_data a").
 		LeftJoin("inventory_in b").

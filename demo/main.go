@@ -19,6 +19,11 @@ func main() {
 		SnowFlake: &sqlca.SnowFlake{ //雪花算法配置（不使用可以赋值nil）
 			NodeId: 1, //雪花算法节点ID 1-1023
 		},
+		//SSH: &sqlca.SSH{ //SSH隧道连接配置
+		//	User:     "root",
+		//	Password: "123456",
+		//	Host:     "192.168.2.19:22",
+		//},
 	}
 	db, err = sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", options)
 	if err != nil {

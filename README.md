@@ -298,10 +298,15 @@ func main() {
         Debug: true, //是否开启调试日志输出
         Max:   150,  //最大连接数
         Idle:  5,    //空闲连接数
-        //DefaultLimit: 100,  //默认查询条数限制
         SnowFlake: &sqlca.SnowFlake{ //雪花算法配置（不使用可以赋值nil）
             NodeId: 1, //雪花算法节点ID 1-1023
         },
+        //SSH: &sqlca.SSH{ //SSH隧道连接配置
+        //	User:     "root",
+        //	Password: "123456",
+        //	Host:     "192.168.2.19:22",
+        //},
+        //DefaultLimit: 100,  //默认查询条数限制
     }
     db, err = sqlca.NewEngine(MysqlDSN, options)
     if err != nil {

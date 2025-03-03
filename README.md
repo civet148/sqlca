@@ -749,7 +749,7 @@ func UpdateByModel(db *sqlca.Engine) error {
     }
     
     do.Quantity = 2300 //更改库存
-    _, err = db.Model(do).Select("quantity").Update()
+    _, err = db.Model(do).Select("quantity").Update() //do对象中id字段已有值，在更新/查询时自动作为Where条件
     if err != nil {
         return log.Errorf("更新错误：%s", err)
     }

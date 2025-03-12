@@ -106,6 +106,7 @@ type Engine struct {
 	selected         bool                   // column(s) selected
 	noVerbose        bool                   // no more verbose
 	idgen            *snowflake.Node        // snowflake id generator
+	hookMethods      *hookMethods           // hook methods
 }
 
 func init() {
@@ -615,7 +616,9 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	defer e.cleanWhereCondition()
-
+	if err = e.execBeforeCreateHooks(); err != nil {
+		return 0, log.Errorf(err.Error())
+	}
 	var strSql string
 	strSql = e.makeSQL(types.OperType_Insert)
 	c := e.Counter()
@@ -639,6 +642,9 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	}
 	if !e.noVerbose {
 		log.Debugf("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
+	}
+	if err = e.execAfterCreateHooks(); err != nil {
+		return 0, log.Errorf(err.Error())
 	}
 	return
 }
@@ -701,6 +707,11 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	assert(e.strTableName, "table name not found")
 	assert(e.getSelectColumns(), "update columns is not set, please call Select method")
 	defer e.cleanWhereCondition()
+
+	if err = e.execBeforeUpdateHooks(); err != nil {
+		return 0, log.Errorf(err.Error())
+	}
+
 	var strSql string
 	strSql = e.makeSQL(types.OperType_Update)
 	c := e.Counter()
@@ -730,11 +741,17 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	if !e.noVerbose {
 		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	}
+	if err = e.execAfterUpdateHooks(); err != nil {
+		return 0, log.Errorf(err.Error())
+	}
 	return rowsAffected, nil
 }
 
 // Delete orm delete record(s) from db
 func (e *Engine) Delete() (rowsAffected int64, err error) {
+	if err = e.execBeforeDeleteHooks(); err != nil {
+		return 0, log.Errorf(err.Error())
+	}
 
 	strSql := e.makeSQL(types.OperType_Delete)
 	defer e.cleanWhereCondition()
@@ -762,7 +779,10 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	if !e.noVerbose {
 		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	}
-	return
+	if err = e.execAfterDeleteHooks(); err != nil {
+		return 0, log.Errorf(err.Error())
+	}
+	return rowsAffected, nil
 }
 
 // QueryRaw use raw sql to query results
@@ -775,7 +795,7 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 
 	var rows *sqlx.Rows
 	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
+
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strQuery))
 	if e.operType == types.OperType_Tx {
@@ -809,7 +829,7 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 	assert(strQuery, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
 	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
+
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strQuery))
 
@@ -937,10 +957,8 @@ func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, row
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("TxExec [%s]", strQuery))
 	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("query [%v]", strQuery)
 
 	result, err = e.tx.Exec(strQuery)
-
 	if err != nil {
 		if !e.noVerbose {
 			log.Errorf("TxExec exec query [%v] args %+v error [%+v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)

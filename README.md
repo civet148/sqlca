@@ -84,7 +84,6 @@ type User struct {
 
 - **创建数据库**
 
-
 ```sql
 CREATE DATABASE `test` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 USE `test`;
@@ -150,7 +149,6 @@ CREATE TABLE `inventory_out` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='出库主表';
 
 ```
-
 
 - **安装db2go工具**
 
@@ -327,7 +325,6 @@ func main() {
 ```go
 func InsertSingle(db *sqlca.Engine) error {
 	
-	now := time.Now().Format("2006-01-02 15:04:05")
 	var do = &models.InventoryData{
 		Id:         uint64(db.NewID()),
 		CreateId:   1,
@@ -343,8 +340,8 @@ func InsertSingle(db *sqlca.Engine) error {
 
 	var err error
 	/*
-		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
-		VALUES ('1859078192380252161','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','轮胎','SNO_002','2000','210','{}')
+		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`update_id`,`update_name`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
+		VALUES ('1859078192380252161','1','admin','1','admin','0','轮胎','SNO_002','2000','210','{}')
 	*/
 	_, err = db.Model(&do).Insert()
 	if err != nil {
@@ -397,10 +394,10 @@ func InsertBatch(db *sqlca.Engine) error {
     var err error
     /*
         INSERT INTO inventory_data
-            (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
+            (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
         VALUES
-            ('1867379968636358656','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','齿轮','SNO_001','1000','10.5','{\"avg_price\":\".8\",\"specs_value\":\"齿数：32\"}'),
-            ('1867379968636358657','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','轮胎','SNO_002','2000','210','{\"avg_price\":\"450.5\",\"specs_value\":\"17英寸\"}')
+            ('1867379968636358656','1','admin','1','admin','0','齿轮','SNO_001','1000','10.5','{\"avg_price\":\".8\",\"specs_value\":\"齿数：32\"}'),
+            ('1867379968636358657','1','admin','1','admin','0','轮胎','SNO_002','2000','210','{\"avg_price\":\"450.5\",\"specs_value\":\"17英寸\"}')
     */
     _, err = db.Model(&dos).Insert()
     if err != nil {
@@ -444,10 +441,10 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 	//SELECT * FROM inventory_data WHERE id=1899078192380252160
 	count, err = db.Model(&do).Id(1899078192380252160).Find()
 	if err != nil {
-		if errors.Is(err, sqlca.ErrRecordNotFound) {
-			return log.Errorf("根据ID查询数据库记录无结果：%s", err)
-		}
-		return log.Errorf("数据库错误：%s", err)
+        if errors.Is(err, sqlca.ErrRecordNotFound) {
+            return log.Errorf("根据ID查询数据库记录无结果：%s", err)
+        }
+        return log.Errorf("数据库错误：%s", err)
 	}
 	log.Infof("查询结果数据条数: %d", count)
 	return nil
@@ -1040,3 +1037,4 @@ MySQL数据库构造JSON小于等于查询表达式，用于查询JSON字段。
 
 #### **JsonContainArray**
 MySQL数据库构造JSON包含数组查询表达式，用于查询JSON字段。
+

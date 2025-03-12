@@ -121,7 +121,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 		}
 		break //only check first argument
 	}
-	return e
+	return e.setHooks()
 }
 
 // clone engine
@@ -1232,6 +1232,7 @@ func (e *Engine) makeSqlxDelete() (strSqlx string) {
 func (e *Engine) cleanWhereCondition() {
 	e.strWhere = ""
 	e.strPkValue = ""
+	e.cleanHooks()
 }
 
 func (e *Engine) autoRollback() {

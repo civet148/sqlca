@@ -44,6 +44,23 @@ type User struct {
 对于上面的User结构，ExtraData成员变量因为有db标签，sqlca把ExtraData作为user表的一个字段进行处理，插入时把ExtraData序列化为JSON文本存入extra_data字段。查询时反序列化到ExtraData结构中。
 而gorm把ExtraData作为外键处理从而可能会导致查询失败。
 
+- 数据ID条件判断
+
+sqlca通过数据模型结构中是否包含`db:"id"`标签的字段自动在查询/更新条件中将id=xxx加入Where条件
+
+```go
+var user =&User{
+	Id: 10003,
+}
+//SELECT * FROM user WHERE id=10003
+_, err := db.Model(&user).Query() //等同于db.Model(&user).Id(10003).Query()
+if err != nil {
+    log.Errorf(err.Error())
+    return 
+}
+```
+
+
 ## sqlca标签说明
 
 - `sqlca:"readonly"` 只读标签，指定该标签的字段插入和更新操作均不参与
@@ -945,8 +962,53 @@ func TransactionWrapper(db *sqlca.Engine) error {
 ```
 ## 其他方法说明
 
-### Table
+### Table方法
 设置数据库表名，通过Model方法传参时默认将结构体名称的小写蛇形命名作为表名，当传入的结构体名称跟实际表名不一致时需要明确用Table方法指定表名
+
+### Use方法
+
+切换数据库
+```go
+func SwitchDatabase(db *sqlca.Engine) (err error){
+    var db2 *sqlca.Engine
+	db2, err = db.Use("test2")
+    if err != nil {
+        log.Errorf(err.Error())
+        return err
+    }	
+    return nil
+}
+
+```
+
+
+### 前置和后置操作接口定义
+
+```go
+type BeforeCreateInterface interface {
+	BeforeCreate(db *sqlca.Engine) error
+}
+
+type AfterCreateInterface interface {
+	AfterCreate(db *sqlca.Engine) error
+}
+
+type BeforeUpdateInterface interface {
+	BeforeUpdate(db *sqlca.Engine) error
+}
+
+type AfterUpdateInterface interface {
+	AfterUpdate(db *sqlca.Engine) error
+}
+
+type BeforeDeleteInterface interface {
+	BeforeDelete(db *sqlca.Engine) error
+}
+
+type AfterDeleteInterface interface {
+	AfterDelete(db *sqlca.Engine) error
+}
+```
 
 ### NearBy
 
@@ -1037,4 +1099,3 @@ MySQL数据库构造JSON小于等于查询表达式，用于查询JSON字段。
 
 #### **JsonContainArray**
 MySQL数据库构造JSON包含数组查询表达式，用于查询JSON字段。
-

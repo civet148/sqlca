@@ -449,14 +449,14 @@ func QueryLimit(db *sqlca.Engine) error {
 ## 查询无数据则报错
 
 ```go
-func QueryErrNotFound(db *sqlca.Engine) error {
+func QueryErrRecordNotFound(db *sqlca.Engine) error {
 	
 	var err error
 	var count int64
-	var do *models.InventoryData //如果取数对象是切片则不报错
+	var do *models.InventoryData 
 
 	//SELECT * FROM inventory_data WHERE id=1899078192380252160
-	count, err = db.Model(&do).Id(1899078192380252160).Find()
+	count, err = db.Model(&do).Id(1899078192380252160).MustFind() //MustFind方法记录没找到则提示ErrRecordNotFound错误（Query方法不会报错）
 	if err != nil {
         if errors.Is(err, sqlca.ErrRecordNotFound) {
             return log.Errorf("根据ID查询数据库记录无结果：%s", err)
@@ -542,7 +542,7 @@ func QueryWithJsonColumn(db *sqlca.Engine) error {
                 Table("inventory_data").
                 Select("id", "name", "serial_no", "quantity","price", "product_extra").
                 Id(id).
-                Find()
+                MustFind() //MustFind方法记录没找到则提示ErrRecordNotFound错误（Query方法不会报错）
     if err != nil {
         return log.Errorf("数据查询错误：%s", err)
     }
@@ -721,7 +721,7 @@ func QueryByNormalVars(db *sqlca.Engine) error {
                 Table("inventory_data").
                 Select("name, serial_no").
                 Id(id).
-                Find()
+                MustFind() //MustFind方法记录没找到则提示ErrRecordNotFound错误（Query方法不会报错）
     if err != nil {
         return log.Errorf("数据查询错误：%s", err)
     }
@@ -757,7 +757,7 @@ func UpdateByModel(db *sqlca.Engine) error {
     var err error
     var do *models.InventoryData
     var id = uint64(1858759254329004032)
-    _, err = db.Model(&do).Id(id).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+    _, err = db.Model(&do).Id(id).MustFind() //MustFind方法如果记录没找到则提示ErrRecordNotFound错误（Query方法不会报错）
     if err != nil {
         return log.Errorf("数据查询错误：%s", err)
     }
@@ -879,7 +879,7 @@ func Transaction(db *sqlca.Engine) error {
 		return log.Errorf("数据插入错误: %s", err)
 	}
 	var inventoryData = &models.InventoryData{}
-	_, err = tx.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+	_, err = tx.Model(&inventoryData).Id(productId).MustFind() //MustFind方法如果记录没找到则提示ErrRecordNotFound错误（Query方法不会报错）
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
@@ -941,7 +941,7 @@ func TransactionWrapper(db *sqlca.Engine) error {
             return log.Errorf("数据插入错误: %s", err)
         }
         var inventoryData = &models.InventoryData{}
-        _, err = tx.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+        _, err = tx.Model(&inventoryData).Id(productId).MustFind() //MustFind方法记录没找到则提示ErrRecordNotFound错误（Query方法不会报错）
         if err != nil {
             return log.Errorf("数据查询错误：%s", err)
         }
@@ -1050,7 +1050,7 @@ func QueryNearBy(db *sqlca.Engine) error {
 ```go
 func QueryLike(db *sqlca.Engine) error {
     //SELECT * FROM inventory_data WHERE `serial_no` LIKE '%0001%'
-    _, err := db.Model(&models.InventoryData{}).LIKE(serial_no, "0001").Find()
+    _, err := db.Model(&models.InventoryData{}).LIKE(serial_no, "0001").MustFind()
     if err != nil {
         return logx.Error(err.Error())
     }

@@ -600,10 +600,10 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	return
 }
 
-// Find orm find data records, returns error if data model is not slice
-func (e *Engine) Find() (rowsAffected int64, err error) {
+// MustFind orm find data records, returns error if not found
+func (e *Engine) MustFind() (rowsAffected int64, err error) {
 	rowsAffected, err = e.Query()
-	if rowsAffected == 0 && e.modelType != types.ModelType_Slice {
+	if rowsAffected == 0 {
 		return 0, ErrRecordNotFound
 	}
 	return rowsAffected, err
@@ -1408,4 +1408,3 @@ func (e *Engine) LockShareMode() *Engine {
 	}
 	return e.setLockShareMode()
 }
-

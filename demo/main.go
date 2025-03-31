@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+const (
+	exampleId = 1906626367382884352
+)
+
 func main() {
 	var err error
 	var db *sqlca.Engine
@@ -25,7 +29,7 @@ func main() {
 		//	Host:     "192.168.2.19:22",
 		//},
 	}
-	db, err = sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", options)
+	db, err = sqlca.NewEngine("mysql://root:12345678@127.0.0.1:3306/test?charset=utf8mb4", options)
 	if err != nil {
 		log.Errorf("connect database error: %s", err)
 		return
@@ -184,7 +188,7 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 	var do *models.InventoryData
 
 	//SELECT * FROM inventory_data WHERE id=1899078192380252160
-	count, err = db.Model(&do).Id(1899078192380252160).Find()
+	count, err = db.Model(&do).Id(1899078192380252160).MustFind()
 	if err != nil {
 		if errors.Is(err, sqlca.ErrRecordNotFound) {
 			return log.Errorf("根据ID查询数据库记录无结果：%s", err)
@@ -344,13 +348,13 @@ func QueryJoins(db *sqlca.Engine) error {
 func QueryByNormalVars(db *sqlca.Engine) error {
 	var err error
 	var name, serialNo string
-	var id = uint64(1858759254329004032)
-	//SELECT name, serial_no FROM inventory_data WHERE id=1858759254329004032
+	var id = uint64(exampleId)
+	//SELECT name, serial_no FROM inventory_data WHERE id=1906626367382884352
 	_, err = db.Model(&name, &serialNo).
 		Table("inventory_data").
 		Select("name, serial_no").
 		Id(id).
-		Find()
+		MustFind()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
@@ -365,28 +369,28 @@ models.InventoryData对象的ProductExtra是一个跟数据库JSON内容对应�
 func QueryWithJsonColumn(db *sqlca.Engine) error {
 	var err error
 	var do models.InventoryData
-	var id = uint64(1867379968636358657)
+	var id = uint64(exampleId)
 
 	/*
-		SELECT * FROM inventory_data WHERE id=1867379968636358657
+		SELECT * FROM inventory_data WHERE id=1906626367382884352
 
 		+-----------------------+-----------------------+-----------------------+------------------------------------------------+
 		| id	                | name	| serial_no	    | quantity	| price	    |                 product_extra                  |
 		+-----------------------+-------+---------------+-----------+-----------+------------------------------------------------+
-		| 1867379968636358657	| 轮胎  	| SNO_002		| 2000.000 	| 210.00	| {"avg_price": "450.5", "specs_value": "17英寸"} |
+		| 1906626367382884352	| 轮胎  	| SNO_002		| 2000.000 	| 210.00	| {"avg_price": "450.5", "specs_value": "17英寸"} |
 		+------------------------------------------------------------------------------------------------------------------------+
 	*/
 	_, err = db.Model(&do).
 		Table("inventory_data").
 		Select("id", "name", "serial_no", "quantity", "price", "product_extra").
 		Id(id).
-		Find()
+		MustFind()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
 	log.Infof("ID: %v 数据：%+v", id, do)
 	/*
-		2024-12-18 15:15:03.560732 PID:64764 [INFO] {goroutine 1} <main.go:373 QueryWithJsonColumn()> ID: 1867379968636358657 数据：{Id:1867379968636358657 Name:轮胎 SerialNo:SNO_002 Quantity:2000 Price:210 ProductExtra:{AvgPrice:450.5 SpecsValue:17英寸}}
+		2024-12-18 15:15:03.560732 PID:64764 [INFO] {goroutine 1} <main.go:373 QueryWithJsonColumn()> ID: 1906626367382884352 数据：{Id:1906626367382884352 Name:轮胎 SerialNo:SNO_002 Quantity:2000 Price:210 ProductExtra:{AvgPrice:450.5 SpecsValue:17英寸}}
 	*/
 	return nil
 }
@@ -431,14 +435,14 @@ func ExecRawSQL(db *sqlca.Engine) error {
 /*
 [数据更新]
 
-SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
-UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1858759254329004032'
+SELECT * FROM inventory_data  WHERE `id`='1906626367382884352'
+UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1906626367382884352'
 */
 func UpdateByModel(db *sqlca.Engine) error {
 	var err error
 	var do *models.InventoryData
-	var id = uint64(1858759254329004032)
-	_, err = db.Model(&do).Id(id).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+	var id = uint64(exampleId)
+	_, err = db.Model(&do).Id(id).MustFind() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
@@ -456,12 +460,12 @@ func UpdateByModel(db *sqlca.Engine) error {
 */
 func UpdateByMap(db *sqlca.Engine) error {
 	var err error
-	var id = uint64(1858759254329004032)
+	var id = uint64(exampleId)
 	var updates = map[string]interface{}{
 		"quantity": 2100, //更改库存
 		"Price":    300,  //更改价格
 	}
-	//UPDATE inventory_data SET `quantity`='2100',`price`=300 WHERE `id`='1858759254329004032'
+	//UPDATE inventory_data SET `quantity`='2100',`price`=300 WHERE `id`='1906626367382884352'
 	_, err = db.Model(&updates).Table("inventory_data").Id(id).Update()
 	if err != nil {
 		return log.Errorf("更新错误：%s", err)
@@ -492,9 +496,9 @@ func Transaction(db *sqlca.Engine) error {
 	/*
 		-- TRANSACTION BEGIN
 
-			INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1858759254329004032','1861614736295071744','admin','1','2024-11-27 1114','202407090000001')
-			SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
-			UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1858759254329004032'
+			INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1906626367382884352','1861614736295071744','admin','1','2024-11-27 1114','202407090000001')
+			SELECT * FROM inventory_data  WHERE `id`='1906626367382884352'
+			UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1906626367382884352'
 
 		-- TRANSACTION END
 	*/
@@ -506,7 +510,7 @@ func Transaction(db *sqlca.Engine) error {
 	}
 	defer tx.TxRollback()
 
-	productId := uint64(1858759254329004032)
+	productId := uint64(1906626367382884352)
 	strOrderNo := time.Now().Format("20060102150405.000000000")
 	//***************** 执行事务操作 *****************
 	quantity := float64(20)
@@ -531,7 +535,7 @@ func Transaction(db *sqlca.Engine) error {
 		return log.Errorf("数据插入错误: %s", err)
 	}
 	var inventoryData = &models.InventoryData{}
-	_, err = tx.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+	_, err = tx.Model(&inventoryData).Id(productId).MustFind() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
@@ -555,16 +559,16 @@ func TransactionWrapper(db *sqlca.Engine) error {
 	/*
 	   -- TRANSACTION BEGIN
 
-	   	INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1858759254329004032','1861614736295071744','admin','1','2024-11-27 1114','202407090000002')
-	   	SELECT * FROM inventory_data  WHERE `id`='1858759254329004032'
-	   	UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1858759254329004032'
+	   	INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1906626367382884352','1861614736295071744','admin','1','2024-11-27 1114','202407090000002')
+	   	SELECT * FROM inventory_data  WHERE `id`='1906626367382884352'
+	   	UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1906626367382884352'
 
 	   -- TRANSACTION END
 	*/
 	strOrderNo := time.Now().Format("20060102150405.000000000")
 	err := db.TxFunc(func(tx *sqlca.Engine) error {
 		var err error
-		productId := uint64(1858759254329004032)
+		productId := uint64(exampleId)
 		now := time.Now().Format("2006-01-02 15:04:05")
 
 		//***************** 执行事务操作 *****************
@@ -590,7 +594,7 @@ func TransactionWrapper(db *sqlca.Engine) error {
 			return log.Errorf("数据插入错误: %s", err)
 		}
 		var inventoryData = &models.InventoryData{}
-		_, err = tx.Model(&inventoryData).Id(productId).Find() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
+		_, err = tx.Model(&inventoryData).Id(productId).MustFind() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
 		if err != nil {
 			return log.Errorf("数据查询错误：%s", err)
 		}
@@ -608,4 +612,3 @@ func TransactionWrapper(db *sqlca.Engine) error {
 	}
 	return nil
 }
-

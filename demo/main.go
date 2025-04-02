@@ -169,7 +169,7 @@ func QueryLimit(db *sqlca.Engine) error {
 
 	//SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 1000
 	count, err = db.Model(&dos).
-		Select("").
+		Select("*").
 		Limit(1000).
 		Desc("create_time").
 		Query()

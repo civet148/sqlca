@@ -570,7 +570,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 		dbQuery := e.getDB()
 		if rowsQuery, err = dbQuery.Query(strSql); err != nil {
 			if !e.noVerbose {
-				log.Errorf("query [%v] error [%v]", strSql, err.Error())
+				log.Errorf("query [%v] error: %v", strSql, err.Error())
 			}
 			return
 		}
@@ -640,6 +640,9 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	} else {
 		lastInsertId, _, err = e.mysqlExec(strSql)
 	}
+	if err != nil {
+		return 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
+	}
 	if !e.noVerbose {
 		log.Debugf("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	}
@@ -692,6 +695,9 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 			lastInsertId, err = e.mysqlQueryUpsert(strSql)
 		}
 	}
+	if err != nil {
+		return 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
+	}
 	if !e.noVerbose {
 		log.Debugf("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	}
@@ -733,10 +739,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		if !e.noVerbose {
-			log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSql, e.model)
-		}
-		return
+		return 0, log.Errorf(err)
 	}
 	if !e.noVerbose {
 		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)

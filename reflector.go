@@ -542,7 +542,6 @@ func (e *Engine) fetchToMap(fetcher *Fetcher, arg interface{}) (err error) {
 func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.Value) (err error) {
 
 	if typ.Kind() == reflect.Ptr {
-
 		typ = typ.Elem()
 		val = val.Elem()
 	}
@@ -558,17 +557,17 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 	return
 }
 
-func (e *Engine) fetchToStructField(fetcher *Fetcher, typ reflect.Type, field reflect.StructField, val reflect.Value) {
+func (e *Engine) fetchToStructField(fetcher *Fetcher, typ reflect.Type, field reflect.StructField, val reflect.Value, ptr ...reflect.Value) {
 
-	//	log.Debugf("typField name [%s] type [%s] valField can addr [%v]", field.Name, field.Type.Kind(), val.CanAddr())
+	//log.Debugf("typField name [%s] type [%s] valField can addr [%v]", field.Name, field.Type.Kind(), val.CanAddr())
 	switch typ.Kind() {
 	case reflect.Struct:
 		{
-			e.fetchToStructAny(fetcher, field, val)
+			e.fetchToStructAny(fetcher, field, val, ptr...)
 		}
 	case reflect.Slice:
 		if e.getTagValue(field) != "" {
-			_ = e.fetchToJsonObject(fetcher, field, val)
+			_ = e.fetchToJsonObject(fetcher, field, val, ptr...)
 		}
 	case reflect.Map: //ignore...
 	case reflect.Ptr:
@@ -578,33 +577,48 @@ func (e *Engine) fetchToStructField(fetcher *Fetcher, typ reflect.Type, field re
 				valNew := reflect.New(typElem)
 				val.Set(valNew)
 			}
-			e.fetchToStructField(fetcher, typElem, field, val.Elem())
+			e.fetchToStructField(fetcher, typElem, field, val.Elem(), val)
 		}
 	default:
 		{
-			_ = e.setValueByField(fetcher, field, val) //assign value to struct field
+			_ = e.setValueByField(fetcher, field, val, ptr...) //assign value to struct field
 		}
 	}
 }
 
-func (e *Engine) fetchToStructAny(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
+func (e *Engine) fetchToStructAny(fetcher *Fetcher, field reflect.StructField, val reflect.Value, ptr ...reflect.Value) {
 	if _, ok := val.Addr().Interface().(sql.Scanner); ok {
 		e.fetchToScanner(fetcher, field, val)
 	} else {
 		if e.getTagValue(field) != "" {
-			_ = e.fetchToJsonObject(fetcher, field, val)
+			_ = e.fetchToJsonObject(fetcher, field, val, ptr...)
 		} else {
 			_ = e.fetchToStruct(fetcher, field.Type, val)
 		}
 	}
 }
 
+func setNilPtr(vals ...reflect.Value) {
+	for _, val := range vals {
+		if !val.CanAddr() {
+			return
+		}
+		val.Set(reflect.Zero(val.Type()))
+	}
+}
+
 // json string unmarshal to struct/slice
-func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, val reflect.Value) (err error) {
+func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, val reflect.Value, ptr ...reflect.Value) (err error) {
+	var assigned bool
+	defer func() {
+		if !assigned && len(ptr) != 0 {
+			setNilPtr(ptr...)
+		}
+	}()
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
 	if strDbTagVal == types.SQLCA_TAG_VALUE_IGNORE {
-		return
+		return nil
 	}
 
 	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
@@ -613,6 +627,7 @@ func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, 
 			if err = json.Unmarshal([]byte(v), vp.Interface()); err != nil {
 				return log.Errorf("json.Unmarshal [%s] error [%s]", v, err)
 			}
+			assigned = true
 		} else {
 			//if struct field is a slice type and content is nil make space for it
 			if field.Type.Kind() == reflect.Slice {
@@ -620,7 +635,7 @@ func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, 
 			}
 		}
 	}
-	return
+	return nil
 }
 
 // fetch to struct object by customize scanner
@@ -691,27 +706,35 @@ func (e *Engine) getTagValue(sf reflect.StructField) (strValue string) {
 }
 
 // 按结构体字段标签赋值
-func (e *Engine) setValueByField(fetcher *Fetcher, field reflect.StructField, val reflect.Value) (err error) {
+func (e *Engine) setValueByField(fetcher *Fetcher, field reflect.StructField, val reflect.Value, ptr ...reflect.Value) (err error) {
 
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
 	if strDbTagVal == types.SQLCA_TAG_VALUE_IGNORE {
-		return
+		return nil
 	}
-	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
-		e.setValue(field.Type, val, v)
+	var assigned bool
+	v, ok := fetcher.mapValues[strDbTagVal]
+	if ok {
+		assigned = e.setValue(field.Type, val, v)
 	}
-	return
+	if !assigned && len(ptr) != 0 {
+		setNilPtr(ptr...)
+	}
+	return nil
 }
 
 // 将string存储的值赋值到变量
-func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) {
+func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) bool {
+	if strings.TrimSpace(v) == "" {
+		return false
+	}
 	switch typ.Kind() {
 	case reflect.Struct:
 		s, ok := val.Addr().Interface().(sql.Scanner)
 		if !ok {
 			log.Warnf("struct type %s not implement sql.Scanner interface", typ.Name())
-			return
+			return false
 		}
 		if err := s.Scan(v); err != nil {
 			panic(fmt.Sprintf("scan value %s to sql.Scanner implement object error [%s]", v, err))
@@ -741,8 +764,9 @@ func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) {
 		e.setValue(typ, val, v)
 	default:
 		panic(fmt.Sprintf("can't assign value [%v] to variant type [%v]\n", v, typ.Kind()))
-		return
+		return false
 	}
+	return true
 }
 
 func convertBool2Int(v interface{}) interface{} {
@@ -774,4 +798,3 @@ func convertBoolString(strVal string) string {
 	}
 	return strVal
 }
-

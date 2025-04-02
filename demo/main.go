@@ -72,6 +72,7 @@ func requireError(err error) {
 */
 func InsertSingle(db *sqlca.Engine) error {
 	now := time.Now().Format("2006-01-02 15:04:05")
+	price := float64(12.33)
 	var do = &models.InventoryData{
 		Id:         uint64(db.NewID()),
 		CreateId:   1,
@@ -84,7 +85,7 @@ func InsertSingle(db *sqlca.Engine) error {
 		Name:       "齿轮",
 		SerialNo:   "SNO_001",
 		Quantity:   1000,
-		Price:      10.5,
+		Price:      &price,
 	}
 
 	var err error
@@ -117,8 +118,8 @@ func InsertBatch(db *sqlca.Engine) error {
 			Name:       "齿轮",
 			SerialNo:   "SNO_001",
 			Quantity:   1000,
-			Price:      10.5,
-			ProductExtra: models.ProductExtraData{
+			//Price:      10.5,
+			ProductExtra: &models.ProductExtraData{
 				SpecsValue: "齿数：32",
 				AvgPrice:   sqlca.NewDecimal(30.8),
 			},
@@ -135,8 +136,8 @@ func InsertBatch(db *sqlca.Engine) error {
 			Name:       "轮胎",
 			SerialNo:   "SNO_002",
 			Quantity:   2000,
-			Price:      210,
-			ProductExtra: models.ProductExtraData{
+			//Price:      210,
+			ProductExtra: &models.ProductExtraData{
 				SpecsValue: "17英寸",
 				AvgPrice:   sqlca.NewDecimal(450.5),
 			},
@@ -168,6 +169,7 @@ func QueryLimit(db *sqlca.Engine) error {
 
 	//SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 1000
 	count, err = db.Model(&dos).
+		Select("").
 		Limit(1000).
 		Desc("create_time").
 		Query()
@@ -187,6 +189,15 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 	var count int64
 	var do *models.InventoryData
 
+	count, err = db.Model(&do).Id(exampleId).MustFind()
+	if err != nil {
+		if errors.Is(err, sqlca.ErrRecordNotFound) {
+			return log.Errorf("根据ID查询数据库记录无结果：%s", err)
+		}
+		return log.Errorf("数据库错误：%s", err)
+	}
+	log.Infof("查询结果条数: %d 数据: %+v", count, do)
+
 	//SELECT * FROM inventory_data WHERE id=1899078192380252160
 	count, err = db.Model(&do).Id(1899078192380252160).MustFind()
 	if err != nil {
@@ -195,7 +206,7 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 		}
 		return log.Errorf("数据库错误：%s", err)
 	}
-	log.Infof("查询结果数据条数: %d", count)
+	log.Infof("查询结果条数: %d", count)
 	//log.Json("查询结果(JSON)", dos)
 	return nil
 }
@@ -388,7 +399,7 @@ func QueryWithJsonColumn(db *sqlca.Engine) error {
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
-	log.Infof("ID: %v 数据：%+v", id, do)
+	log.Json(do)
 	/*
 		2024-12-18 15:15:03.560732 PID:64764 [INFO] {goroutine 1} <main.go:373 QueryWithJsonColumn()> ID: 1906626367382884352 数据：{Id:1906626367382884352 Name:轮胎 SerialNo:SNO_002 Quantity:2000 Price:210 ProductExtra:{AvgPrice:450.5 SpecsValue:17英寸}}
 	*/

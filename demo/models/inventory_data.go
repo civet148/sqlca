@@ -33,8 +33,8 @@ type InventoryData struct {
 	Name         string           `json:"name" db:"name" `                                                     //产品名称
 	SerialNo     string           `json:"serial_no" db:"serial_no" `                                           //产品编号
 	Quantity     float64          `json:"quantity" db:"quantity" `                                             //产品库存
-	Price        float64          `json:"price" db:"price" `                                                   //产品均价
-	ProductExtra ProductExtraData `json:"product_extra" db:"product_extra" sqlca:"isnull"`                     //产品附带数据(JSON文本)
+	Price        *float64          `json:"price" db:"price" `                                                   //产品均价
+	ProductExtra *ProductExtraData `json:"product_extra" db:"product_extra" sqlca:"isnull"`                    //产品附带数据(JSON文本)
 }
 
 func (do *InventoryData) GetId() uint64                      { return do.Id }
@@ -59,8 +59,8 @@ func (do *InventoryData) GetSerialNo() string                { return do.SerialN
 func (do *InventoryData) SetSerialNo(v string)               { do.SerialNo = v }
 func (do *InventoryData) GetQuantity() float64               { return do.Quantity }
 func (do *InventoryData) SetQuantity(v float64)              { do.Quantity = v }
-func (do *InventoryData) GetPrice() float64                  { return do.Price }
-func (do *InventoryData) SetPrice(v float64)                 { do.Price = v }
-func (do *InventoryData) GetProductExtra() ProductExtraData  { return do.ProductExtra }
-func (do *InventoryData) SetProductExtra(v ProductExtraData) { do.ProductExtra = v }
+func (do *InventoryData) GetPrice() *float64                  { return do.Price }
+func (do *InventoryData) SetPrice(v *float64)                 { do.Price = v }
+func (do *InventoryData) GetProductExtra() *ProductExtraData  { return do.ProductExtra }
+func (do *InventoryData) SetProductExtra(v *ProductExtraData) { do.ProductExtra = v }
 

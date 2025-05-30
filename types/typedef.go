@@ -220,3 +220,6 @@ func (m ModelType) String() string {
 	return "ModelType_Unknown"
 }
 
+type Tabler interface {
+	TableName() string
+}

@@ -73,7 +73,7 @@ func requireError(err error) {
 func InsertSingle(db *sqlca.Engine) error {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	price := float64(12.33)
-	var do = &models.InventoryData{
+	var do = models.InventoryData{
 		Id:         uint64(db.NewID()),
 		CreateId:   1,
 		CreateName: "admin",
@@ -105,7 +105,7 @@ func InsertSingle(db *sqlca.Engine) error {
 */
 func InsertBatch(db *sqlca.Engine) error {
 	now := time.Now().Format("2006-01-02 15:04:05")
-	var dos = []*models.InventoryData{
+	var dos = []models.InventoryData{
 		{
 			Id:         uint64(db.NewID()),
 			CreateId:   1,
@@ -167,17 +167,17 @@ func QueryLimit(db *sqlca.Engine) error {
 	var count int64
 	var dos []*models.InventoryData
 
-	//SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 1000
+	//SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 2
 	count, err = db.Model(&dos).
-		Select("*").
-		Limit(1000).
+		Select("id, name, serial_no, quantity").
+		Limit(2).
 		Desc("create_time").
 		Query()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
 	log.Infof("查询结果数据条数: %d", count)
-	//log.Json("查询结果(JSON)", dos)
+	log.Json("查询结果(JSON)", dos)
 	return nil
 }
 
@@ -192,7 +192,8 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 	count, err = db.Model(&do).Id(exampleId).MustFind()
 	if err != nil {
 		if errors.Is(err, sqlca.ErrRecordNotFound) {
-			return log.Errorf("根据ID查询数据库记录无结果：%s", err)
+			log.Infof("根据ID查询数据库记录无结果：%s", err)
+			return nil
 		}
 		return log.Errorf("数据库错误：%s", err)
 	}

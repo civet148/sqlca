@@ -48,6 +48,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 		if v == nil {
 			continue
 		}
+
 		var isStructPtrPtr bool
 		typ := reflect.TypeOf(v)
 		val := reflect.ValueOf(v)
@@ -95,10 +96,26 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 					typSt := elemVal.Type().Elem()
 					if typSt.Kind() == reflect.Ptr {
 						typSt = typSt.Elem()
+					}
+					valSt := reflect.New(typSt)
+					if tabler, ok := valSt.Interface().(types.Tabler); ok {
+						strCamelTableName = tabler.TableName()
+					} else {
 						strCamelTableName = typSt.Name()
 					}
 					if val.IsNil() {
 						val.Set(reflect.MakeSlice(elemVal.Type(), 0, 0))
+					}
+				} else {
+					var typSt = typ
+					if typ.Kind() == reflect.Ptr {
+						typSt = typ.Elem()
+					}
+					valSt := reflect.New(typSt)
+					if tabler, ok := valSt.Interface().(types.Tabler); ok {
+						strCamelTableName = tabler.TableName()
+					} else {
+						strCamelTableName = typSt.Name()
 					}
 				}
 			} else {
@@ -1328,4 +1345,3 @@ func (e *Engine) parseQueryOrMap(query interface{}) {
 	}
 	e.setOr(qss...)
 }
-

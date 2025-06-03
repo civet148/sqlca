@@ -87,7 +87,6 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 				e.setModelType(types.ModelType_BaseType)
 			}
 			if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
-				strCamelTableName = typ.Name()
 				e.model = models[0] //map, struct or slice
 				if typ.Kind() == reflect.Slice {
 					modelVal := reflect.ValueOf(e.model)
@@ -99,7 +98,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 					}
 					valSt := reflect.New(typSt)
 					if tabler, ok := valSt.Interface().(types.Tabler); ok {
-						strCamelTableName = tabler.TableName()
+						e.setTableName(tabler.TableName())
 					} else {
 						strCamelTableName = typSt.Name()
 					}
@@ -113,7 +112,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 					}
 					valSt := reflect.New(typSt)
 					if tabler, ok := valSt.Interface().(types.Tabler); ok {
-						strCamelTableName = tabler.TableName()
+						e.setTableName(tabler.TableName())
 					} else {
 						strCamelTableName = typSt.Name()
 					}

@@ -2,7 +2,7 @@ package models
 
 import (
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v2"
+	"github.com/civet148/sqlca/v3"
 	"time"
 )
 
@@ -42,4 +42,3 @@ func (do *InventoryData) AfterDelete(db *sqlca.Engine) error {
 	log.Infof("%+v", do)
 	return nil
 }
-

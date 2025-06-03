@@ -3,8 +3,8 @@ package main
 import (
 	"errors"
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v2"
-	"github.com/civet148/sqlca/v2/demo/models"
+	"github.com/civet148/sqlca/v3"
+	"github.com/civet148/sqlca/v3/demo/models"
 	"time"
 )
 

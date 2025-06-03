@@ -1,4 +1,4 @@
-module github.com/civet148/sqlca/v2
+module github.com/civet148/sqlca/v3
 
 go 1.13
 

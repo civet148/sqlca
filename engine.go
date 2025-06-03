@@ -9,7 +9,7 @@ import (
 	_ "gitee.com/opengauss/openGauss-connector-go-pq" //open gauss golang driver of gitee.com
 	"github.com/bwmarrin/snowflake"
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v2/types"
+	"github.com/civet148/sqlca/v3/types"
 	_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
 	"github.com/gansidui/geohash"
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver

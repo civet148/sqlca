@@ -3,7 +3,7 @@ package sqlca
 import (
 	"fmt"
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v2/types"
+	"github.com/civet148/sqlca/v3/types"
 	"net/url"
 	"strconv"
 	"strings"
@@ -400,4 +400,3 @@ func Url2MySql(strUrl string) (string, error) {
 	}
 	return fmt.Sprintf("%s:%s@tcp(%s)%s?%s", strUser, strPasswd, strHost, strPath, strings.Join(params, "&")), nil
 }
-

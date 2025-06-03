@@ -6,7 +6,7 @@ import (
 	"github.com/civet148/gotools/wss"
 	_ "github.com/civet148/gotools/wss/tcpsock" //required (register socket instance)
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v2/types"
+	"github.com/civet148/sqlca/v3/types"
 	"github.com/elliotchance/sshtunnel"
 	"golang.org/x/crypto/ssh"
 	"net"
@@ -194,4 +194,3 @@ func (s *SSH) buildMssqlTunnelDSN(dsn *dsnDriver) *dsnDriver {
 	parameter.strDSN = buildMssqlDSN(s.listenIP, strListenPort, parameter.user, parameter.password, parameter.db, parameter.queries)
 	return dsn
 }
-

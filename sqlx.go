@@ -175,7 +175,6 @@ func (e *Engine) genSnowflakeId() ID {
 }
 
 func (e *Engine) newTx() (txEngine *Engine, err error) {
-
 	txEngine = e.clone()
 	db := e.getDB()
 	if txEngine.tx, err = db.Begin(); err != nil {
@@ -184,6 +183,71 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 	}
 	txEngine.operType = types.OperType_Tx
 	return
+}
+
+func (e *Engine) execSql() {
+
+}
+
+func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
+	var result sql.Result
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("exec tx [%s]", strSql))
+	strSql = e.buildSqlStatements(strSql, args...)
+
+	result, err = e.tx.Exec(strSql)
+	if err != nil {
+		if !e.noVerbose {
+			log.Errorf("exec tx [%v] args %+v error [%+v] auto rollback [%v]", strSql, args, err.Error(), e.bAutoRollback)
+		}
+		e.autoRollback()
+		return
+	}
+	lastInsertId, _ = result.LastInsertId()
+	rowsAffected, _ = result.RowsAffected()
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
+	}
+	return
+}
+
+func (e *Engine) txQuery(dest interface{}, strSql string, args ...interface{}) (count int64, err error) {
+	var rows *sql.Rows
+	strSql = e.buildSqlStatements(strSql, args...)
+	log.Debugf("query tx [%v]", strSql)
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("query tx [%s]", strSql))
+
+	rows, err = e.tx.Query(strSql)
+	if err != nil {
+		if !e.noVerbose {
+			log.Errorf("query tx sql [%v] args %v query error [%v] auto rollback [%v]", strSql, args, err.Error(), e.bAutoRollback)
+		}
+		e.autoRollback()
+		return
+	}
+	e.setModel(dest)
+
+	defer rows.Close()
+	if count, err = e.fetchRows(rows); err != nil {
+		if !e.noVerbose {
+			log.Errorf("query tx sql [%v] args %v fetch row error [%v] auto rollback [%v]", strSql, args, err.Error(), e.bAutoRollback)
+		}
+		e.autoRollback()
+		return
+	}
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), count, strSql)
+	}
+	return
+}
+
+func (e *Engine) txRollback() error {
+	return e.tx.Rollback()
+}
+
+func (e *Engine) txCommit() error {
+	return e.tx.Commit()
 }
 
 func (e *Engine) postgresQueryInsert(strSQL string) string {
@@ -1025,15 +1089,18 @@ func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) 
 	return
 }
 
-func (e *Engine) formatString(strIn string, args ...interface{}) (strFmt string) {
-	strFmt = strIn
-	if isQuestionPlaceHolder(strIn, args...) { //question placeholder exist
-		strFmt = strings.Replace(strFmt, "?", " '%v' ", -1)
+func (e *Engine) buildSqlStatements(query string, args ...any) string {
+	if !strings.Contains(query, "%") && !strings.Contains(query, "?") && len(args) > 0 {
+		query = fmt.Sprintf("%s = ?", query)
 	}
-	return e.preventInjectionFmt(strFmt, args...)
+	if !isQuestionPlaceHolder(query, args...) { //question placeholder exist
+		return e.preventInjection(query, args...)
+	}
+	e.stmtArgs = append(e.stmtArgs, args...)
+	return query
 }
 
-func (e *Engine) preventInjectionFmt(strFmt string, args ...interface{}) string {
+func (e *Engine) preventInjection(strFmt string, args ...any) string {
 	var newArgs []interface{}
 	for _, a := range args {
 		switch a.(type) {
@@ -1174,6 +1241,58 @@ func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
 	return
 }
 
+//
+//func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
+//
+//	if !e.isPkValueNil() {
+//		strWhere += e.getPkWhere()
+//	}
+//
+//	if strWhere == "" {
+//		strCustomer := e.getCustomWhere()
+//		if strCustomer == "" {
+//			//where condition required when update or delete
+//			if operType != types.OperType_Update && operType != types.OperType_Delete && len(e.joins) == 0 {
+//				strWhere += "1=1"
+//			} else {
+//				if len(e.joins) > 0 || len(e.andConditions) != 0 {
+//					strWhere += "1=1"
+//				}
+//			}
+//		} else {
+//			strWhere += strCustomer
+//		}
+//	}
+//
+//	//AND conditions
+//	for _, v := range e.andConditions {
+//		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v)
+//	}
+//	//IN conditions
+//	for _, v := range e.inConditions {
+//		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, e.makeInCondition(v))
+//	}
+//	//NOT IN conditions
+//	for _, v := range e.notConditions {
+//		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, e.makeNotCondition(v))
+//	}
+//	//OR conditions
+//	for _, v := range e.orConditions {
+//		if strings.Contains(v, "(") && strings.Contains(v, ")") {
+//			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v) //multiple OR condition append
+//		} else {
+//			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_OR, v) //single OR condition append
+//		}
+//	}
+//
+//	if strWhere != "" {
+//		strWhere = types.DATABASE_KEY_NAME_WHERE + " " + strWhere
+//	} else {
+//		strWhere = types.DATABASE_KEY_NAME_WHERE
+//	}
+//	return
+//}
+
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 	strWhere := e.makeWhereCondition(types.OperType_Query)
 
@@ -1187,7 +1306,6 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), e.getLimit(), e.getOffset())
 	}
-
 	return
 }
 
@@ -1248,6 +1366,7 @@ func (e *Engine) makeSqlxDelete() (strSqlx string) {
 func (e *Engine) cleanWhereCondition() {
 	e.strWhere = ""
 	e.strPkValue = ""
+	e.stmtArgs = nil
 	e.cleanHooks()
 }
 
@@ -1290,7 +1409,7 @@ func (e *Engine) setLockShareMode() *Engine {
 
 func (e *Engine) setAnd(query string, args ...interface{}) *Engine {
 	assert(query, "query statement is empty")
-	query = e.formatString(query, args...)
+	query = e.buildSqlStatements(query, args...)
 	e.andConditions = append(e.andConditions, query)
 	return e
 }
@@ -1298,14 +1417,14 @@ func (e *Engine) setAnd(query string, args ...interface{}) *Engine {
 func (e *Engine) setOr(queries ...*queryStatement) *Engine {
 	if len(queries) == 1 {
 		v := queries[0]
-		strQuery := e.formatString(v.query, v.args...)
+		strQuery := e.buildSqlStatements(v.query, v.args...)
 		e.orConditions = append(e.orConditions, strQuery)
 		return e
 	}
 
 	var ors []string
 	for _, v := range queries {
-		strQuery := e.formatString(v.query, v.args...)
+		strQuery := e.buildSqlStatements(v.query, v.args...)
 		ors = append(ors, strQuery)
 	}
 	strConditions := " ( " + strings.Join(ors, " OR ") + " ) "

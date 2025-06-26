@@ -1,8 +1,11 @@
 package sqlca
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"github.com/civet148/log"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -102,13 +105,16 @@ func parseQueryInterface(query interface{}) queryInterfaceType {
 	case string:
 		return queryInterface_String
 	}
-	log.Panic("query interface type just support 'string' or 'map[string]interface{}'")
 	return queryInterface_Unknown
 }
 
 func isQuestionPlaceHolder(query string, args ...interface{}) bool {
 	count := strings.Count(query, "?")
-	if count > 0 && count == len(args) {
+	if count > 0 {
+		if count != len(args) {
+			log.Warnf("question placeholder count %d not equal args count %d", count, len(args))
+			return true
+		}
 		return true
 	}
 	return false
@@ -116,6 +122,7 @@ func isQuestionPlaceHolder(query string, args ...interface{}) bool {
 
 type StringBuilder struct {
 	builder strings.Builder
+	args    []interface{}
 }
 
 func NewStringBuilder() *StringBuilder {
@@ -125,10 +132,11 @@ func NewStringBuilder() *StringBuilder {
 func (s *StringBuilder) Append(query string, args ...interface{}) *StringBuilder {
 	var strQuery string
 	if isQuestionPlaceHolder(query, args...) { //question placeholder exist
-		query = strings.Replace(query, "?", " '%v' ", -1)
+		s.builder.WriteString(query)
+		s.args = append(s.args, args...)
+	} else {
 		strQuery = " " + fmt.Sprintf(query, args...) + " "
 	}
-	strQuery = " " + fmt.Sprintf(query, args...) + " "
 	s.builder.WriteString(strQuery)
 	return s
 }
@@ -137,3 +145,53 @@ func (s *StringBuilder) String() string {
 	return s.builder.String()
 }
 
+func (s *StringBuilder) Args() []interface{} {
+	return s.args
+}
+
+func indirectValue(v any) any {
+	if v == nil {
+		return "NULL"
+	}
+
+	value := reflect.ValueOf(v)
+	// 循环处理指针，直到获取到非指针的值
+	for value.Kind() == reflect.Ptr {
+		if value.IsNil() {
+			return "NULL"
+		}
+		value = value.Elem()
+	}
+
+	switch value.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return value.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return int64(value.Uint())
+	case reflect.Float32, reflect.Float64:
+		return value.Float()
+	case reflect.String:
+		return value.String()
+	case reflect.Struct:
+		if valuer, ok := value.Interface().(driver.Valuer); ok {
+			result, err := valuer.Value()
+			if err == nil {
+				return result
+			}
+		}
+		data, err := json.Marshal(value.Interface())
+		if err == nil {
+			return string(data)
+		}
+	case reflect.Slice, reflect.Array, reflect.Map:
+		data, err := json.Marshal(value.Interface())
+		if err == nil {
+			return string(data)
+		}
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+	return v
+}
+
+// ... existing code ...

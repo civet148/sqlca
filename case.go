@@ -19,7 +19,7 @@ type CaseWhen struct {
 func (c *CaseWhen) Case(strThen string, strWhen string, args ...interface{}) *CaseWhen {
 	c.whens = append(c.whens, &when{
 		strThen: strThen,
-		strWhen: c.e.formatString(strWhen, args...),
+		strWhen: c.e.buildSqlStatements(strWhen, args...),
 	})
 	return c
 }

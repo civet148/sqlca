@@ -47,7 +47,7 @@ type Join struct {
 
 func (j *Join) On(strOn string, args ...interface{}) *Engine {
 	e := j.e
-	j.strOn = e.formatString(strOn, args...)
+	j.strOn = e.buildSqlStatements(strOn, args...)
 	e.joins = append(e.joins, j)
 	return e
 }

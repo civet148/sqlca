@@ -107,6 +107,7 @@ type Engine struct {
 	noVerbose        bool                   // no more verbose
 	idgen            *snowflake.Node        // snowflake id generator
 	hookMethods      *hookMethods           // hook methods
+	stmtArgs         []any                  // statement args
 }
 
 func init() {
@@ -299,7 +300,7 @@ func (e *Engine) GetPkName() string {
 }
 
 // Id set orm primary key's value
-func (e *Engine) Id(value interface{}) *Engine {
+func (e *Engine) Id(value any) *Engine {
 	e.setPkValue(value)
 	return e
 }
@@ -331,45 +332,45 @@ func (e *Engine) Distinct() *Engine {
 }
 
 // Where orm where condition
-func (e *Engine) Where(query interface{}, args ...interface{}) *Engine {
-	var strQuery string
+func (e *Engine) Where(query any, args ...any) *Engine {
+	var strSql string
 	qt := parseQueryInterface(query)
 	switch qt {
 	case queryInterface_String:
-		strQuery = query.(string)
-		assert(strQuery, "query statement is empty")
-		strQuery = e.formatString(strQuery, args...)
-		e.setWhere(strQuery)
+		strSql = query.(string)
+		assert(strSql, "query statement is empty")
+		strSql = e.buildSqlStatements(strSql, args...)
+		e.setWhere(strSql)
 	case queryInterface_Map:
 		e.parseQueryAndMap(query)
 	}
 	return e
 }
 
-func (e *Engine) And(query interface{}, args ...interface{}) *Engine {
-	var strQuery string
+func (e *Engine) And(query any, args ...any) *Engine {
+	var strSql string
 	qt := parseQueryInterface(query)
 	switch qt {
 	case queryInterface_String:
-		strQuery = query.(string)
-		assert(strQuery, "query statement is empty")
-		strQuery = e.formatString(strQuery, args...)
-		e.andConditions = append(e.andConditions, strQuery)
+		strSql = query.(string)
+		assert(strSql, "query statement is empty")
+		strSql = e.buildSqlStatements(strSql, args...)
+		e.andConditions = append(e.andConditions, strSql)
 	case queryInterface_Map:
 		e.parseQueryAndMap(query)
 	}
 	return e
 }
 
-func (e *Engine) Or(query interface{}, args ...interface{}) *Engine {
-	var strQuery string
+func (e *Engine) Or(query any, args ...any) *Engine {
+	var strSql string
 	qt := parseQueryInterface(query)
 	switch qt {
 	case queryInterface_String:
-		strQuery = query.(string)
-		assert(strQuery, "query statement is empty")
+		strSql = query.(string)
+		assert(strSql, "query statement is empty")
 		e.setOr(&queryStatement{
-			query: strQuery,
+			query: strSql,
 			args:  args,
 		})
 	case queryInterface_Map:
@@ -438,8 +439,8 @@ func (e *Engine) Offset(offset int) *Engine {
 }
 
 // Having having [condition]
-func (e *Engine) Having(strFmt string, args ...interface{}) *Engine {
-	strCondition := e.formatString(strFmt, args...)
+func (e *Engine) Having(strFmt string, args ...any) *Engine {
+	strCondition := e.buildSqlStatements(strFmt, args...)
 	e.setHaving(strCondition)
 	return e
 }
@@ -473,7 +474,7 @@ func (e *Engine) Desc(columns ...string) *Engine {
 }
 
 // In `field_name` IN ('1','2',...)
-func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
+func (e *Engine) In(strColumn string, args ...any) *Engine {
 	v := condition{
 		ColumnName:   strColumn,
 		ColumnValues: args,
@@ -483,7 +484,7 @@ func (e *Engine) In(strColumn string, args ...interface{}) *Engine {
 }
 
 // NotIn `field_name` NOT IN ('1','2',...)
-func (e *Engine) NotIn(strColumn string, args ...interface{}) *Engine {
+func (e *Engine) NotIn(strColumn string, args ...any) *Engine {
 	v := condition{
 		ColumnName:   strColumn,
 		ColumnValues: args,
@@ -791,24 +792,24 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 // QueryRaw use raw sql to query results
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
-func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
+func (e *Engine) QueryRaw(strSql string, args ...any) (rowsAffected int64, err error) {
 
-	assert(strQuery, "query sql string is nil")
+	assert(strSql, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
 
 	var rows *sqlx.Rows
-	strQuery = e.formatString(strQuery, args...)
+	strSql = e.buildSqlStatements(strSql, args...)
 
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strQuery))
+	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strSql))
 	if e.operType == types.OperType_Tx {
-		return e.TxGet(e.model, strQuery)
+		return e.TxGet(e.model, strSql)
 	}
 
 	db := e.getDB()
-	if rows, err = db.Queryx(strQuery); err != nil {
+	if rows, err = db.Queryx(strSql); err != nil {
 		if !e.noVerbose {
-			log.Errorf("query [%v] error [%v]", strQuery, err.Error())
+			log.Errorf("query [%v] error [%v]", strSql, err.Error())
 		}
 		return
 	}
@@ -820,7 +821,7 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 		return 0, err
 	}
 	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strQuery)
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	}
 	return rowsAffected, nil
 }
@@ -828,24 +829,24 @@ func (e *Engine) QueryRaw(strQuery string, args ...interface{}) (rowsAffected in
 // QueryMap use raw sql to query results into a map slice (model type is []map[string]string)
 // return results and error
 // NOTE: Model function is must be called before call this function
-func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected int64, err error) {
-	assert(strQuery, "query sql string is nil")
+func (e *Engine) QueryMap(strSql string, args ...any) (rowsAffected int64, err error) {
+	assert(strSql, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
-	strQuery = e.formatString(strQuery, args...)
+	strSql = e.buildSqlStatements(strSql, args...)
 
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strQuery))
+	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strSql))
 
 	if e.operType == types.OperType_Tx {
-		return e.TxGet(e.model, strQuery)
+		return e.TxGet(e.model, strSql)
 	}
 
 	var rows *sqlx.Rows
 
 	db := e.getDB()
-	if rows, err = db.Queryx(strQuery); err != nil {
+	if rows, err = db.Queryx(strSql); err != nil {
 		if !e.noVerbose {
-			log.Errorf("SQL [%v] query error [%v]", strQuery, err.Error())
+			log.Errorf("SQL [%v] query error [%v]", strSql, err.Error())
 		}
 		return
 	}
@@ -857,29 +858,29 @@ func (e *Engine) QueryMap(strQuery string, args ...interface{}) (rowsAffected in
 		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
 	}
 	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strQuery)
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	}
 	return
 }
 
 // ExecRaw use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows affected and error, if err is not nil must be something wrong
-func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, lastInsertId int64, err error) {
+func (e *Engine) ExecRaw(strSql string, args ...any) (rowsAffected, lastInsertId int64, err error) {
 
-	assert(strQuery, "query sql string is nil")
-	strQuery = e.formatString(strQuery, args...)
+	assert(strSql, "query sql string is nil")
+	strSql = e.buildSqlStatements(strSql, args...)
 	if e.operType == types.OperType_Tx {
-		return e.TxExec(strQuery)
+		return e.TxExec(strSql)
 	}
 
 	var r sql.Result
 
-	log.Debugf("exec [%v]", strQuery)
+	log.Debugf("exec [%v]", strSql)
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("ExecRaw [%s]", strQuery))
+	defer c.Stop(fmt.Sprintf("ExecRaw [%s]", strSql))
 
 	db := e.getDB()
-	if r, err = db.Exec(strQuery); err != nil {
+	if r, err = db.Exec(strSql); err != nil {
 		if !e.noVerbose {
 			log.Errorf("error [%v] model [%+v]", err, e.model)
 		}
@@ -889,13 +890,13 @@ func (e *Engine) ExecRaw(strQuery string, args ...interface{}) (rowsAffected, la
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
 		if !e.noVerbose {
-			log.Errorf("get rows affected error [%v] query [%v]", err.Error(), strQuery)
+			log.Errorf("get rows affected error [%v] query [%v]", err.Error(), strSql)
 		}
 		return
 	}
 	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
 	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strQuery)
+		log.Debugf("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
 	}
 	return rowsAffected, lastInsertId, nil
 }
@@ -921,70 +922,24 @@ func (e *Engine) TxBegin() (*Engine, error) {
 	return e.newTx()
 }
 
-func (e *Engine) TxGet(dest interface{}, strQuery string, args ...interface{}) (count int64, err error) {
-	assert(e.tx, "TxGet tx instance is nil, please call TxBegin to create a tx instance")
-	var rows *sql.Rows
-	strQuery = e.formatString(strQuery, args...)
-	log.Debugf("TxGet query [%v]", strQuery)
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("TxGet [%s]", strQuery))
-
-	rows, err = e.tx.Query(strQuery)
-	if err != nil {
-		if !e.noVerbose {
-			log.Errorf("TxGet sql [%v] args %v query error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		}
-		e.autoRollback()
-		return
-	}
-	//log.Debugf("TxGet query [%v] rows ok", strQuery)
-	e.setModel(dest)
-
-	defer rows.Close()
-	if count, err = e.fetchRows(rows); err != nil {
-		if !e.noVerbose {
-			log.Errorf("TxGet sql [%v] args %v fetch row error [%v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		}
-		e.autoRollback()
-		return
-	}
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), count, strQuery)
-	}
-	return
+func (e *Engine) TxGet(dest any, strSql string, args ...any) (count int64, err error) {
+	assert(e.tx, "tx instance is nil")
+	return e.txQuery(dest, strSql, args...)
 }
 
-func (e *Engine) TxExec(strQuery string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
-	assert(e.tx, "TxExec tx instance is nil, please call TxBegin to create a tx instance")
-	var result sql.Result
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("TxExec [%s]", strQuery))
-	strQuery = e.formatString(strQuery, args...)
-
-	result, err = e.tx.Exec(strQuery)
-	if err != nil {
-		if !e.noVerbose {
-			log.Errorf("TxExec exec query [%v] args %+v error [%+v] auto rollback [%v]", strQuery, args, err.Error(), e.bAutoRollback)
-		}
-		e.autoRollback()
-		return
-	}
-	lastInsertId, _ = result.LastInsertId()
-	rowsAffected, _ = result.RowsAffected()
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strQuery)
-	}
-	return
+func (e *Engine) TxExec(strSql string, args ...any) (lastInsertId, rowsAffected int64, err error) {
+	assert(e.tx, "tx instance is nil")
+	return e.txExec(strSql, args...)
 }
 
 func (e *Engine) TxRollback() error {
-	assert(e.tx, "TxRollback tx instance is nil, please call TxBegin to create a tx instance")
-	return e.tx.Rollback()
+	assert(e.tx, "tx instance is nil")
+	return e.txRollback()
 }
 
 func (e *Engine) TxCommit() error {
-	assert(e.tx, "TxCommit tx instance is nil, please call TxBegin to create a tx instance")
-	return e.tx.Commit()
+	assert(e.tx, "tx instance is nil")
+	return e.txCommit()
 }
 
 // make SQL from orm model and operation type
@@ -1133,13 +1088,13 @@ func (e *Engine) SlowQuery(on bool, ms int) {
 	}
 }
 
-func (e *Engine) Case(strThen string, strWhen string, args ...interface{}) *CaseWhen {
+func (e *Engine) Case(strThen string, strWhen string, args ...any) *CaseWhen {
 	cw := &CaseWhen{
 		e: e,
 	}
 	cw.whens = append(cw.whens, &when{
 		strThen: strThen,
-		strWhen: e.formatString(strWhen, args...),
+		strWhen: e.buildSqlStatements(strWhen, args...),
 	})
 	return cw
 }
@@ -1189,7 +1144,7 @@ func (e *Engine) GeoHash(lng, lat float64, precision int) (strGeoHash string, st
 	return
 }
 
-func (e *Engine) JsonMarshal(v interface{}) (strJson string) {
+func (e *Engine) JsonMarshal(v any) (strJson string) {
 	if data, err := json.Marshal(v); err != nil {
 		log.Error(err.Error())
 	} else {
@@ -1198,7 +1153,7 @@ func (e *Engine) JsonMarshal(v interface{}) (strJson string) {
 	return
 }
 
-func (e *Engine) JsonUnmarshal(strJson string, v interface{}) (err error) {
+func (e *Engine) JsonUnmarshal(strJson string, v any) (err error) {
 	err = json.Unmarshal([]byte(strJson), v)
 	return
 }
@@ -1231,28 +1186,28 @@ func (e *Engine) GetAdapter() types.AdapterType {
 	return e.adapterSqlx
 }
 
-func (e *Engine) Count(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_COUNT, strColumn, strAS...))
+func (e *Engine) Count(strColumn string, as ...string) *Engine {
+	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_COUNT, strColumn, as...))
 }
 
-func (e *Engine) Sum(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_SUM, strColumn, strAS...))
+func (e *Engine) Sum(strColumn string, as ...string) *Engine {
+	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_SUM, strColumn, as...))
 }
 
-func (e *Engine) Avg(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_AVG, strColumn, strAS...))
+func (e *Engine) Avg(strColumn string, as ...string) *Engine {
+	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_AVG, strColumn, as...))
 }
 
-func (e *Engine) Min(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_MIN, strColumn, strAS...))
+func (e *Engine) Min(strColumn string, as ...string) *Engine {
+	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_MIN, strColumn, as...))
 }
 
-func (e *Engine) Max(strColumn string, strAS ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_MAX, strColumn, strAS...))
+func (e *Engine) Max(strColumn string, as ...string) *Engine {
+	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_MAX, strColumn, as...))
 }
 
-func (e *Engine) Round(strColumn string, round int, strAS ...string) *Engine {
-	return e.Select(e.roundFunc(strColumn, round, strAS...))
+func (e *Engine) Round(strColumn string, round int, as ...string) *Engine {
+	return e.Select(e.roundFunc(strColumn, round, as...))
 }
 
 func (e *Engine) NoVerbose() *Engine {
@@ -1260,17 +1215,17 @@ func (e *Engine) NoVerbose() *Engine {
 	return e
 }
 
-func (e *Engine) Like(strColumn, strSub string) *Engine {
+func (e *Engine) Like(strColumn, keyword string) *Engine {
 	switch e.adapterSqlx {
 	case types.AdapterSqlx_MySQL:
-		e.And("LOCATE('%s', %s)", strSub, strColumn)
+		e.And("LOCATE('%s', %s)", keyword, strColumn)
 	default:
-		e.And("%s LIKE '%%%s%%'", strColumn, strSub)
+		e.And("%s LIKE '%%%s%%'", strColumn, keyword)
 	}
 	return e
 }
 
-func (e *Engine) Likes(kvs map[string]interface{}) *Engine {
+func (e *Engine) Likes(kvs map[string]any) *Engine {
 	var likes []string
 	for k, v := range kvs {
 		likes = append(likes, fmt.Sprintf(" %s LIKE '%%%v%%' ", k, v))
@@ -1281,107 +1236,107 @@ func (e *Engine) Likes(kvs map[string]interface{}) *Engine {
 }
 
 func (e *Engine) IsNull(strColumn string) *Engine {
-	e.And("%s IS NULL", strColumn)
+	e.And(strColumn + " IS NULL")
 	return e
 }
 
-func (e *Engine) Equal(strColumn string, value interface{}) *Engine {
-	e.And("%s='%v'", strColumn, value)
+func (e *Engine) Equal(strColumn string, value any) *Engine {
+	e.And(strColumn, indirectValue(value))
 	return e
 }
 
 // Eq alias of Equal
-func (e *Engine) Eq(strColumn string, value interface{}) *Engine {
-	return e.Equal(strColumn, value)
+func (e *Engine) Eq(strColumn string, value any) *Engine {
+	return e.Equal(strColumn, indirectValue(value))
 }
 
 // Ne not equal
-func (e *Engine) Ne(strColumn string, value interface{}) *Engine {
-	return e.And("%s != '%v'", strColumn, value)
+func (e *Engine) Ne(strColumn string, value any) *Engine {
+	return e.And(strColumn+" != ?", indirectValue(value))
 }
 
-func (e *Engine) GreaterThan(strColumn string, value interface{}) *Engine {
-	e.And("%s>'%v'", strColumn, value)
+func (e *Engine) GreaterThan(strColumn string, value any) *Engine {
+	e.And(strColumn+" > ?", indirectValue(value))
 	return e
 }
 
 // Gt alias of GreaterThan
-func (e *Engine) Gt(strColumn string, value interface{}) *Engine {
-	return e.GreaterThan(strColumn, value)
+func (e *Engine) Gt(strColumn string, value any) *Engine {
+	return e.GreaterThan(strColumn, indirectValue(value))
 }
 
-func (e *Engine) GreaterEqual(strColumn string, value interface{}) *Engine {
-	e.And("%s>='%v'", strColumn, value)
+func (e *Engine) GreaterEqual(strColumn string, value any) *Engine {
+	e.And(strColumn+" >= ?", indirectValue(value))
 	return e
 }
 
 // Gte alias of GreaterEqual
-func (e *Engine) Gte(strColumn string, value interface{}) *Engine {
-	return e.GreaterEqual(strColumn, value)
+func (e *Engine) Gte(strColumn string, value any) *Engine {
+	return e.GreaterEqual(strColumn, indirectValue(value))
 }
 
-func (e *Engine) LessThan(strColumn string, value interface{}) *Engine {
-	e.And("%s<'%v'", strColumn, value)
+func (e *Engine) LessThan(strColumn string, value any) *Engine {
+	e.And(strColumn+" < ?", indirectValue(value))
 	return e
 }
 
 // Lt alias of LessThan
-func (e *Engine) Lt(strColumn string, value interface{}) *Engine {
-	return e.LessThan(strColumn, value)
+func (e *Engine) Lt(strColumn string, value any) *Engine {
+	return e.LessThan(strColumn, indirectValue(value))
 }
 
-func (e *Engine) LessEqual(strColumn string, value interface{}) *Engine {
-	e.And("%s<='%v'", strColumn, value)
+func (e *Engine) LessEqual(strColumn string, value any) *Engine {
+	e.And(strColumn+" <= ?", indirectValue(value))
 	return e
 }
 
 // Lte alias of LessEqual
-func (e *Engine) Lte(strColumn string, value interface{}) *Engine {
-	return e.LessEqual(strColumn, value)
+func (e *Engine) Lte(strColumn string, value any) *Engine {
+	return e.LessEqual(strColumn, indirectValue(value))
 }
 
 // GteLte greater than equal and less than equal
-func (e *Engine) GteLte(strColumn string, value1, value2 interface{}) *Engine {
+func (e *Engine) GteLte(strColumn string, value1, value2 any) *Engine {
 	e.Gte(strColumn, value1)
 	e.Lte(strColumn, value2)
 	return e
 }
 
 func (e *Engine) IsNULL(strColumn string) *Engine {
-	return e.And("%s is NULL", strColumn)
+	return e.And(strColumn + " is NULL")
 }
 
 func (e *Engine) NotNULL(strColumn string) *Engine {
-	return e.And("%s is not NULL", strColumn)
+	return e.And(strColumn + " is not NULL")
 }
 
 func (e *Engine) jsonExpr(strColumn, strPath string) string {
 	return fmt.Sprintf("`%s`->'$.%s'", strColumn, strPath)
 }
 
-func (e *Engine) JsonEqual(strColumn, strPath string, value interface{}) *Engine {
-	return e.And("%s=%v", e.jsonExpr(strColumn, strPath), value)
+func (e *Engine) JsonEqual(strColumn, strPath string, value any) *Engine {
+	return e.And("%s = '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
 }
 
-func (e *Engine) JsonGreater(strColumn, strPath string, value interface{}) *Engine {
-	return e.And("%s>%v", e.jsonExpr(strColumn, strPath), value)
+func (e *Engine) JsonGreater(strColumn, strPath string, value any) *Engine {
+	return e.And("%s > '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
 }
 
-func (e *Engine) JsonLess(strColumn, strPath string, value interface{}) *Engine {
-	return e.And("%s<%v", e.jsonExpr(strColumn, strPath), value)
+func (e *Engine) JsonLess(strColumn, strPath string, value any) *Engine {
+	return e.And("%s< '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
 }
 
-func (e *Engine) JsonGreaterEqual(strColumn, strPath string, value interface{}) *Engine {
-	return e.And("%s>=%v", e.jsonExpr(strColumn, strPath), value)
+func (e *Engine) JsonGreaterEqual(strColumn, strPath string, value any) *Engine {
+	return e.And("%s >= '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
 }
 
-func (e *Engine) JsonLessEqual(strColumn, strPath string, value interface{}) *Engine {
-	return e.And("%s<=%v", e.jsonExpr(strColumn, strPath), value)
+func (e *Engine) JsonLessEqual(strColumn, strPath string, value any) *Engine {
+	return e.And("%s <= '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
 }
 
 // SELECT * FROM news WHERE JSON_CONTAINS(tags,  JSON_ARRAY("#Blockchain"))
-func (e *Engine) JsonContainArray(strColumn string, value interface{}) *Engine {
-	return e.And("JSON_CONTAINS(%s, JSON_ARRAY('%v'))", strColumn, value)
+func (e *Engine) JsonContainArray(strColumn string, value any) *Engine {
+	return e.And("JSON_CONTAINS(%s, JSON_ARRAY('%v'))", strColumn, indirectValue(value))
 }
 
 func (e *Engine) NewID() ID {

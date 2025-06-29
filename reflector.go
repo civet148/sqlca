@@ -142,30 +142,15 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 				}
 			}
 			if typField.Type.Kind() == reflect.Struct {
-
-				if _, ok := valField.Interface().(driver.Valuer); ok {
-					s.parseValuer(typField, valField, tagNames...)
+				if tagVal == "" {
+					s.parseStructField(typField.Type, valField, tagNames...) //recurse every field that type is a struct
 				} else {
-					if tagVal == "" {
-						s.parseStructField(typField.Type, valField, tagNames...) //recurse every field that type is a struct
-					} else {
-						data, err := json.Marshal(valField.Interface())
-						if err != nil {
-							fmt.Printf("[sqlca] marshal struct failed error [%s]\n", err.Error())
-							continue
-						}
-						s.Dict[tagVal] = string(data)
-						s.Columns = append(s.Columns, tagVal)
-					}
+					s.Dict[tagVal] = indirectValue(valField.Interface())
+					s.Columns = append(s.Columns, tagVal)
 				}
 			} else if typField.Type.Kind() == reflect.Slice || typField.Type.Kind() == reflect.Map {
 				if tagVal != "" {
-					data, err := json.Marshal(valField.Interface())
-					if err != nil {
-						fmt.Printf("[sqlca] marshal struct failed error [%s]\n", err.Error())
-						continue
-					}
-					s.Dict[tagVal] = string(data)
+					s.Dict[tagVal] = indirectValue(valField.Interface())
 					s.Columns = append(s.Columns, tagVal)
 				}
 			} else {
@@ -173,12 +158,6 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 			}
 		}
 	}
-}
-
-// parse decimal
-func (s *ModelReflector) parseValuer(field reflect.StructField, val reflect.Value, tagNames ...string) {
-
-	s.setValueByField(field, val, tagNames...)
 }
 
 // trim the field value's first and last blank character and save to map
@@ -203,19 +182,13 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 			break
 		}
 		if tagVal != "" {
-			//log.Debugf("ModelReflector.setValueByField tag [%v] value [%+v]", tagVal, val.Interface())
-			if d, ok := val.Interface().(driver.Valuer); ok {
-				s.Dict[tagVal], _ = d.Value()
-			} else {
-				s.Dict[tagVal] = val.Interface()
-			}
+			s.Dict[tagVal] = indirectValue(val.Interface())
 			s.Columns = append(s.Columns, tagVal)
 			break
 		}
 	}
 
 	for _, v := range tagNames {
-
 		if v == types.TAG_NAME_SQLCA { //parse sqlca tag
 			strTagValue, ignore := s.getTag(field, v)
 			if !ignore && strTagValue != "" {

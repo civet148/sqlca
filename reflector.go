@@ -105,12 +105,14 @@ func (s *ModelReflector) convertMapString(ms map[string]string) (mi map[string]i
 
 // get struct field's tag value
 func (s *ModelReflector) getTag(sf reflect.StructField, tagName string) (strValue string, ignore bool) {
-
 	strValue = sf.Tag.Get(tagName)
 	if strValue == types.SQLCA_TAG_VALUE_IGNORE {
 		return "", true
 	}
-	return
+	if strValue == "" {
+		return "", true
+	}
+	return strValue, false
 }
 
 // parse struct fields

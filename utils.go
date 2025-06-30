@@ -178,10 +178,11 @@ func indirectValue(v any) any {
 			if err == nil {
 				return result
 			}
-		}
-		data, err := json.Marshal(value.Interface())
-		if err == nil {
-			return string(data)
+		} else {
+			data, err := json.Marshal(value.Interface())
+			if err == nil {
+				return string(data)
+			}
 		}
 	case reflect.Slice, reflect.Array, reflect.Map:
 		data, err := json.Marshal(value.Interface())

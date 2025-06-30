@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	exampleId = 1906626367382884352
+	exampleId = 1939612151790440448
 )
 
 func main() {
@@ -35,12 +35,12 @@ func main() {
 		return
 	}
 
-	//requireNoError(InsertSingle(db))
+	requireNoError(InsertSingle(db))
 	//requireNoError(InsertBatch(db))
 	//requireNoError(QueryLimit(db))
 	//requireError(QueryErrNotFound(db))
 	//requireNoError(QueryByPage(db))
-	requireNoError(QueryByCondition(db))
+	//requireNoError(QueryByCondition(db))
 	//requireNoError(QueryByGroup(db))
 	//requireNoError(QueryJoins(db))
 	//requireNoError(QueryByNormalVars(db))
@@ -49,7 +49,7 @@ func main() {
 	//requireNoError(DeleteById(db))
 	//requireNoError(Transaction(db))
 	//requireNoError(TransactionWrapper(db))
-	requireNoError(QueryOr(db))
+	//requireNoError(QueryOr(db))
 	//requireNoError(QueryRawSQL(db))
 	//requireNoError(ExecRawSQL(db))
 	//requireNoError(QueryWithJsonColumn(db))
@@ -86,6 +86,10 @@ func InsertSingle(db *sqlca.Engine) error {
 		SerialNo:   "SNO_001",
 		Quantity:   1000,
 		Price:      &price,
+		ProductExtra: &models.ProductExtraData{
+			SpecsValue: "齿数：30",
+			AvgPrice:   sqlca.NewDecimal(30.8),
+		},
 	}
 
 	var err error

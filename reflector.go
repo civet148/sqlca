@@ -126,11 +126,12 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 				typField.Type = typField.Type.Elem()
 				valField = valField.Elem()
 			}
-			if !valField.IsValid() || !valField.CanInterface() {
-				continue
-			}
 			tagVal, ignore := s.getTag(typField, types.TAG_NAME_DB)
 			if ignore {
+				continue
+			}
+			if !valField.IsValid() || !valField.CanInterface() {
+				s.Dict[tagVal] = indirectValue(nil)
 				continue
 			}
 			var tagSqlca string
@@ -349,21 +350,20 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 				typField.Type = typField.Type.Elem()
 				valField = valField.Elem()
 			}
-			if !valField.IsValid() || !valField.CanInterface() {
-				continue
-			}
-
 			if typField.Type.Kind() == reflect.Bool {
 				isBool = true
 			}
+			var strTagVal string
 			var strFieldVal string
-			strTagVal := e.getTagValue(typField)
-			strFieldVal = fmt.Sprintf("%v", indirectValue(valField.Interface()))
-			//log.Debugf("tag %v value %v", strTagVal, strFieldVal)
+			if !valField.IsValid() || !valField.CanInterface() {
+				strFieldVal = fmt.Sprintf("%v", indirectValue(nil))
+			} else {
+				strTagVal = e.getTagValue(typField)
+				strFieldVal = fmt.Sprintf("%v", indirectValue(valField.Interface()))
+			}
 			if (strFieldVal == "" || strFieldVal == "0") && strTagVal == e.GetPkName() {
 				continue
 			}
-
 			if excludeReadOnly {
 				if typField.Tag.Get(types.TAG_NAME_SQLCA) == types.SQLCA_TAG_VALUE_READ_ONLY {
 					continue

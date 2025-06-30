@@ -1241,58 +1241,6 @@ func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
 	return
 }
 
-//
-//func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
-//
-//	if !e.isPkValueNil() {
-//		strWhere += e.getPkWhere()
-//	}
-//
-//	if strWhere == "" {
-//		strCustomer := e.getCustomWhere()
-//		if strCustomer == "" {
-//			//where condition required when update or delete
-//			if operType != types.OperType_Update && operType != types.OperType_Delete && len(e.joins) == 0 {
-//				strWhere += "1=1"
-//			} else {
-//				if len(e.joins) > 0 || len(e.andConditions) != 0 {
-//					strWhere += "1=1"
-//				}
-//			}
-//		} else {
-//			strWhere += strCustomer
-//		}
-//	}
-//
-//	//AND conditions
-//	for _, v := range e.andConditions {
-//		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v)
-//	}
-//	//IN conditions
-//	for _, v := range e.inConditions {
-//		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, e.makeInCondition(v))
-//	}
-//	//NOT IN conditions
-//	for _, v := range e.notConditions {
-//		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, e.makeNotCondition(v))
-//	}
-//	//OR conditions
-//	for _, v := range e.orConditions {
-//		if strings.Contains(v, "(") && strings.Contains(v, ")") {
-//			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v) //multiple OR condition append
-//		} else {
-//			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_OR, v) //single OR condition append
-//		}
-//	}
-//
-//	if strWhere != "" {
-//		strWhere = types.DATABASE_KEY_NAME_WHERE + " " + strWhere
-//	} else {
-//		strWhere = types.DATABASE_KEY_NAME_WHERE
-//	}
-//	return
-//}
-
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 	strWhere := e.makeWhereCondition(types.OperType_Query)
 

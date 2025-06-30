@@ -2,7 +2,6 @@ package sqlca
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"github.com/civet148/log"
@@ -351,8 +350,7 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 				valField = valField.Elem()
 			}
 			if !valField.IsValid() || !valField.CanInterface() {
-				//fmt.Printf("Filed [%s] tag(%s)  is not valid \n", typField.Type.Name(), e.getTagValue(typField))
-				return
+				continue
 			}
 
 			if typField.Type.Kind() == reflect.Bool {
@@ -360,30 +358,9 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 			}
 			var strFieldVal string
 			strTagVal := e.getTagValue(typField)
-
-			if typField.Type.Kind() == reflect.Struct {
-				if d, ok := valField.Interface().(driver.Valuer); ok {
-					v, err := d.Value()
-					if err != nil {
-						log.Errorf(err.Error())
-						return
-					}
-					strFieldVal = fmt.Sprintf("%v", v)
-				} else {
-					data, _ := json.Marshal(valField.Interface())
-					strFieldVal = fmt.Sprintf("%s", data)
-				}
-			} else {
-				if typField.Type.Kind() == reflect.Slice || typField.Type.Kind() == reflect.Map {
-					data, _ := json.Marshal(valField.Interface())
-					strFieldVal = fmt.Sprintf("%s", data)
-				} else {
-					strFieldVal = fmt.Sprintf("%v", valField)
-				}
-			}
-
+			strFieldVal = fmt.Sprintf("%v", indirectValue(valField.Interface()))
+			//log.Debugf("tag %v value %v", strTagVal, strFieldVal)
 			if (strFieldVal == "" || strFieldVal == "0") && strTagVal == e.GetPkName() {
-				//log.Warnf("tag name [%v] value [%v] ignored", strTagVal, strFieldVal)
 				continue
 			}
 
@@ -401,7 +378,6 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 			if strTagVal != "" && strTagVal != types.SQLCA_TAG_VALUE_IGNORE {
 				keys = append(keys, strTagVal)
 				values = append(values, strFieldVal)
-				//log.Debugf("filed tag name [%v] value [%v]", strTagVal, strFieldVal)
 			}
 		}
 	}

@@ -36,7 +36,7 @@ func main() {
 	}
 
 	requireNoError(InsertSingle(db))
-	//requireNoError(InsertBatch(db))
+	requireNoError(InsertBatch(db))
 	//requireNoError(QueryLimit(db))
 	//requireError(QueryErrNotFound(db))
 	//requireNoError(QueryByPage(db))

@@ -137,7 +137,7 @@ func (e *Engine) clone(models ...interface{}) *Engine {
 		strDSN:          e.strDSN,
 		dsn:             e.dsn,
 		db:              e.db,
-		adapterSqlx:     e.adapterSqlx,
+		adapterType:     e.adapterType,
 		adapterCache:    e.adapterCache,
 		strPkName:       e.strPkName,
 		expireTime:      e.expireTime,
@@ -183,7 +183,7 @@ func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsA
 	var result sql.Result
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("exec tx [%s]", strSql))
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
 
 	result, err = e.tx.Exec(strSql)
 	if err != nil {
@@ -203,7 +203,7 @@ func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsA
 
 func (e *Engine) txQuery(dest interface{}, strSql string, args ...interface{}) (count int64, err error) {
 	var rows *sql.Rows
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
 	log.Debugf("query tx [%v]", strSql)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("query tx [%s]", strSql))
@@ -584,7 +584,7 @@ func (e *Engine) getConflictColumns() []string {
 }
 
 func (e *Engine) getSingleQuote() (strQuote string) {
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "'"
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
@@ -596,7 +596,7 @@ func (e *Engine) getSingleQuote() (strQuote string) {
 }
 
 func (e *Engine) getForwardQuote() (strQuote string) {
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "`"
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
@@ -608,7 +608,7 @@ func (e *Engine) getForwardQuote() (strQuote string) {
 }
 
 func (e *Engine) getBackQuote() (strQuote string) {
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "`"
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
@@ -620,7 +620,7 @@ func (e *Engine) getBackQuote() (strQuote string) {
 }
 
 func (e *Engine) getOnConflictForwardKey() (strKey string) {
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "ON DUPLICATE"
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
@@ -632,7 +632,7 @@ func (e *Engine) getOnConflictForwardKey() (strKey string) {
 }
 
 func (e *Engine) getOnConflictBackKey() (strKey string) {
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
 		return "KEY UPDATE"
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
@@ -795,7 +795,7 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 
 func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 
-	if e.adapterSqlx != types.AdapterSqlx_Postgres && e.adapterSqlx != types.AdapterSqlx_OpenGauss {
+	if e.adapterType != types.AdapterSqlx_Postgres && e.adapterType != types.AdapterSqlx_OpenGauss {
 		return //only postgres need conflicts fields
 	}
 
@@ -852,7 +852,7 @@ func (e *Engine) trimNearbySameColumn(strAS string, strColumns ...string) (colum
 func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 
 	columns = strColumns
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_MySQL:
 		{
 			/* -- MySQL
@@ -888,7 +888,7 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 func (e *Engine) handleSpecialChars(strIn string) (strOut string) {
 
 	strIn = strings.TrimSpace(strIn) //trim blank characters
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_MySQL:
 		strIn = strings.Replace(strIn, `\`, `\\`, -1)
 		strIn = strings.Replace(strIn, `'`, `\'`, -1)
@@ -955,7 +955,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 func (e *Engine) getOnConflictDo() (strDo string) {
 	var strUpdates string
 	var strCustomizeUpdates = e.getCustomizeUpdates()
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_MySQL:
 		{
 			if len(strCustomizeUpdates) != 0 {
@@ -1232,7 +1232,7 @@ func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
 func (e *Engine) makeSqlxQuery() (strSqlx string) {
 	strWhere := e.makeWhereCondition(types.OperType_Query)
 
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
 			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
@@ -1248,7 +1248,7 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 func (e *Engine) makeSqlxQueryCount() (strSqlx string) {
 	strWhere := e.makeWhereCondition(types.OperType_Query)
 
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
 			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
@@ -1358,7 +1358,7 @@ func (e *Engine) setOr(exprs ...types.Expr) *Engine {
 
 	var ors []string
 	for _, expr := range exprs {
-		ors = append(ors, expr.RawSQL())
+		ors = append(ors, expr.RawSQL(e.GetAdapter()))
 	}
 	strCombOrs := " ( " + strings.Join(ors, " OR ") + " ) "
 	e.orConditions = append(e.orConditions, types.Expr{SQL: strCombOrs})

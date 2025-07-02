@@ -65,7 +65,7 @@ type Engine struct {
 	options          Options                // database options
 	db               *sqlx.DB               // DB instance masters
 	tx               *sql.Tx                // sql tx instance
-	adapterSqlx      types.AdapterType      // what's adapter of sqlx
+	adapterType      types.AdapterType      // what's adapter
 	adapterCache     types.AdapterType      // what's adapter of cache
 	modelType        types.ModelType        // model type
 	operType         types.OperType         // operation type
@@ -125,7 +125,7 @@ func NewEngine(strUrl string, options ...*Options) (*Engine, error) {
 		strPkName:     types.DEFAULT_PRIMARY_KEY_NAME,
 		expireTime:    types.DEFAULT_CAHCE_EXPIRE_SECONDS,
 		slowQueryTime: types.DEFAULT_SLOW_QUERY_ALERT_TIME,
-		adapterSqlx:   types.AdapterSqlx_MySQL,
+		adapterType:   types.AdapterSqlx_MySQL,
 	}
 	e.dbTags = append(e.dbTags, types.TAG_NAME_DB, types.TAG_NAME_SQLCA, types.TAG_NAME_PROTOBUF, types.TAG_NAME_JSON)
 	return e.open(strUrl, options...)
@@ -188,7 +188,7 @@ func (e *Engine) open(strUrl string, options ...*Options) (*Engine, error) {
 	var opt *Options
 	var param = &dsn.parameter
 
-	e.adapterSqlx = adapter
+	e.adapterType = adapter
 	var db *sqlx.DB
 	if len(options) != 0 {
 		opt = options[0]
@@ -395,7 +395,7 @@ func (e *Engine) Limit(args ...int) *Engine {
 		return e
 	}
 
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
 		{
 			e.setLimit(fmt.Sprintf("TOP %v", args[0]))
@@ -439,7 +439,7 @@ func (e *Engine) Offset(offset int) *Engine {
 // Having having [condition]
 func (e *Engine) Having(strFmt string, args ...any) *Engine {
 	expr := e.buildSqlExprs(strFmt, args...)
-	e.setHaving(expr.RawSQL())
+	e.setHaving(expr.RawSQL(e.GetAdapter()))
 	return e
 }
 
@@ -623,7 +623,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Insert [%s]", strSql))
 
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
 		{
 			strSql = e.mssqlQueryInsert(strSql)
@@ -674,7 +674,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Upsert [%s]", strSql))
 
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
 		{
 			if e.operType == types.OperType_Tx {
@@ -796,7 +796,7 @@ func (e *Engine) QueryRaw(strSql string, args ...any) (rowsAffected int64, err e
 	//assert(e.model, "model is nil, please call Model method first")
 
 	var rows *sqlx.Rows
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strSql))
@@ -830,7 +830,7 @@ func (e *Engine) QueryRaw(strSql string, args ...any) (rowsAffected int64, err e
 func (e *Engine) QueryMap(strSql string, args ...any) (rowsAffected int64, err error) {
 	assert(strSql, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strSql))
@@ -866,7 +866,7 @@ func (e *Engine) QueryMap(strSql string, args ...any) (rowsAffected int64, err e
 func (e *Engine) ExecRaw(strSql string, args ...any) (rowsAffected, lastInsertId int64, err error) {
 
 	assert(strSql, "query sql string is nil")
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
 	if e.operType == types.OperType_Tx {
 		return e.TxExec(strSql)
 	}
@@ -1092,7 +1092,7 @@ func (e *Engine) Case(strThen string, strWhen string, args ...any) *CaseWhen {
 	}
 	cw.whens = append(cw.whens, &when{
 		strThen: strThen,
-		strWhen: e.buildSqlExprs(strWhen, args...).RawSQL(),
+		strWhen: e.buildSqlExprs(strWhen, args...).RawSQL(e.GetAdapter()),
 	})
 	return cw
 }
@@ -1181,7 +1181,7 @@ func (e *Engine) RightJoin(strTableName string) *Join {
 }
 
 func (e *Engine) GetAdapter() types.AdapterType {
-	return e.adapterSqlx
+	return e.adapterType
 }
 
 func (e *Engine) Count(strColumn string, as ...string) *Engine {
@@ -1214,7 +1214,7 @@ func (e *Engine) NoVerbose() *Engine {
 }
 
 func (e *Engine) Like(strColumn, keyword string) *Engine {
-	switch e.adapterSqlx {
+	switch e.adapterType {
 	case types.AdapterSqlx_MySQL:
 		e.And("LOCATE('%s', %s)", keyword, strColumn)
 	default:

@@ -549,7 +549,6 @@ func (e *Engine) getQuoteColumnName(v string) (strColumn string) {
 }
 
 func (e *Engine) getQuoteColumnValue(v interface{}) (strValue string) {
-	v = e.handleSpecialChars(fmt.Sprintf("%v", v))
 	return fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote())
 }
 
@@ -1042,7 +1041,6 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 			if k == e.GetPkName() && e.isPkValueNil() {
 				continue
 			}
-			v = e.handleSpecialChars(fmt.Sprintf("%v", v))
 			vq := fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()) // column value format
 			cols = append(cols, c)
 			vals = append(vals, vq)
@@ -1069,27 +1067,7 @@ func (e *Engine) buildSqlExprs(query string, args ...any) types.Expr {
 	if !strings.Contains(query, "%") && !strings.Contains(query, "?") && len(args) > 0 {
 		query = fmt.Sprintf("%s = ?", query)
 	}
-	if !isQuestionPlaceHolder(query, args...) { //question placeholder exist
-		query = e.preventInjection(query, args...)
-	}
 	return types.Expr{SQL: query, Vars: args}
-}
-
-func (e *Engine) preventInjection(strFmt string, args ...any) string {
-	var newArgs []interface{}
-	for _, a := range args {
-		switch a.(type) {
-		case string:
-			{
-				strIn := a.(string)
-				strIn = e.handleSpecialChars(strIn)
-				newArgs = append(newArgs, strIn)
-			}
-		default:
-			newArgs = append(newArgs, a)
-		}
-	}
-	return fmt.Sprintf(strFmt, newArgs...)
 }
 
 func (e *Engine) makeSqlxQueryPrimaryKey() (strSql string) {

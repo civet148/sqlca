@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/civet148/log"
+	"github.com/civet148/sqlca/v3/types"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -151,14 +152,14 @@ func (s *StringBuilder) Args() []interface{} {
 
 func indirectValue(v any) any {
 	if v == nil {
-		return "NULL"
+		return types.SqlNull{}
 	}
 
 	value := reflect.ValueOf(v)
 	// 循环处理指针，直到获取到非指针的值
 	for value.Kind() == reflect.Ptr {
 		if value.IsNil() {
-			return "NULL"
+			return types.SqlNull{}
 		}
 		value = value.Elem()
 	}

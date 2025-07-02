@@ -1,6 +1,9 @@
 package types
 
-import "strings"
+import (
+	"database/sql/driver"
+	"strings"
+)
 
 const (
 	TAG_NAME_DB       = "db"
@@ -222,4 +225,23 @@ func (m ModelType) String() string {
 
 type Tabler interface {
 	TableName() string
+}
+
+const NULL = "NULL"
+
+type SqlNull struct {
+}
+
+func (s SqlNull) String() string {
+	return NULL
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (s SqlNull) MarshalJSON() ([]byte, error) {
+	return []byte(NULL), nil
+}
+
+// Value implements the driver.Valuer interface for database serialization.
+func (s SqlNull) Value() (driver.Value, error) {
+	return NULL, nil
 }

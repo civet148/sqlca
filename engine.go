@@ -440,7 +440,7 @@ func (e *Engine) Offset(offset int) *Engine {
 // Having having [condition]
 func (e *Engine) Having(strFmt string, args ...any) *Engine {
 	expr := e.buildSqlExprs(strFmt, args...)
-	e.setHaving(expr.String())
+	e.setHaving(expr.RawSQL())
 	return e
 }
 
@@ -797,7 +797,7 @@ func (e *Engine) QueryRaw(strSql string, args ...any) (rowsAffected int64, err e
 	//assert(e.model, "model is nil, please call Model method first")
 
 	var rows *sqlx.Rows
-	strSql = e.buildSqlExprs(strSql, args...).String()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strSql))
@@ -831,7 +831,7 @@ func (e *Engine) QueryRaw(strSql string, args ...any) (rowsAffected int64, err e
 func (e *Engine) QueryMap(strSql string, args ...any) (rowsAffected int64, err error) {
 	assert(strSql, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
-	strSql = e.buildSqlExprs(strSql, args...).String()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strSql))
@@ -867,7 +867,7 @@ func (e *Engine) QueryMap(strSql string, args ...any) (rowsAffected int64, err e
 func (e *Engine) ExecRaw(strSql string, args ...any) (rowsAffected, lastInsertId int64, err error) {
 
 	assert(strSql, "query sql string is nil")
-	strSql = e.buildSqlExprs(strSql, args...).String()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
 	if e.operType == types.OperType_Tx {
 		return e.TxExec(strSql)
 	}
@@ -1093,7 +1093,7 @@ func (e *Engine) Case(strThen string, strWhen string, args ...any) *CaseWhen {
 	}
 	cw.whens = append(cw.whens, &when{
 		strThen: strThen,
-		strWhen: e.buildSqlExprs(strWhen, args...).String(),
+		strWhen: e.buildSqlExprs(strWhen, args...).RawSQL(),
 	})
 	return cw
 }

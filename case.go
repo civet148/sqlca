@@ -20,7 +20,7 @@ func (c *CaseWhen) Case(strThen string, strWhen string, args ...interface{}) *Ca
 	expr := c.e.buildSqlExprs(strWhen, args...)
 	c.whens = append(c.whens, &when{
 		strThen: strThen,
-		strWhen: expr.String(),
+		strWhen: expr.RawSQL(),
 	})
 	return c
 }

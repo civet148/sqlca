@@ -188,7 +188,7 @@ func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsA
 	var result sql.Result
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("exec tx [%s]", strSql))
-	strSql = e.buildSqlExprs(strSql, args...).String()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
 
 	result, err = e.tx.Exec(strSql)
 	if err != nil {
@@ -208,7 +208,7 @@ func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsA
 
 func (e *Engine) txQuery(dest interface{}, strSql string, args ...interface{}) (count int64, err error) {
 	var rows *sql.Rows
-	strSql = e.buildSqlExprs(strSql, args...).String()
+	strSql = e.buildSqlExprs(strSql, args...).RawSQL()
 	log.Debugf("query tx [%v]", strSql)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("query tx [%s]", strSql))
@@ -1366,7 +1366,7 @@ func (e *Engine) setOr(queries ...*queryStatement) *Engine {
 	var ors []string
 	for _, v := range queries {
 		expr := e.buildSqlExprs(v.query, v.args...)
-		ors = append(ors, expr.String())
+		ors = append(ors, expr.RawSQL())
 	}
 	strCombOrs := " ( " + strings.Join(ors, " OR ") + " ) "
 	e.orConditions = append(e.orConditions, types.Expr{SQL: strCombOrs})

@@ -1,22 +1,15 @@
 package types
 
 import (
-	"database/sql"
 	"fmt"
 	"reflect"
 	"strings"
 )
 
-type Writer interface {
-	WriteByte(byte) error
-	WriteString(string) (int, error)
-}
-
 // Builder builder interface
 type Builder interface {
-	Writer
-	WriteQuoted(field interface{})
-	AddVar(Writer, ...interface{})
+	AddSQL(string)
+	AddVar(...any)
 }
 
 type Expr struct {
@@ -26,25 +19,17 @@ type Expr struct {
 
 // Build build raw expression
 func (expr Expr) Build(builder Builder) {
-	var (
-		idx int
-	)
-
+	var idx int
+	builder.AddSQL(expr.SQL)
 	for _, v := range []byte(expr.SQL) {
 		if v == '?' && len(expr.Vars) > idx {
-			builder.AddVar(builder, expr.Vars[idx])
+			builder.AddVar(expr.Vars[idx])
 			idx++
-		}
-	}
-
-	if idx < len(expr.Vars) {
-		for _, v := range expr.Vars[idx:] {
-			builder.AddVar(builder, sql.NamedArg{Value: v})
 		}
 	}
 }
 
-func (expr Expr) String() string {
+func (expr Expr) RawSQL() string {
 	query := strings.Replace(expr.SQL, "?", "%v", -1)
 	vars := expr.quoteValues(expr.Vars...)
 	return fmt.Sprintf(query, vars...)

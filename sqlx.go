@@ -18,11 +18,6 @@ type tableIndex struct {
 	Value interface{} `json:"value"`
 }
 
-type queryStatement struct {
-	query string
-	args  []interface{}
-}
-
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
@@ -559,7 +554,7 @@ func (e *Engine) getQuoteColumnValue(v interface{}) (strValue string) {
 }
 
 func (e *Engine) setWhere(query string, args ...any) {
-	e.whereConditions = append(e.whereConditions, e.buildSqlExprs(query, args...))
+	e.andConditions = append(e.andConditions, e.buildSqlExprs(query, args...))
 }
 
 func (e *Engine) getModelType() types.ModelType {
@@ -1355,17 +1350,14 @@ func (e *Engine) setAnd(query string, args ...interface{}) *Engine {
 	return e
 }
 
-func (e *Engine) setOr(queries ...*queryStatement) *Engine {
-	if len(queries) == 1 {
-		v := queries[0]
-		strQuery := e.buildSqlExprs(v.query, v.args...)
-		e.orConditions = append(e.orConditions, strQuery)
+func (e *Engine) setOr(exprs ...types.Expr) *Engine {
+	if len(exprs) == 1 {
+		e.orConditions = append(e.orConditions, exprs[0])
 		return e
 	}
 
 	var ors []string
-	for _, v := range queries {
-		expr := e.buildSqlExprs(v.query, v.args...)
+	for _, expr := range exprs {
 		ors = append(ors, expr.RawSQL())
 	}
 	strCombOrs := " ( " + strings.Join(ors, " OR ") + " ) "
@@ -1386,19 +1378,19 @@ func (e *Engine) parseQueryAndMap(query interface{}) {
 }
 
 func (e *Engine) parseQueryOrMap(query interface{}) {
-	var qss []*queryStatement
+	var qss []types.Expr
 	where := query.(map[string]interface{})
 	for k, v := range where {
 		if strings.Contains(k, "?") {
-			qss = append(qss, &queryStatement{
-				query: k,
-				args:  []interface{}{v},
+			qss = append(qss, types.Expr{
+				SQL:  k,
+				Vars: []any{v},
 			})
 		} else {
-			cond := fmt.Sprintf("%s = ?", k)
-			qss = append(qss, &queryStatement{
-				query: cond,
-				args:  []interface{}{v},
+			k = fmt.Sprintf("%s = ?", k)
+			qss = append(qss, types.Expr{
+				SQL:  k,
+				Vars: []any{v},
 			})
 		}
 	}

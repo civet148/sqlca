@@ -91,7 +91,6 @@ type Engine struct {
 	orderByColumns   []string               // order by columns
 	groupByColumns   []string               // group by columns
 	havingCondition  string                 // having condition
-	whereConditions  []types.Expr           // where condition
 	inConditions     []types.Expr           // in condition
 	notConditions    []types.Expr           // not in condition
 	andConditions    []types.Expr           // and condition
@@ -368,9 +367,9 @@ func (e *Engine) Or(query any, args ...any) *Engine {
 	case queryInterface_String:
 		strSql = query.(string)
 		assert(strSql, "query statement is empty")
-		e.setOr(&queryStatement{
-			query: strSql,
-			args:  args,
+		e.setOr(types.Expr{
+			SQL:  strSql,
+			Vars: args,
 		})
 	case queryInterface_Map:
 		e.parseQueryOrMap(query)

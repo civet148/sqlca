@@ -35,12 +35,12 @@ func main() {
 		return
 	}
 
-	requireNoError(InsertSingle(db))
-	requireNoError(InsertBatch(db))
+	//requireNoError(InsertSingle(db))
+	//requireNoError(InsertBatch(db))
 	//requireNoError(QueryLimit(db))
 	//requireError(QueryErrNotFound(db))
 	//requireNoError(QueryByPage(db))
-	//requireNoError(QueryByCondition(db))
+	requireNoError(QueryByCondition(db))
 	//requireNoError(QueryByGroup(db))
 	//requireNoError(QueryJoins(db))
 	//requireNoError(QueryByNormalVars(db))

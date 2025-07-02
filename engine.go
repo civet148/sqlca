@@ -91,10 +91,11 @@ type Engine struct {
 	orderByColumns   []string               // order by columns
 	groupByColumns   []string               // group by columns
 	havingCondition  string                 // having condition
-	inConditions     []condition            // in condition
-	notConditions    []condition            // not in condition
-	andConditions    []string               // and condition
-	orConditions     []string               // or condition
+	whereConditions  []types.Expr           // where condition
+	inConditions     []types.Expr           // in condition
+	notConditions    []types.Expr           // not in condition
+	andConditions    []types.Expr           // and condition
+	orConditions     []types.Expr           // or condition
 	dbTags           []string               // custom db tag names
 	readOnly         []string               // read only column names
 	slowQueryTime    int                    // slow query alert time (milliseconds)
@@ -333,14 +334,12 @@ func (e *Engine) Distinct() *Engine {
 
 // Where orm where condition
 func (e *Engine) Where(query any, args ...any) *Engine {
-	var strSql string
 	qt := parseQueryInterface(query)
 	switch qt {
 	case queryInterface_String:
-		strSql = query.(string)
-		assert(strSql, "query statement is empty")
-		strSql = e.buildSqlStatements(strSql, args...)
-		e.setWhere(strSql)
+		strQuery := query.(string)
+		assert(strQuery, "query statement is empty")
+		e.setWhere(strQuery, args...)
 	case queryInterface_Map:
 		e.parseQueryAndMap(query)
 	}
@@ -354,8 +353,8 @@ func (e *Engine) And(query any, args ...any) *Engine {
 	case queryInterface_String:
 		strSql = query.(string)
 		assert(strSql, "query statement is empty")
-		strSql = e.buildSqlStatements(strSql, args...)
-		e.andConditions = append(e.andConditions, strSql)
+		expr := e.buildSqlExprs(strSql, args...)
+		e.andConditions = append(e.andConditions, expr)
 	case queryInterface_Map:
 		e.parseQueryAndMap(query)
 	}
@@ -440,8 +439,8 @@ func (e *Engine) Offset(offset int) *Engine {
 
 // Having having [condition]
 func (e *Engine) Having(strFmt string, args ...any) *Engine {
-	strCondition := e.buildSqlStatements(strFmt, args...)
-	e.setHaving(strCondition)
+	expr := e.buildSqlExprs(strFmt, args...)
+	e.setHaving(expr.String())
 	return e
 }
 
@@ -475,9 +474,9 @@ func (e *Engine) Desc(columns ...string) *Engine {
 
 // In `field_name` IN ('1','2',...)
 func (e *Engine) In(strColumn string, args ...any) *Engine {
-	v := condition{
-		ColumnName:   strColumn,
-		ColumnValues: args,
+	v := types.Expr{
+		SQL:  strColumn,
+		Vars: args,
 	}
 	e.inConditions = append(e.inConditions, v)
 	return e
@@ -485,9 +484,9 @@ func (e *Engine) In(strColumn string, args ...any) *Engine {
 
 // NotIn `field_name` NOT IN ('1','2',...)
 func (e *Engine) NotIn(strColumn string, args ...any) *Engine {
-	v := condition{
-		ColumnName:   strColumn,
-		ColumnValues: args,
+	v := types.Expr{
+		SQL:  strColumn,
+		Vars: args,
 	}
 	e.notConditions = append(e.notConditions, v)
 	return e
@@ -798,7 +797,7 @@ func (e *Engine) QueryRaw(strSql string, args ...any) (rowsAffected int64, err e
 	//assert(e.model, "model is nil, please call Model method first")
 
 	var rows *sqlx.Rows
-	strSql = e.buildSqlStatements(strSql, args...)
+	strSql = e.buildSqlExprs(strSql, args...).String()
 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strSql))
@@ -832,7 +831,7 @@ func (e *Engine) QueryRaw(strSql string, args ...any) (rowsAffected int64, err e
 func (e *Engine) QueryMap(strSql string, args ...any) (rowsAffected int64, err error) {
 	assert(strSql, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
-	strSql = e.buildSqlStatements(strSql, args...)
+	strSql = e.buildSqlExprs(strSql, args...).String()
 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strSql))
@@ -868,7 +867,7 @@ func (e *Engine) QueryMap(strSql string, args ...any) (rowsAffected int64, err e
 func (e *Engine) ExecRaw(strSql string, args ...any) (rowsAffected, lastInsertId int64, err error) {
 
 	assert(strSql, "query sql string is nil")
-	strSql = e.buildSqlStatements(strSql, args...)
+	strSql = e.buildSqlExprs(strSql, args...).String()
 	if e.operType == types.OperType_Tx {
 		return e.TxExec(strSql)
 	}
@@ -1094,7 +1093,7 @@ func (e *Engine) Case(strThen string, strWhen string, args ...any) *CaseWhen {
 	}
 	cw.whens = append(cw.whens, &when{
 		strThen: strThen,
-		strWhen: e.buildSqlStatements(strWhen, args...),
+		strWhen: e.buildSqlExprs(strWhen, args...).String(),
 	})
 	return cw
 }

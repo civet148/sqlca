@@ -18,11 +18,6 @@ type tableIndex struct {
 	Value interface{} `json:"value"`
 }
 
-type condition struct {
-	ColumnName   string
-	ColumnValues []interface{}
-}
-
 type queryStatement struct {
 	query string
 	args  []interface{}
@@ -193,7 +188,7 @@ func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsA
 	var result sql.Result
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("exec tx [%s]", strSql))
-	strSql = e.buildSqlStatements(strSql, args...)
+	strSql = e.buildSqlExprs(strSql, args...).String()
 
 	result, err = e.tx.Exec(strSql)
 	if err != nil {
@@ -213,7 +208,7 @@ func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsA
 
 func (e *Engine) txQuery(dest interface{}, strSql string, args ...interface{}) (count int64, err error) {
 	var rows *sql.Rows
-	strSql = e.buildSqlStatements(strSql, args...)
+	strSql = e.buildSqlExprs(strSql, args...).String()
 	log.Debugf("query tx [%v]", strSql)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("query tx [%s]", strSql))
@@ -563,8 +558,8 @@ func (e *Engine) getQuoteColumnValue(v interface{}) (strValue string) {
 	return fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote())
 }
 
-func (e *Engine) setWhere(strWhere string) {
-	e.strWhere = strWhere
+func (e *Engine) setWhere(query string, args ...any) {
+	e.whereConditions = append(e.whereConditions, e.buildSqlExprs(query, args...))
 }
 
 func (e *Engine) getModelType() types.ModelType {
@@ -1089,15 +1084,14 @@ func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) 
 	return
 }
 
-func (e *Engine) buildSqlStatements(query string, args ...any) string {
+func (e *Engine) buildSqlExprs(query string, args ...any) types.Expr {
 	if !strings.Contains(query, "%") && !strings.Contains(query, "?") && len(args) > 0 {
 		query = fmt.Sprintf("%s = ?", query)
 	}
 	if !isQuestionPlaceHolder(query, args...) { //question placeholder exist
-		return e.preventInjection(query, args...)
+		query = e.preventInjection(query, args...)
 	}
-	e.stmtArgs = append(e.stmtArgs, args...)
-	return query
+	return types.Expr{SQL: query, Vars: args}
 }
 
 func (e *Engine) preventInjection(strFmt string, args ...any) string {
@@ -1156,10 +1150,10 @@ func (e *Engine) makeSQL(operType types.OperType) (strSql string) {
 	return strings.TrimSpace(strSql)
 }
 
-func (e *Engine) makeInCondition(cond condition) (strCondition string) {
+func (e *Engine) makeInCondition(cond types.Expr) (strCondition string) {
 
 	var strValues []string
-	for _, v := range cond.ColumnValues {
+	for _, v := range cond.Vars {
 
 		var typ = reflect.TypeOf(v)
 		var val = reflect.ValueOf(v)
@@ -1174,19 +1168,18 @@ func (e *Engine) makeInCondition(cond condition) (strCondition string) {
 		default:
 			strValues = append(strValues, fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()))
 		}
-
 	}
-	strCondition = fmt.Sprintf("%v %v (%v)", cond.ColumnName, types.DATABASE_KEY_NAME_IN, strings.Join(strValues, ","))
+	strCondition = fmt.Sprintf("%v %v (%v)", cond.SQL, types.DATABASE_KEY_NAME_IN, strings.Join(strValues, ","))
 	return
 }
 
-func (e *Engine) makeNotCondition(cond condition) (strCondition string) {
+func (e *Engine) makeNotCondition(cond types.Expr) (strCondition string) {
 
 	var strValues []string
-	for _, v := range cond.ColumnValues {
+	for _, v := range cond.Vars {
 		strValues = append(strValues, fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()))
 	}
-	strCondition = fmt.Sprintf("%v %v (%v)", cond.ColumnName, types.DATABASE_KEY_NAME_NOT_IN, strings.Join(strValues, ","))
+	strCondition = fmt.Sprintf("%v %v (%v)", cond.SQL, types.DATABASE_KEY_NAME_NOT_IN, strings.Join(strValues, ","))
 	return
 }
 
@@ -1214,7 +1207,7 @@ func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
 
 	//AND conditions
 	for _, v := range e.andConditions {
-		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v)
+		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v.SQL)
 	}
 	//IN conditions
 	for _, v := range e.inConditions {
@@ -1226,10 +1219,10 @@ func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
 	}
 	//OR conditions
 	for _, v := range e.orConditions {
-		if strings.Contains(v, "(") && strings.Contains(v, ")") {
-			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v) //multiple OR condition append
+		if strings.Contains(v.SQL, "(") && strings.Contains(v.SQL, ")") {
+			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v.SQL) //multiple OR condition append
 		} else {
-			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_OR, v) //single OR condition append
+			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_OR, v.SQL) //single OR condition append
 		}
 	}
 
@@ -1357,26 +1350,26 @@ func (e *Engine) setLockShareMode() *Engine {
 
 func (e *Engine) setAnd(query string, args ...interface{}) *Engine {
 	assert(query, "query statement is empty")
-	query = e.buildSqlStatements(query, args...)
-	e.andConditions = append(e.andConditions, query)
+	expr := e.buildSqlExprs(query, args...)
+	e.andConditions = append(e.andConditions, expr)
 	return e
 }
 
 func (e *Engine) setOr(queries ...*queryStatement) *Engine {
 	if len(queries) == 1 {
 		v := queries[0]
-		strQuery := e.buildSqlStatements(v.query, v.args...)
+		strQuery := e.buildSqlExprs(v.query, v.args...)
 		e.orConditions = append(e.orConditions, strQuery)
 		return e
 	}
 
 	var ors []string
 	for _, v := range queries {
-		strQuery := e.buildSqlStatements(v.query, v.args...)
-		ors = append(ors, strQuery)
+		expr := e.buildSqlExprs(v.query, v.args...)
+		ors = append(ors, expr.String())
 	}
-	strConditions := " ( " + strings.Join(ors, " OR ") + " ) "
-	e.orConditions = append(e.orConditions, strConditions)
+	strCombOrs := " ( " + strings.Join(ors, " OR ") + " ) "
+	e.orConditions = append(e.orConditions, types.Expr{SQL: strCombOrs})
 	return e
 }
 

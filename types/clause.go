@@ -46,7 +46,7 @@ func (expr Expr) quoteValues(adapter AdapterType, values ...any) (vars []any) {
 
 		switch val.Kind() {
 		case reflect.String:
-			s := preventSqlInject(adapter, v.(string))
+			s := PreventSqlInject(adapter, v.(string))
 			vars = append(vars, fmt.Sprintf("'%v'", s))
 		case reflect.Struct:
 			var sn = v.(SqlNull)
@@ -61,8 +61,8 @@ func (expr Expr) quoteValues(adapter AdapterType, values ...any) (vars []any) {
 	return vars
 }
 
-// handle special characters, prevent SQL inject
-func preventSqlInject(adapter AdapterType, strIn string) (strOut string) {
+// PreventSqlInject handle special characters, prevent SQL inject
+func PreventSqlInject(adapter AdapterType, strIn string) (strOut string) {
 
 	strIn = strings.TrimSpace(strIn) //trim blank characters
 	switch adapter {

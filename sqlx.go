@@ -886,21 +886,7 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 
 // handle special characters, prevent SQL inject
 func (e *Engine) handleSpecialChars(strIn string) (strOut string) {
-
-	strIn = strings.TrimSpace(strIn) //trim blank characters
-	switch e.adapterType {
-	case types.AdapterSqlx_MySQL:
-		strIn = strings.Replace(strIn, `\`, `\\`, -1)
-		strIn = strings.Replace(strIn, `'`, `\'`, -1)
-		strIn = strings.Replace(strIn, `"`, `\"`, -1)
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
-		strIn = strings.Replace(strIn, `'`, `''`, -1)
-	case types.AdapterSqlx_Mssql:
-		strIn = strings.Replace(strIn, `'`, `''`, -1)
-	case types.AdapterSqlx_Sqlite:
-	}
-
-	return strIn
+	return types.PreventSqlInject(e.GetAdapter(), strIn)
 }
 
 func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (strUpdates string) {

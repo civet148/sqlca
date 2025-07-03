@@ -1179,9 +1179,9 @@ func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool) (strWh
 	//OR conditions
 	for _, v := range e.orConditions {
 		if strings.Contains(v.SQL, "(") && strings.Contains(v.SQL, ")") {
-			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v.SQL) //multiple OR condition append
+			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v.RawSQL()) //multiple OR condition append
 		} else {
-			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_OR, v.SQL) //single OR condition append
+			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_OR, v.RawSQL()) //single OR condition append
 		}
 	}
 

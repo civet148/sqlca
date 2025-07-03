@@ -50,9 +50,9 @@ func main() {
 	requireNoError(Transaction(db))
 	requireNoError(TransactionWrapper(db))
 	requireNoError(QueryOr(db))
-	requireNoError(QueryRawSQL(db))
-	requireNoError(ExecRawSQL(db))
-	requireNoError(QueryWithJsonColumn(db))
+	//requireNoError(QueryRawSQL(db))
+	//requireNoError(ExecRawSQL(db))
+	//requireNoError(QueryWithJsonColumn(db))
 }
 
 func requireNoError(err error) {
@@ -526,7 +526,7 @@ func Transaction(db *sqlca.Engine) error {
 	}
 	defer tx.TxRollback()
 
-	productId := uint64(1906626367382884352)
+	productId := uint64(exampleId)
 	strOrderNo := time.Now().Format("20060102150405.000000000")
 	//***************** 执行事务操作 *****************
 	quantity := float64(20)

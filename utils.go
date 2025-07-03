@@ -123,16 +123,17 @@ func isQuestionPlaceHolder(query string, args ...interface{}) bool {
 
 type StringBuilder struct {
 	builder strings.Builder
-	args    []interface{}
+	args    []any
 }
 
 func NewStringBuilder() *StringBuilder {
 	return &StringBuilder{}
 }
 
-func (s *StringBuilder) Append(query string, args ...interface{}) *StringBuilder {
+func (s *StringBuilder) Append(query string, args ...any) *StringBuilder {
 	var strQuery string
 	if isQuestionPlaceHolder(query, args...) { //question placeholder exist
+		query = strings.Replace(query, "?", "%v", -1) + " "
 		s.builder.WriteString(query)
 		s.args = append(s.args, args...)
 	} else {
@@ -143,7 +144,7 @@ func (s *StringBuilder) Append(query string, args ...interface{}) *StringBuilder
 }
 
 func (s *StringBuilder) String() string {
-	return s.builder.String()
+	return fmt.Sprintf(s.builder.String(), s.args...)
 }
 
 func (s *StringBuilder) Args() []interface{} {

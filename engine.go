@@ -78,7 +78,6 @@ type Engine struct {
 	strTableName     string                 // table name
 	strPkName        string                 // primary key of table, default 'id'
 	strPkValue       string                 // primary key's value
-	strWhere         string                 // where condition to query or update
 	strLimit         string                 // limit
 	strOffset        string                 // offset (only for postgres)
 	strDistinct      string                 // distinct
@@ -107,7 +106,6 @@ type Engine struct {
 	noVerbose        bool                   // no more verbose
 	idgen            *snowflake.Node        // snowflake id generator
 	hookMethods      *hookMethods           // hook methods
-	stmtArgs         []any                  // statement args
 }
 
 func init() {

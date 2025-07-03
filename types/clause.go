@@ -6,27 +6,9 @@ import (
 	"strings"
 )
 
-// Builder builder interface
-type Builder interface {
-	AddSQL(string)
-	AddVar(...any)
-}
-
 type Expr struct {
 	SQL  string
 	Vars []any
-}
-
-// Build build raw expression
-func (expr Expr) Build(builder Builder) {
-	var idx int
-	builder.AddSQL(expr.SQL)
-	for _, v := range []byte(expr.SQL) {
-		if v == '?' && len(expr.Vars) > idx {
-			builder.AddVar(expr.Vars[idx])
-			idx++
-		}
-	}
 }
 
 func (expr Expr) RawSQL(adapters ...AdapterType) string {

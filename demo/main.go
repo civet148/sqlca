@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	exampleId = 1939612151790440448
+	productId = 1939612151790440448
 )
 
 func main() {
@@ -35,21 +35,21 @@ func main() {
 		return
 	}
 
-	//requireNoError(InsertSingle(db))
-	//requireNoError(InsertBatch(db))
-	//requireNoError(QueryLimit(db))
-	//requireError(QueryErrNotFound(db))
-	//requireNoError(QueryByPage(db))
-	//requireNoError(QueryByCondition(db))
-	//requireNoError(QueryByGroup(db))
-	//requireNoError(QueryJoins(db))
-	//requireNoError(QueryByNormalVars(db))
-	//requireNoError(UpdateByModel(db))
-	//requireNoError(UpdateByMap(db))
-	//requireNoError(DeleteById(db))
-	//requireNoError(Transaction(db))
-	//requireNoError(TransactionWrapper(db))
-	//requireNoError(QueryOr(db))
+	requireNoError(InsertSingle(db))
+	requireNoError(InsertBatch(db))
+	requireNoError(QueryLimit(db))
+	requireError(QueryErrNotFound(db))
+	requireNoError(QueryByPage(db))
+	requireNoError(QueryByCondition(db))
+	requireNoError(QueryByGroup(db))
+	requireNoError(QueryJoins(db))
+	requireNoError(QueryByNormalVars(db))
+	requireNoError(UpdateByModel(db))
+	requireNoError(UpdateByMap(db))
+	requireNoError(DeleteById(db))
+	requireNoError(Transaction(db))
+	requireNoError(TransactionWrapper(db))
+	requireNoError(QueryOr(db))
 	requireNoError(QueryRawSQL(db))
 	requireNoError(ExecRawSQL(db))
 	requireNoError(QueryWithJsonColumn(db))
@@ -193,7 +193,7 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 	var count int64
 	var do *models.InventoryData
 
-	count, err = db.Model(&do).Id(exampleId).MustFind()
+	count, err = db.Model(&do).Id(productId).MustFind()
 	if err != nil {
 		if errors.Is(err, sqlca.ErrRecordNotFound) {
 			log.Infof("根据ID查询数据库记录无结果：%s", err)
@@ -364,7 +364,7 @@ func QueryJoins(db *sqlca.Engine) error {
 func QueryByNormalVars(db *sqlca.Engine) error {
 	var err error
 	var name, serialNo string
-	var id = uint64(exampleId)
+	var id = uint64(productId)
 	//SELECT name, serial_no FROM inventory_data WHERE id=1906626367382884352
 	_, err = db.Model(&name, &serialNo).
 		Table("inventory_data").
@@ -385,7 +385,7 @@ models.InventoryData对象的ProductExtra是一个跟数据库JSON内容对应�
 func QueryWithJsonColumn(db *sqlca.Engine) error {
 	var err error
 	var do models.InventoryData
-	var id = uint64(exampleId)
+	var id = uint64(productId)
 
 	/*
 		SELECT * FROM inventory_data WHERE id=1906626367382884352
@@ -416,15 +416,9 @@ func QueryWithJsonColumn(db *sqlca.Engine) error {
 */
 func QueryRawSQL(db *sqlca.Engine) error {
 	var rows []*models.InventoryData
-	var sb = sqlca.NewStringBuilder()
 
 	//SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
-
-	sb.Append("SELECT * FROM %s", "inventory_data")
-	sb.Append("WHERE is_frozen = ?", 0)
-	sb.Append("AND quantity > ?", 10)
-	strQuery := sb.String()
-	_, err := db.Model(&rows).QueryRaw(strQuery)
+	_, err := db.Model(&rows).QueryRaw("SELECT * FROM inventory_data WHERE is_frozen = ? AND quantity > ?", 0, 10)
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
@@ -457,7 +451,7 @@ UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1906626367382884352'
 func UpdateByModel(db *sqlca.Engine) error {
 	var err error
 	var do *models.InventoryData
-	var id = uint64(exampleId)
+	var id = uint64(productId)
 	_, err = db.Model(&do).Id(id).MustFind() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
@@ -476,7 +470,7 @@ func UpdateByModel(db *sqlca.Engine) error {
 */
 func UpdateByMap(db *sqlca.Engine) error {
 	var err error
-	var id = uint64(exampleId)
+	var id = uint64(productId)
 	var updates = map[string]interface{}{
 		"quantity": 2100, //更改库存
 		"Price":    300,  //更改价格
@@ -526,7 +520,7 @@ func Transaction(db *sqlca.Engine) error {
 	}
 	defer tx.TxRollback()
 
-	productId := uint64(exampleId)
+	productId := uint64(productId)
 	strOrderNo := time.Now().Format("20060102150405.000000000")
 	//***************** 执行事务操作 *****************
 	quantity := float64(20)
@@ -584,7 +578,7 @@ func TransactionWrapper(db *sqlca.Engine) error {
 	strOrderNo := time.Now().Format("20060102150405.000000000")
 	err := db.TxFunc(func(tx *sqlca.Engine) error {
 		var err error
-		productId := uint64(exampleId)
+		productId := uint64(productId)
 		now := time.Now().Format("2006-01-02 15:04:05")
 
 		//***************** 执行事务操作 *****************

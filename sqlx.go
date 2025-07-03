@@ -527,11 +527,6 @@ func (e *Engine) getAscAndDesc() (strAscDesc string) {
 	return strings.Join(ss, ",")
 }
 
-// use Where function to set custom where condition
-func (e *Engine) getCustomWhere() string {
-	return e.strWhere
-}
-
 // primary key value like 'id'=xxx condition
 func (e *Engine) getPkWhere() (strCondition string) {
 
@@ -1109,7 +1104,7 @@ func (e *Engine) makeSQL(operType types.OperType, rawSQL bool) (strSql string, a
 	return strings.TrimSpace(strSql), args
 }
 
-func (e *Engine) makeInCondition(cond types.Expr) (strCondition string) {
+func (e *Engine) makeInCondition(cond types.Expr) (strCondition string, args []any) {
 
 	var strValues []string
 	for _, v := range cond.Vars {
@@ -1132,7 +1127,7 @@ func (e *Engine) makeInCondition(cond types.Expr) (strCondition string) {
 	return
 }
 
-func (e *Engine) makeNotCondition(cond types.Expr) (strCondition string) {
+func (e *Engine) makeNotCondition(cond types.Expr) (strCondition string, args []any) {
 
 	var strValues []string
 	for _, v := range cond.Vars {
@@ -1149,32 +1144,48 @@ func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool) (strWh
 	}
 
 	if strWhere == "" {
-		strCustomer := e.getCustomWhere()
-		if strCustomer == "" {
-			//where condition required when update or delete
-			if operType != types.OperType_Update && operType != types.OperType_Delete && len(e.joins) == 0 {
-				strWhere += "1=1"
-			} else {
-				if len(e.joins) > 0 || len(e.andConditions) != 0 {
-					strWhere += "1=1"
-				}
-			}
+		//where condition required when update or delete
+		if operType != types.OperType_Update && operType != types.OperType_Delete && len(e.joins) == 0 {
+			strWhere += "1=1"
 		} else {
-			strWhere += strCustomer
+			if len(e.joins) > 0 || len(e.andConditions) != 0 {
+				strWhere += "1=1"
+			}
 		}
 	}
 
 	//AND conditions
 	for _, v := range e.andConditions {
-		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v.RawSQL())
+		var query string
+		if rawSQL {
+			query = v.RawSQL()
+		} else {
+			query = v.SQL
+			if len(v.Vars) != 0 {
+				args = append(v.Vars)
+			}
+		}
+		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, query)
 	}
 	//IN conditions
 	for _, v := range e.inConditions {
-		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, e.makeInCondition(v))
+		var query string
+		var vars []any
+		query, vars = e.makeInCondition(v)
+		if len(vars) != 0 {
+			args = append(args, vars...)
+		}
+		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, query)
 	}
 	//NOT IN conditions
 	for _, v := range e.notConditions {
-		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, e.makeNotCondition(v))
+		var query string
+		var vars []any
+		query, vars = e.makeNotCondition(v)
+		if len(vars) != 0 {
+			args = append(args, vars...)
+		}
+		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, query)
 	}
 	//OR conditions
 	for _, v := range e.orConditions {
@@ -1268,9 +1279,7 @@ func (e *Engine) makeSqlxDelete(rawSQL bool) (strSqlx string, args []any) {
 }
 
 func (e *Engine) cleanWhereCondition() {
-	e.strWhere = ""
 	e.strPkValue = ""
-	e.stmtArgs = nil
 	e.cleanHooks()
 }
 

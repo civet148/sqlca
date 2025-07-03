@@ -1090,23 +1090,23 @@ func (e *Engine) getCaller(skip int) (strFunc string) {
 	return
 }
 
-func (e *Engine) makeSQL(operType types.OperType) (strSql string) {
+func (e *Engine) makeSQL(operType types.OperType, rawSQL bool) (strSql string, args []any) {
 
 	switch operType {
 	case types.OperType_Query:
-		strSql = e.makeSqlxQuery()
+		strSql, args = e.makeSqlxQuery(rawSQL)
 	case types.OperType_Update:
-		strSql = e.makeSqlxUpdate()
+		strSql, args = e.makeSqlxUpdate(rawSQL)
 	case types.OperType_Insert:
 		strSql = e.makeSqlxInsert()
 	case types.OperType_Upsert:
 		strSql = e.makeSqlxUpsert()
 	case types.OperType_Delete:
-		strSql = e.makeSqlxDelete()
+		strSql, args = e.makeSqlxDelete(rawSQL)
 	default:
 		log.Errorf("operation illegal")
 	}
-	return strings.TrimSpace(strSql)
+	return strings.TrimSpace(strSql), args
 }
 
 func (e *Engine) makeInCondition(cond types.Expr) (strCondition string) {
@@ -1142,7 +1142,7 @@ func (e *Engine) makeNotCondition(cond types.Expr) (strCondition string) {
 	return
 }
 
-func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
+func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool) (strWhere string, args []any) {
 
 	if !e.isPkValueNil() {
 		strWhere += e.getPkWhere()
@@ -1166,7 +1166,7 @@ func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
 
 	//AND conditions
 	for _, v := range e.andConditions {
-		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v.SQL)
+		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v.RawSQL())
 	}
 	//IN conditions
 	for _, v := range e.inConditions {
@@ -1193,8 +1193,9 @@ func (e *Engine) makeWhereCondition(operType types.OperType) (strWhere string) {
 	return
 }
 
-func (e *Engine) makeSqlxQuery() (strSqlx string) {
-	strWhere := e.makeWhereCondition(types.OperType_Query)
+func (e *Engine) makeSqlxQuery(rawSQL bool) (strSqlx string, args []any) {
+	var strWhere string
+	strWhere, args = e.makeWhereCondition(types.OperType_Query, rawSQL)
 
 	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
@@ -1210,7 +1211,7 @@ func (e *Engine) makeSqlxQuery() (strSqlx string) {
 }
 
 func (e *Engine) makeSqlxQueryCount() (strSqlx string) {
-	strWhere := e.makeWhereCondition(types.OperType_Query)
+	strWhere, _ := e.makeWhereCondition(types.OperType_Query, true)
 
 	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
@@ -1225,13 +1226,15 @@ func (e *Engine) makeSqlxQueryCount() (strSqlx string) {
 	return
 }
 
-func (e *Engine) makeSqlxForUpdate() (strSqlx string) {
-	return e.makeSqlxQuery() + " " + types.DATABASE_KEY_NAME_FOR_UPDATE
+func (e *Engine) makeSqlxForUpdate(rawSQL bool) (strSql string, args []any) {
+	strSql, args = e.makeSqlxQuery(rawSQL)
+	strSql += " " + types.DATABASE_KEY_NAME_FOR_UPDATE
+	return strSql, args
 }
 
-func (e *Engine) makeSqlxUpdate() (strSqlx string) {
-
-	strWhere := e.makeWhereCondition(types.OperType_Update)
+func (e *Engine) makeSqlxUpdate(rawSQL bool) (strSqlx string, args []any) {
+	var strWhere string
+	strWhere, args = e.makeWhereCondition(types.OperType_Update, rawSQL)
 	strSqlx = fmt.Sprintf("%v %v %v %v %v %v",
 		types.DATABASE_KEY_NAME_UPDATE, e.getTableName(), types.DATABASE_KEY_NAME_SET,
 		e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), strWhere, e.getLimit())
@@ -1254,8 +1257,9 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 	return
 }
 
-func (e *Engine) makeSqlxDelete() (strSqlx string) {
-	strWhere := e.makeWhereCondition(types.OperType_Delete)
+func (e *Engine) makeSqlxDelete(rawSQL bool) (strSqlx string, args []any) {
+	var strWhere string
+	strWhere, args = e.makeWhereCondition(types.OperType_Delete, rawSQL)
 	if strWhere == "" {
 		panic("no condition to delete records") //删除必须加条件,WHERE条件可设置为1=1(确保不是人为疏忽)
 	}

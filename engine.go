@@ -507,16 +507,16 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 		e.setLimit(fmt.Sprintf("LIMIT %v", e.options.DefaultLimit))
 	}
 
-	strSql, _ := e.makeSQL(types.OperType_Query, true)
+	strRawSql, _ := e.makeSQL(types.OperType_Query, true)
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
+	defer c.Stop(fmt.Sprintf("Query [%s]", strRawSql))
 
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
-	}
 	rowsAffected, err = e.execQuery()
 	if err != nil {
-		return 0, log.Errorf("caller [%v] rows [%v] SQL [%s] error: %s", e.getCaller(2), rowsAffected, strSql, err.Error())
+		return 0, log.Errorf("caller [%v] SQL [%s] error: %s", e.getCaller(2), strRawSql, err.Error())
+	}
+	if !e.noVerbose {
+		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strRawSql)
 	}
 	return rowsAffected, nil
 }

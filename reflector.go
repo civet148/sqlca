@@ -207,17 +207,18 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 
 func (e *Engine) fetchRows(r *sql.Rows) (count int64, err error) {
 
+	var i int
 	for r.Next() {
 		var c int64
-
+		i++
 		if e.getModelType() == types.ModelType_BaseType {
 			if c, err = e.fetchRow(r, e.model.([]interface{})...); err != nil {
-				log.Errorf("fetchRow error [%v]", err.Error())
+				log.Errorf("fetch row error [%v]", err.Error())
 				return
 			}
 		} else {
 			if c, err = e.fetchRow(r, e.model); err != nil {
-				log.Errorf("fetchRow error [%v]", err.Error())
+				log.Errorf("fetch row error [%v]", err.Error())
 				return
 			}
 		}

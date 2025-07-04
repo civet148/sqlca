@@ -167,7 +167,7 @@ func (e *Engine) genSnowflakeId() ID {
 func (e *Engine) newTx() (txEngine *Engine, err error) {
 	txEngine = e.clone()
 	db := e.getDB()
-	if txEngine.tx, err = db.Begin(); err != nil {
+	if txEngine.tx, err = db.Beginx(); err != nil {
 		log.Errorf("newTx error [%+v]", err.Error())
 		return nil, err
 	}
@@ -175,8 +175,32 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 	return
 }
 
-func (e *Engine) execSql() {
+func (e *Engine) execQuery() (rowsAffected int64, err error) {
+	var query string
+	var args []any
+	var db = e.getDB()
+	var queryer sqlx.Queryer
+	_ = queryer
+	query, args = e.makeSqlxQuery(false)
+	if e.operType == types.OperType_Tx {
+		queryer = sqlx.Queryer(e.tx)
+	} else {
+		queryer = sqlx.Queryer(db)
+	}
+	var rows *sql.Rows
 
+	//log.Debugf("query [%v] args %v", query, args)
+	rows, err = queryer.Query(query, args...)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	rowsAffected, err = e.fetchRows(rows)
+	if err != nil {
+		return 0, err
+	}
+	return rowsAffected, nil
 }
 
 func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
@@ -204,7 +228,6 @@ func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsA
 func (e *Engine) txQuery(dest interface{}, strSql string, args ...interface{}) (count int64, err error) {
 	var rows *sql.Rows
 	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
-	log.Debugf("query tx [%v]", strSql)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("query tx [%s]", strSql))
 
@@ -225,9 +248,6 @@ func (e *Engine) txQuery(dest interface{}, strSql string, args ...interface{}) (
 		}
 		e.autoRollback()
 		return
-	}
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), count, strSql)
 	}
 	return
 }
@@ -1162,7 +1182,7 @@ func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool) (strWh
 		} else {
 			query = v.SQL
 			if len(v.Vars) != 0 {
-				args = append(v.Vars)
+				args = append(args, v.Vars...)
 			}
 		}
 		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, query)

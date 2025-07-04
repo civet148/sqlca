@@ -64,7 +64,7 @@ type Engine struct {
 	dsn              dsnDriver              // driver name and parameters
 	options          Options                // database options
 	db               *sqlx.DB               // DB instance masters
-	tx               *sql.Tx                // sql tx instance
+	tx               *sqlx.Tx               // sql tx instance
 	adapterType      types.AdapterType      // what's adapter
 	adapterCache     types.AdapterType      // what's adapter of cache
 	modelType        types.ModelType        // model type
@@ -506,32 +506,17 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	if e.options.DefaultLimit > 0 && e.strLimit == "" {
 		e.setLimit(fmt.Sprintf("LIMIT %v", e.options.DefaultLimit))
 	}
-	if e.operType == types.OperType_Tx {
-		return e.TxGet(e.model, e.ToSQL(types.OperType_Query))
-	}
 
 	strSql, _ := e.makeSQL(types.OperType_Query, true)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
 
-	var rows *sql.Rows
-
-	db := e.getDB()
-	if rows, err = db.Query(strSql); err != nil {
-		if !e.noVerbose {
-			log.Errorf("query [%v] error [%v]", strSql, err.Error())
-		}
-		return
-	}
-
-	defer rows.Close()
-
-	rowsAffected, err = e.fetchRows(rows)
-	if err != nil {
-		return 0, err
-	}
 	if !e.noVerbose {
 		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	}
+	rowsAffected, err = e.execQuery()
+	if err != nil {
+		return 0, log.Errorf("caller [%v] rows [%v] SQL [%s] error: %s", e.getCaller(2), rowsAffected, strSql, err.Error())
 	}
 	return rowsAffected, nil
 }
@@ -1338,13 +1323,6 @@ func (e *Engine) NewID() ID {
 		log.Panic("snowflake node id not set, please set it by Options when using NewEngine method")
 	}
 	return e.idgen.Generate()
-}
-
-func (e *Engine) NewFromTx(tx *sql.Tx) *Engine {
-	engine := e.clone()
-	engine.tx = tx
-	engine.operType = types.OperType_Tx
-	return engine
 }
 
 func (e *Engine) ForUpdate() *Engine {

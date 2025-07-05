@@ -197,4 +197,21 @@ func indirectValue(v any) any {
 	return v
 }
 
-// ... existing code ...
+func quotedValue(v any) (sv string) {
+	typ := reflect.TypeOf(v)
+	val := reflect.ValueOf(v)
+
+	switch val.Kind() {
+	case reflect.String:
+		sv = fmt.Sprintf("'%v'", v.(string))
+	case reflect.Struct:
+		var sn = v.(types.SqlNull)
+		// 判断类型名称和包路径是否一致
+		if typ.Name() == "SqlNull" && typ.PkgPath() == reflect.TypeOf(types.SqlNull{}).PkgPath() {
+			sv = sn.String()
+		}
+	default:
+		sv = fmt.Sprintf("'%v'", indirectValue(v))
+	}
+	return sv
+}

@@ -73,11 +73,11 @@ func (s *ModelReflector) ParseModel(tagNames ...string) *ModelReflector {
 		}
 	case reflect.Map:
 		{
-			var dict map[string]interface{}
-			if v, ok := s.value.(*map[string]interface{}); ok {
+			var dict map[string]any
+			if v, ok := s.value.(*map[string]any); ok {
 				dict = *v
 			}
-			if v, ok := s.value.(map[string]interface{}); ok {
+			if v, ok := s.value.(map[string]any); ok {
 				dict = v
 			}
 			for k, v := range dict {
@@ -95,8 +95,8 @@ func (s *ModelReflector) ParseModel(tagNames ...string) *ModelReflector {
 	return s
 }
 
-func (s *ModelReflector) convertMapString(ms map[string]string) (mi map[string]interface{}) {
-	mi = make(map[string]interface{}, 10)
+func (s *ModelReflector) convertMapString(ms map[string]string) (mi map[string]any) {
+	mi = make(map[string]any, 10)
 	for k, v := range ms {
 		mi[k] = v
 	}
@@ -212,7 +212,7 @@ func (e *Engine) fetchRows(r *sql.Rows) (count int64, err error) {
 		var c int64
 		i++
 		if e.getModelType() == types.ModelType_BaseType {
-			if c, err = e.fetchRow(r, e.model.([]interface{})...); err != nil {
+			if c, err = e.fetchRow(r, e.model.([]any)...); err != nil {
 				log.Errorf("fetch row error [%v]", err.Error())
 				return
 			}
@@ -228,7 +228,7 @@ func (e *Engine) fetchRows(r *sql.Rows) (count int64, err error) {
 }
 
 // fetch row to struct or slice, must call rows.Next() before call this function
-func (e *Engine) fetchRow(rows *sql.Rows, args ...interface{}) (count int64, err error) {
+func (e *Engine) fetchRow(rows *sql.Rows, args ...any) (count int64, err error) {
 
 	fetcher, _ := e.getFetcher(rows)
 
@@ -388,7 +388,7 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 }
 
 // fetch cache data to struct or slice or map
-func (e *Engine) fetchCache(fetchers []*Fetcher, args ...interface{}) (count int64, err error) {
+func (e *Engine) fetchCache(fetchers []*Fetcher, args ...any) (count int64, err error) {
 
 	for i, fetcher := range fetchers {
 
@@ -457,7 +457,7 @@ func (e *Engine) getFetcher(rows *sql.Rows) (fetcher *Fetcher, err error) {
 	fetcher.types, _ = rows.ColumnTypes()
 	fetcher.arrValues = make([][]byte, fetcher.count)
 	fetcher.mapValues = make(map[string]string)
-	scans := make([]interface{}, fetcher.count)
+	scans := make([]any, fetcher.count)
 
 	for i := range fetcher.arrValues {
 		scans[i] = &fetcher.arrValues[i]
@@ -475,7 +475,7 @@ func (e *Engine) getFetcher(rows *sql.Rows) (fetcher *Fetcher, err error) {
 }
 
 // fetch row data to map
-func (e *Engine) fetchToMap(fetcher *Fetcher, arg interface{}) (err error) {
+func (e *Engine) fetchToMap(fetcher *Fetcher, arg any) (err error) {
 
 	typ := reflect.TypeOf(arg)
 
@@ -721,7 +721,7 @@ func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) bool {
 	return true
 }
 
-func convertBool2Int(v interface{}) interface{} {
+func convertBool2Int(v any) any {
 	typ := reflect.TypeOf(v)
 	val := reflect.ValueOf(v)
 	if typ.Kind() == reflect.Ptr {

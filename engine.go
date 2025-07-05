@@ -331,31 +331,11 @@ func (e *Engine) Distinct() *Engine {
 
 // Where orm where condition
 func (e *Engine) Where(query any, args ...any) *Engine {
-	qt := parseQueryInterface(query)
-	switch qt {
-	case queryInterface_String:
-		strQuery := query.(string)
-		assert(strQuery, "query statement is empty")
-		e.setWhere(strQuery, args...)
-	case queryInterface_Map:
-		e.parseQueryAndMap(query)
-	}
-	return e
+	return e.setNormalCondition(query, args...)
 }
 
 func (e *Engine) And(query any, args ...any) *Engine {
-	var strSql string
-	qt := parseQueryInterface(query)
-	switch qt {
-	case queryInterface_String:
-		strSql = query.(string)
-		assert(strSql, "query statement is empty")
-		expr := e.buildSqlExprs(strSql, args...)
-		e.andConditions = append(e.andConditions, expr)
-	case queryInterface_Map:
-		e.parseQueryAndMap(query)
-	}
-	return e
+	return e.setNormalCondition(query, args...)
 }
 
 func (e *Engine) Or(query any, args ...any) *Engine {
@@ -378,7 +358,6 @@ func (e *Engine) Or(query any, args ...any) *Engine {
 // OnConflict set the conflict columns for upsert
 // only for postgresql
 func (e *Engine) OnConflict(columns ...string) *Engine {
-
 	e.setConflictColumns(columns...)
 	return e
 }

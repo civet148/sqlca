@@ -39,16 +39,16 @@ func main() {
 	//requireNoError(InsertBatch(db))
 	//requireNoError(QueryLimit(db))
 	//requireError(QueryErrNotFound(db))
-	requireNoError(QueryByPage(db))
-	requireNoError(QueryByCondition(db))
-	requireNoError(QueryByGroup(db))
+	//requireNoError(QueryByPage(db))
+	//requireNoError(QueryByCondition(db))
+	//requireNoError(QueryByGroup(db))
 	//requireNoError(QueryJoins(db))
 	//requireNoError(QueryOr(db))
 	//requireNoError(QueryRawSQL(db))
 	//requireNoError(QueryByNormalVars(db))
 	//requireNoError(QueryWithJsonColumn(db))
 	//requireNoError(UpdateByModel(db))
-	//requireNoError(UpdateByMap(db))
+	requireNoError(UpdateByMap(db))
 	//requireNoError(DeleteById(db))
 	//requireNoError(Transaction(db))
 	//requireNoError(TransactionWrapper(db))
@@ -472,10 +472,12 @@ func UpdateByMap(db *sqlca.Engine) error {
 	var err error
 	var id = uint64(productId)
 	var updates = map[string]interface{}{
-		"quantity": 2100, //更改库存
-		"Price":    300,  //更改价格
+		"quantity":      2100, //更改库存
+		"price":         300,  //更改价格
+		"nullable":      nil,
+		"product_extra": &models.ProductExtraData{},
 	}
-	//UPDATE inventory_data SET `quantity`='2100',`price`=300 WHERE `id`='1906626367382884352'
+	//UPDATE inventory_data SET `quantity`='2100',`price`=300, is_frozen = NULL WHERE `id`='1906626367382884352'
 	_, err = db.Model(&updates).Table("inventory_data").Id(id).Update()
 	if err != nil {
 		return log.Errorf("更新错误：%s", err)

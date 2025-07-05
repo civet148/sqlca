@@ -600,8 +600,8 @@ func (e *Engine) getQuoteColumnName(v string) (strColumn string) {
 	return fmt.Sprintf("%v%v%v", e.getForwardQuote(), v, e.getBackQuote())
 }
 
-func (e *Engine) getQuoteColumnValue(v interface{}) (strValue string) {
-	return fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote())
+func (e *Engine) getQuoteColumnValue(v any) (strValue string) {
+	return fmt.Sprintf("%v", quotedValue(v))
 }
 
 func (e *Engine) setWhere(query string, args ...any) {
@@ -948,12 +948,10 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 		if e.isColumnSelected(v, strExcepts...) && !e.isReadOnly(v) {
 			val := e.getModelValue(v)
 			if val == nil {
-				//log.Warnf("column [%v] selected but have no value", v)
-				continue
+				val = types.SqlNull{}
 			}
 			val = convertBool2Int(val)
-			strVal := fmt.Sprintf("%v", val)
-			c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(v), e.getQuoteColumnValue(strVal)) // column name format to `date`='1583055138',...
+			c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(v), e.getQuoteColumnValue(val)) // column name format to `date`='1583055138',...
 			cols = append(cols, c)
 		}
 	}
@@ -1429,4 +1427,19 @@ func (e *Engine) parseQueryOrMap(query interface{}) {
 		}
 	}
 	e.setOr(qss...)
+}
+
+func (e *Engine) setNormalCondition(query any, args ...any) *Engine {
+	var strSql string
+	qt := parseQueryInterface(query)
+	switch qt {
+	case queryInterface_String:
+		strSql = query.(string)
+		assert(strSql, "query statement is empty")
+		expr := e.buildSqlExprs(strSql, args...)
+		e.andConditions = append(e.andConditions, expr)
+	case queryInterface_Map:
+		e.parseQueryAndMap(query)
+	}
+	return e
 }

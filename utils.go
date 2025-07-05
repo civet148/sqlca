@@ -22,7 +22,7 @@ const (
 
 var (
 	inBlank    = " IN "
-	inQuestion = " IN?"
+	inQuestion = "?"
 )
 
 // convertCamelToSnake converts a CamelCase string to snake_case
@@ -156,10 +156,10 @@ func (s *StringBuilder) Args() []interface{} {
 	return s.args
 }
 
-func indirectValue(v any, inSlices ...bool) any {
-	var inSlice bool
-	if len(inSlices) > 0 {
-		inSlice = inSlices[0]
+func indirectValue(v any, keepSlices ...bool) any {
+	var keepSlice bool
+	if len(keepSlices) > 0 {
+		keepSlice = keepSlices[0]
 	}
 
 	if v == nil {
@@ -197,7 +197,7 @@ func indirectValue(v any, inSlices ...bool) any {
 			}
 		}
 	case reflect.Slice, reflect.Array:
-		if !inSlice {
+		if !keepSlice {
 			data, err := json.Marshal(value.Interface())
 			if err == nil {
 				return string(data)
@@ -251,9 +251,9 @@ func quotedValue(v any) (sv string) {
 }
 
 // 判断是否为IN、NOT IN条件
-func isInCondition(query string, args ...any) bool {
+func shouldKeepSlice(query string, args ...any) bool {
 	var upper = strings.ToUpper(query)
-	if strings.Contains(upper, inBlank) || strings.Contains(upper, inQuestion) {
+	if strings.Contains(upper, inBlank) && strings.Contains(upper, inQuestion) {
 		return true
 	}
 	return false

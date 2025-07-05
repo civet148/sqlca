@@ -1092,17 +1092,17 @@ func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) 
 }
 
 func (e *Engine) buildSqlExprs(query string, args ...any) types.Expr {
-	var isInSlice bool
+	var keepSlice bool
 	if !strings.Contains(query, "?") && len(args) > 0 {
 		query = fmt.Sprintf("%s = ?", query)
 	} else {
-		if isInCondition(query, args...) {
-			isInSlice = true
+		if shouldKeepSlice(query, args...) {
+			keepSlice = true
 		}
 	}
 	var vars []any
 	for _, arg := range args {
-		vars = append(vars, indirectValue(arg, isInSlice))
+		vars = append(vars, indirectValue(arg, keepSlice))
 	}
 	return types.Expr{SQL: query, Vars: vars}
 }

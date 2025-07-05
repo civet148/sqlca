@@ -647,14 +647,14 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Update [%s]", strSql))
 
-	if e.operType == types.OperType_Tx {
-		_, rowsAffected, err = e.TxExec(strSql)
-		return
-	}
 	var r sql.Result
-
-	db := e.getDB()
-	r, err = db.Exec(strSql)
+	var execer sqlx.Execer
+	if e.operType == types.OperType_Tx {
+		execer = e.tx
+	} else {
+		execer = e.getDB()
+	}
+	r, err = execer.Exec(strSql)
 	if err != nil {
 		if !e.noVerbose {
 			log.Errorf("SQL [%s] error: %v", strSql, err.Error())

@@ -47,7 +47,7 @@ func main() {
 	//requireNoError(QueryRawSQL(db))
 	//requireNoError(QueryByNormalVars(db))
 	//requireNoError(QueryWithJsonColumn(db))
-	//requireNoError(UpdateByModel(db))
+	requireNoError(UpdateByModel(db))
 	requireNoError(UpdateByMap(db))
 	//requireNoError(DeleteById(db))
 	//requireNoError(Transaction(db))
@@ -474,11 +474,10 @@ func UpdateByMap(db *sqlca.Engine) error {
 	var updates = map[string]interface{}{
 		"quantity":      2100, //更改库存
 		"price":         300,  //更改价格
-		"nullable":      nil,
-		"product_extra": &models.ProductExtraData{},
+		"product_extra": nil,  //设置产品扩展数据为NULL
 	}
 	//UPDATE inventory_data SET `quantity`='2100',`price`=300, is_frozen = NULL WHERE `id`='1906626367382884352'
-	_, err = db.Model(&updates).Table("inventory_data").Id(id).Update()
+	_, err = db.Model(updates).Table("inventory_data").Id(id).Update()
 	if err != nil {
 		return log.Errorf("更新错误：%s", err)
 	}

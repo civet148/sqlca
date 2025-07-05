@@ -205,10 +205,14 @@ func quotedValue(v any) (sv string) {
 	case reflect.String:
 		sv = fmt.Sprintf("'%v'", v.(string))
 	case reflect.Struct:
-		var sn = v.(types.SqlNull)
-		// 判断类型名称和包路径是否一致
-		if typ.Name() == "SqlNull" && typ.PkgPath() == reflect.TypeOf(types.SqlNull{}).PkgPath() {
-			sv = sn.String()
+		sn, ok := v.(types.SqlNull)
+		if ok {
+			// 判断类型名称和包路径是否一致
+			if typ.Name() == "SqlNull" && typ.PkgPath() == reflect.TypeOf(types.SqlNull{}).PkgPath() {
+				sv = sn.String()
+			}
+		} else {
+			sv = fmt.Sprintf("'%v'", indirectValue(v))
 		}
 	default:
 		sv = fmt.Sprintf("'%v'", indirectValue(v))

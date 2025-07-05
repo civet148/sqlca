@@ -5,6 +5,14 @@ import (
 	"reflect"
 )
 
+type BeforeQueryInterface interface {
+	BeforeQuery(db *Engine) error
+}
+
+type AfterQueryInterface interface {
+	AfterQuery(db *Engine) error
+}
+
 type BeforeCreateInterface interface {
 	BeforeCreate(db *Engine) error
 }
@@ -30,9 +38,11 @@ type AfterDeleteInterface interface {
 }
 
 type hookMethods struct {
+	beforeQueries []BeforeQueryInterface  // before query
 	beforeCreates []BeforeCreateInterface // before create
 	beforeUpdates []BeforeUpdateInterface // before update
 	beforeDeletes []BeforeDeleteInterface // before delete
+	afterQueries  []AfterQueryInterface   // after query
 	afterCreates  []AfterCreateInterface  // after create
 	afterUpdates  []AfterUpdateInterface  // after update
 	afterDeletes  []AfterDeleteInterface  // after delete
@@ -47,7 +57,6 @@ func getHookMethods(obj interface{}) *hookMethods {
 	typ := reflect.TypeOf(obj)
 	val := reflect.ValueOf(obj)
 
-	//log.Infof("obj type %v", typ)
 	for {
 		if typ.Kind() != reflect.Ptr { // pointer type
 			break
@@ -76,6 +85,7 @@ func getHookMethods(obj interface{}) *hookMethods {
 			}
 		}
 	default:
+		//log.Debugf("type -> %v can't get hooks", reflect.TypeOf(typ))
 	}
 	return methods
 }
@@ -83,11 +93,14 @@ func getHookMethods(obj interface{}) *hookMethods {
 // parse struct fields
 func parseStructHookMethods(methods *hookMethods, typ reflect.Type, val reflect.Value) {
 	if !val.CanAddr() {
-		//log.Errorf("type %v can't get address", typ)
+		//log.Warnf("type %v can't get address", typ)
 		return
 	}
 	if typ.Kind() == reflect.Struct {
 		val = val.Addr()
+	}
+	if hook, ok := val.Interface().(BeforeQueryInterface); ok {
+		methods.beforeQueries = append(methods.beforeQueries, hook)
 	}
 	if hook, ok := val.Interface().(BeforeCreateInterface); ok {
 		methods.beforeCreates = append(methods.beforeCreates, hook)
@@ -97,6 +110,9 @@ func parseStructHookMethods(methods *hookMethods, typ reflect.Type, val reflect.
 	}
 	if hook, ok := val.Interface().(BeforeDeleteInterface); ok {
 		methods.beforeDeletes = append(methods.beforeDeletes, hook)
+	}
+	if hook, ok := val.Interface().(AfterQueryInterface); ok {
+		methods.afterQueries = append(methods.afterQueries, hook)
 	}
 	if hook, ok := val.Interface().(AfterCreateInterface); ok {
 		methods.afterCreates = append(methods.afterCreates, hook)
@@ -116,6 +132,20 @@ func (e *Engine) cleanHooks() {
 func (e *Engine) setHooks() *Engine {
 	e.hookMethods = getHookMethods(e.model)
 	return e
+}
+
+func (e *Engine) execBeforeQueryHooks() (err error) {
+	if e.hookMethods != nil {
+		for _, hook := range e.hookMethods.beforeQueries {
+			if hook == nil {
+				continue
+			}
+			if err = hook.BeforeQuery(e.clone()); err != nil {
+				return log.Errorf(err.Error())
+			}
+		}
+	}
+	return nil
 }
 
 func (e *Engine) execBeforeCreateHooks() (err error) {
@@ -153,6 +183,23 @@ func (e *Engine) execBeforeDeleteHooks() (err error) {
 				continue
 			}
 			if err = hook.BeforeDelete(e.clone()); err != nil {
+				return log.Errorf(err.Error())
+			}
+		}
+	}
+	return nil
+}
+
+func (e *Engine) execAfterQueryHooks() (err error) {
+	if len(e.hookMethods.afterQueries) == 0 {
+		e.setHooks()
+	}
+	if e.hookMethods != nil {
+		for _, hook := range e.hookMethods.afterQueries {
+			if hook == nil {
+				continue
+			}
+			if err = hook.AfterQuery(e.clone()); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}
@@ -201,4 +248,3 @@ func (e *Engine) execAfterDeleteHooks() (err error) {
 	}
 	return nil
 }
-

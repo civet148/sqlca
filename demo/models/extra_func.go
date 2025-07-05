@@ -10,6 +10,11 @@ func NowTime() string {
 	return time.Now().Format("2006-01-02 15:04:05")
 }
 
+func (do *InventoryData) BeforeQuery(db *sqlca.Engine) error {
+	log.Infof("%+v", do)
+	return nil
+}
+
 func (do *InventoryData) BeforeCreate(db *sqlca.Engine) error {
 	do.CreateTime = NowTime()
 	do.UpdateTime = NowTime()
@@ -24,6 +29,11 @@ func (do *InventoryData) BeforeUpdate(db *sqlca.Engine) error {
 }
 
 func (do *InventoryData) BeforeDelete(db *sqlca.Engine) error {
+	log.Infof("%+v", do)
+	return nil
+}
+
+func (do *InventoryData) AfterQuery(db *sqlca.Engine) error {
 	log.Infof("%+v", do)
 	return nil
 }

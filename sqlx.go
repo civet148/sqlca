@@ -189,7 +189,7 @@ func (e *Engine) execQuery() (rowsAffected int64, err error) {
 	}
 	var rows *sql.Rows
 
-	log.Debugf("query [%v] args %v", query, args)
+	//log.Debugf("query [%v] args %v", query, args)
 	rows, err = queryer.Query(query, args...)
 	if err != nil {
 		return 0, err
@@ -1430,7 +1430,7 @@ func (e *Engine) setNormalCondition(query any, args ...any) *Engine {
 	return e
 }
 
-func (e *Engine) printVerbose(msg string, args ...any) {
+func (e *Engine) verbose(msg string, args ...any) {
 	var isError bool
 	for _, arg := range args {
 		if _, ok := arg.(error); ok {

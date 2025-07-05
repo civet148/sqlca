@@ -40,11 +40,11 @@ func main() {
 	//requireNoError(QueryLimit(db))
 	//requireError(QueryErrNotFound(db))
 	//requireNoError(QueryByPage(db))
-	//requireNoError(QueryByCondition(db))
+	requireNoError(QueryByCondition(db))
 	//requireNoError(QueryByGroup(db))
 	//requireNoError(QueryJoins(db))
 	//requireNoError(QueryOr(db))
-	requireNoError(QueryRawSQL(db))
+	//requireNoError(QueryRawSQL(db))
 	//requireNoError(QueryByNormalVars(db))
 	//requireNoError(QueryWithJsonColumn(db))
 	//requireNoError(UpdateByModel(db))
@@ -273,6 +273,7 @@ func QueryOr(db *sqlca.Engine) error {
 		Or("name = ?", "配件").
 		Or("serial_no = ?", "SNO_001").
 		Desc("create_time").
+		Limit(5).
 		Query()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
@@ -295,6 +296,7 @@ func QueryOr(db *sqlca.Engine) error {
 		And(andConditions).
 		Or(orConditions).
 		Desc("create_time").
+		Limit(5).
 		Query()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)

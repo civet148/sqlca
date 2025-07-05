@@ -489,12 +489,17 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	strRawSql, _ := e.makeSQL(types.OperType_Query, true)
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strRawSql))
-
+	if err = e.execBeforeQueryHooks(); err != nil {
+		return 0, err
+	}
 	rowsAffected, err = e.execQuery()
 	if err != nil {
 		return 0, log.Errorf("caller [%v] SQL [%s] error: %s", e.getCaller(2), strRawSql, err.Error())
 	}
-	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strRawSql)
+	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strRawSql)
+	if err = e.execAfterQueryHooks(); err != nil {
+		return 0, err
+	}
 	return rowsAffected, nil
 }
 
@@ -513,11 +518,18 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
+	if err = e.execBeforeQueryHooks(); err != nil {
+		return 0, 0, err
+	}
+
 	strCountSql := e.makeSqlxQueryCount()
 	rowsAffected, total, err = e.execQueryEx(strCountSql)
-	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err != nil {
 		return 0, 0, log.Errorf("query count sql [%v] error [%v]", strCountSql, err.Error())
+	}
+	if err = e.execAfterQueryHooks(); err != nil {
+		return 0, 0, err
 	}
 	return rowsAffected, total, nil
 }
@@ -565,7 +577,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	if err != nil {
 		return 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
 	}
-	e.printVerbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
+	e.verbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	if err = e.execAfterCreateHooks(); err != nil {
 		return 0, log.Errorf(err.Error())
 	}
@@ -617,7 +629,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 	if err != nil {
 		return 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
 	}
-	e.printVerbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
+	e.verbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	return
 }
 
@@ -655,7 +667,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	if err != nil {
 		return 0, log.Errorf(err)
 	}
-	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err = e.execAfterUpdateHooks(); err != nil {
 		return 0, log.Errorf(err.Error())
 	}
@@ -688,7 +700,7 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	if err != nil {
 		return 0, err
 	}
-	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err = e.execAfterDeleteHooks(); err != nil {
 		return 0, log.Errorf(err.Error())
 	}
@@ -727,7 +739,7 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 		log.Errorf(err.Error())
 		return 0, err
 	}
-	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	return rowsAffected, nil
 }
 
@@ -749,7 +761,9 @@ func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err er
 	} else {
 		queryer = e.getDB()
 	}
-
+	if err = e.execBeforeQueryHooks(); err != nil {
+		return 0, err
+	}
 	var rows *sqlx.Rows
 	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
 		return
@@ -761,8 +775,11 @@ func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err er
 		fetcher, _ := e.getFetcher(rows.Rows)
 		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
 	}
-	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
-	return
+	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
+	if err = e.execAfterQueryHooks(); err != nil {
+		return 0, err
+	}
+	return rowsAffected, nil
 }
 
 // ExecRaw use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
@@ -794,7 +811,7 @@ func (e *Engine) ExecRaw(query string, args ...any) (rowsAffected, lastInsertId 
 		return
 	}
 	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
-	e.printVerbose("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
+	e.verbose("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
 	return rowsAffected, lastInsertId, nil
 }
 
@@ -840,7 +857,7 @@ func (e *Engine) TxExec(query string, args ...any) (lastInsertId, rowsAffected i
 	}
 	lastInsertId, _ = result.LastInsertId()
 	rowsAffected, _ = result.RowsAffected()
-	e.printVerbose("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
+	e.verbose("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
 	return
 }
 

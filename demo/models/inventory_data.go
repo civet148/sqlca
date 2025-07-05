@@ -10,9 +10,9 @@ const (
 func (s FrozenState) String() string {
 	switch s {
 	case FrozenState_Ture:
-		return "FrozenState_True"
+		return "True"
 	case FrozenState_False:
-		return "FrozenState_False"
+		return "False"
 	}
 	return "<FrozenState_Unknown>"
 }
@@ -43,7 +43,7 @@ type InventoryData struct {
 	UpdateId     uint64            `json:"update_id" db:"update_id" `                                           //更新人ID
 	UpdateName   string            `json:"update_name" db:"update_name" `                                       //更新人姓名
 	UpdateTime   string            `json:"update_time" db:"update_time" gorm:"autoUpdateTime" sqlca:"readonly"` //更新时间
-	IsFrozen     int32             `json:"is_frozen" db:"is_frozen" `                                           //冻结状态(0: 未冻结 1: 已冻结)
+	IsFrozen     FrozenState       `json:"is_frozen" db:"is_frozen" `                                           //冻结状态(0: 未冻结 1: 已冻结)
 	Name         string            `json:"name" db:"name" `                                                     //产品名称
 	SerialNo     string            `json:"serial_no" db:"serial_no" `                                           //产品编号
 	Quantity     float64           `json:"quantity" db:"quantity" `                                             //产品库存
@@ -65,8 +65,8 @@ func (do *InventoryData) GetUpdateName() string               { return do.Update
 func (do *InventoryData) SetUpdateName(v string)              { do.UpdateName = v }
 func (do *InventoryData) GetUpdateTime() string               { return do.UpdateTime }
 func (do *InventoryData) SetUpdateTime(v string)              { do.UpdateTime = v }
-func (do *InventoryData) GetIsFrozen() int32                  { return do.IsFrozen }
-func (do *InventoryData) SetIsFrozen(v int32)                 { do.IsFrozen = v }
+func (do *InventoryData) GetIsFrozen() FrozenState            { return do.IsFrozen }
+func (do *InventoryData) SetIsFrozen(v FrozenState)           { do.IsFrozen = v }
 func (do *InventoryData) GetName() string                     { return do.Name }
 func (do *InventoryData) SetName(v string)                    { do.Name = v }
 func (do *InventoryData) GetSerialNo() string                 { return do.SerialNo }

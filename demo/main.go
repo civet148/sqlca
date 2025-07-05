@@ -40,8 +40,8 @@ func main() {
 	//requireNoError(QueryLimit(db))
 	//requireError(QueryErrNotFound(db))
 	requireNoError(QueryByPage(db))
-	//requireNoError(QueryByCondition(db))
-	//requireNoError(QueryByGroup(db))
+	requireNoError(QueryByCondition(db))
+	requireNoError(QueryByGroup(db))
 	//requireNoError(QueryJoins(db))
 	//requireNoError(QueryOr(db))
 	//requireNoError(QueryRawSQL(db))
@@ -81,7 +81,7 @@ func InsertSingle(db *sqlca.Engine) error {
 		UpdateId:   1,
 		UpdateName: "admin",
 		UpdateTime: now,
-		IsFrozen:   0,
+		IsFrozen:   models.FrozenState_Ture,
 		Name:       "齿轮",
 		SerialNo:   "SNO_001",
 		Quantity:   1000,
@@ -307,7 +307,7 @@ func QueryOr(db *sqlca.Engine) error {
 */
 func QueryByGroup(db *sqlca.Engine) error {
 	var err error
-	var count int64
+	var count, total int64
 	var dos []*models.InventoryData
 	/*
 		SELECT  create_id, SUM(quantity) AS quantity
@@ -315,17 +315,17 @@ func QueryByGroup(db *sqlca.Engine) error {
 		WHERE 1=1 AND quantity>'0' AND is_frozen='0' AND create_time>='2024-10-01 11:35:14'
 		GROUP BY create_id
 	*/
-	count, err = db.Model(&dos).
+	count, total, err = db.Model(&dos).
 		Select("create_id", "SUM(quantity) AS quantity").
 		Gt("quantity", 0).
 		Eq("is_frozen", 0).
 		Gte("create_time", "2024-10-01 11:35:14").
 		GroupBy("create_id").
-		Query()
+		QueryEx()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
-	log.Infof("查询结果数据条数: %d", count)
+	log.Infof("查询返回数据条数: %d 总数：%d", count, total)
 	return nil
 }
 

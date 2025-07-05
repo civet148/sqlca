@@ -494,9 +494,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	if err != nil {
 		return 0, log.Errorf("caller [%v] SQL [%s] error: %s", e.getCaller(2), strRawSql, err.Error())
 	}
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strRawSql)
-	}
+	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strRawSql)
 	return rowsAffected, nil
 }
 
@@ -517,9 +515,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 
 	strCountSql := e.makeSqlxQueryCount()
 	rowsAffected, total, err = e.execQueryEx(strCountSql)
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
-	}
+	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err != nil {
 		return 0, 0, log.Errorf("query count sql [%v] error [%v]", strCountSql, err.Error())
 	}
@@ -569,9 +565,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	if err != nil {
 		return 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
 	}
-	if !e.noVerbose {
-		log.Debugf("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
-	}
+	e.printVerbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	if err = e.execAfterCreateHooks(); err != nil {
 		return 0, log.Errorf(err.Error())
 	}
@@ -623,9 +617,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 	if err != nil {
 		return 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
 	}
-	if !e.noVerbose {
-		log.Debugf("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
-	}
+	e.printVerbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	return
 }
 
@@ -657,18 +649,13 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	query, args := e.makeSQL(types.OperType_Update, false)
 	r, err = execer.Exec(query, args...)
 	if err != nil {
-		if !e.noVerbose {
-			log.Errorf("SQL [%s] error: %v", strSql, err.Error())
-		}
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
 		return 0, log.Errorf(err)
 	}
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
-	}
+	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err = e.execAfterUpdateHooks(); err != nil {
 		return 0, log.Errorf(err.Error())
 	}
@@ -695,19 +682,13 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	var r sql.Result
 	r, err = execer.Exec(strSql, args...)
 	if err != nil {
-		if !e.noVerbose {
-			log.Errorf("error %v model %+v", err, e.model)
-		}
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		log.Errorf("get rows affected error [%v] query [%v] model [%+v]", err, strSql, e.model)
-		return
+		return 0, err
 	}
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
-	}
+	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err = e.execAfterDeleteHooks(); err != nil {
 		return 0, log.Errorf(err.Error())
 	}
@@ -737,9 +718,6 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 	}
 
 	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
-		if !e.noVerbose {
-			log.Errorf("query [%v] error [%v]", strSql, err.Error())
-		}
 		return
 	}
 
@@ -749,9 +727,7 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 		log.Errorf(err.Error())
 		return 0, err
 	}
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
-	}
+	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	return rowsAffected, nil
 }
 
@@ -776,9 +752,6 @@ func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err er
 
 	var rows *sqlx.Rows
 	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
-		if !e.noVerbose {
-			log.Errorf("SQL [%v] query error [%v]", strSql, err.Error())
-		}
 		return
 	}
 
@@ -788,9 +761,7 @@ func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err er
 		fetcher, _ := e.getFetcher(rows.Rows)
 		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
 	}
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
-	}
+	e.printVerbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	return
 }
 
@@ -815,23 +786,15 @@ func (e *Engine) ExecRaw(query string, args ...any) (rowsAffected, lastInsertId 
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
 	if r, err = execer.Exec(expr.SQL, expr.Vars...); err != nil {
-		if !e.noVerbose {
-			log.Errorf("error [%v] model [%+v]", err, e.model)
-		}
 		return
 	}
 
 	rowsAffected, err = r.RowsAffected()
 	if err != nil {
-		if !e.noVerbose {
-			log.Errorf("get rows affected error [%v] query [%v]", err.Error(), strSql)
-		}
 		return
 	}
 	lastInsertId, _ = r.LastInsertId() //MSSQL Server not support last insert id
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
-	}
+	e.printVerbose("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
 	return rowsAffected, lastInsertId, nil
 }
 
@@ -861,9 +824,24 @@ func (e *Engine) TxGet(dest any, strSql string, args ...any) (count int64, err e
 	return e.txQuery(dest, strSql, args...)
 }
 
-func (e *Engine) TxExec(strSql string, args ...any) (lastInsertId, rowsAffected int64, err error) {
+func (e *Engine) TxExec(query string, args ...any) (lastInsertId, rowsAffected int64, err error) {
 	assert(e.tx, "tx instance is nil")
-	return e.txExec(strSql, args...)
+	var result sql.Result
+	var expr = e.buildSqlExprs(query, args...)
+	strSql := expr.RawSQL(e.GetAdapter())
+
+	c := e.Counter()
+	defer c.Stop(fmt.Sprintf("tx [%s]", strSql))
+
+	result, err = e.tx.Exec(expr.SQL, expr.Vars...)
+	if err != nil {
+		e.autoRollback()
+		return
+	}
+	lastInsertId, _ = result.LastInsertId()
+	rowsAffected, _ = result.RowsAffected()
+	e.printVerbose("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
+	return
 }
 
 func (e *Engine) TxRollback() error {
@@ -928,16 +906,10 @@ func (e *Engine) TxHandle(handler TxHandler) (err error) {
 	c := e.Counter()
 	defer c.Stop("TxHandle")
 	if tx, err = e.TxBegin(); err != nil {
-		if !e.noVerbose {
-			log.Errorf("transaction begin error [%v]", err.Error())
-		}
-		return
+		return err
 	}
 	if err = handler.OnTransaction(tx); err != nil {
 		_ = tx.TxRollback()
-		if !e.noVerbose {
-			log.Warnf("transaction rollback by handler error [%v]", err.Error())
-		}
 		return
 	}
 	return tx.TxCommit()
@@ -951,17 +923,11 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	c := e.Counter()
 	defer c.Stop("TxFunc")
 	if tx, err = e.TxBegin(); err != nil {
-		if !e.noVerbose {
-			log.Errorf("transaction begin error [%v]", err.Error())
-		}
-		return
+		return err
 	}
 
 	if err = fn(tx); err != nil {
 		_ = tx.TxRollback()
-		if !e.noVerbose {
-			log.Errorf("transaction rollback by handler error [%v]", err.Error())
-		}
 		return
 	}
 	return tx.TxCommit()
@@ -975,16 +941,10 @@ func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context,
 	c := e.Counter()
 	defer c.Stop("TxFuncContext")
 	if tx, err = e.TxBegin(); err != nil {
-		if !e.noVerbose {
-			log.Errorf("transaction begin error [%v]", err.Error())
-		}
 		return
 	}
 	if err = fn(ctx, tx); err != nil {
 		_ = tx.TxRollback()
-		if !e.noVerbose {
-			log.Warnf("transaction rollback by handler error [%v]", err.Error())
-		}
 		return
 	}
 	return tx.TxCommit()
@@ -1001,14 +961,11 @@ func (e *Engine) QueryJson() (s string, err error) {
 	if count != 0 && e.model != nil {
 		var data []byte
 		if data, err = json.Marshal(e.model); err != nil {
-			if !e.noVerbose {
-				log.Errorf(err.Error())
-			}
-			return
+			return s, err
 		}
 		s = string(data)
 	}
-	return
+	return s, nil
 }
 
 // SlowQuery slow query alert on or off

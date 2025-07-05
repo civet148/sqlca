@@ -240,28 +240,6 @@ func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err
 	return rowsAffected, total, nil
 }
 
-func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
-	var result sql.Result
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("exec tx [%s]", strSql))
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
-
-	result, err = e.tx.Exec(strSql)
-	if err != nil {
-		if !e.noVerbose {
-			log.Errorf("exec tx [%v] args %+v error [%+v] auto rollback [%v]", strSql, args, err.Error(), e.bAutoRollback)
-		}
-		e.autoRollback()
-		return
-	}
-	lastInsertId, _ = result.LastInsertId()
-	rowsAffected, _ = result.RowsAffected()
-	if !e.noVerbose {
-		log.Debugf("caller [%v] rows [%v] last id [%v] SQL [%s]", e.getCaller(2), rowsAffected, lastInsertId, strSql)
-	}
-	return
-}
-
 func (e *Engine) txQuery(dest interface{}, strSql string, args ...interface{}) (count int64, err error) {
 	var rows *sql.Rows
 	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
@@ -1446,4 +1424,20 @@ func (e *Engine) setNormalCondition(query any, args ...any) *Engine {
 		e.parseQueryAndMap(query)
 	}
 	return e
+}
+
+func (e *Engine) printVerbose(msg string, args ...any) {
+	var isError bool
+	for _, arg := range args {
+		if _, ok := arg.(error); ok {
+			isError = true
+		}
+	}
+	if !e.noVerbose {
+		if isError {
+			log.Errorf(msg, args...)
+		} else {
+			log.Debugf(msg, args...)
+		}
+	}
 }

@@ -52,7 +52,7 @@ func main() {
 	//requireNoError(DeleteById(db))
 	//requireNoError(Transaction(db))
 	//requireNoError(TransactionWrapper(db))
-	requireNoError(ExecRawSQL(db))
+	//requireNoError(ExecRawSQL(db))
 }
 
 func requireNoError(err error) {
@@ -246,8 +246,9 @@ func QueryByCondition(db *sqlca.Engine) error {
 	var dos []*models.InventoryData
 	//SELECT * FROM inventory_data WHERE `quantity` > 0 and is_frozen=0 AND create_time >= '2024-10-01 11:35:14' ORDER BY create_time DESC
 	count, err = db.Model(&dos).
+		Where("is_frozen in (?)", []int{0, 1}).
+		//In("is_frozen", []int{0, 1}).
 		Gt("quantity", 0).
-		Eq("is_frozen", 0).
 		Gte("create_time", "2024-10-01 11:35:14").
 		Desc("create_time").
 		Query()
@@ -418,7 +419,7 @@ func QueryRawSQL(db *sqlca.Engine) error {
 	var rows []*models.InventoryData
 
 	//SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
-	_, err := db.Model(&rows).QueryRaw("SELECT * FROM inventory_data WHERE is_frozen = ? AND quantity > ?", 0, 10)
+	_, err := db.Model(&rows).QueryRaw("SELECT * FROM inventory_data WHERE is_frozen IN (?) AND quantity > ?", []int{0, 1}, 10)
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}

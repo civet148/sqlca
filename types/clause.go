@@ -31,10 +31,13 @@ func (expr Expr) quoteValues(adapter AdapterType, values ...any) (vars []any) {
 			s := PreventSqlInject(adapter, v.(string))
 			vars = append(vars, fmt.Sprintf("'%v'", s))
 		case reflect.Struct:
-			var sn = v.(SqlNull)
-			// 判断类型名称和包路径是否一致
-			if typ.Name() == "SqlNull" && typ.PkgPath() == reflect.TypeOf(SqlNull{}).PkgPath() {
-				vars = append(vars, sn.String())
+			if sn, ok := v.(SqlNull); ok {
+				// 判断类型名称和包路径是否一致
+				if typ.Name() == "SqlNull" && typ.PkgPath() == reflect.TypeOf(SqlNull{}).PkgPath() {
+					vars = append(vars, sn.String())
+				}
+			} else {
+				vars = append(vars, v)
 			}
 		default:
 			vars = append(vars, v)

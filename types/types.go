@@ -238,10 +238,28 @@ func (s SqlNull) String() string {
 
 // MarshalJSON implements the json.Marshaler interface.
 func (s SqlNull) MarshalJSON() ([]byte, error) {
-	return []byte(NULL), nil
+	return nil, nil
 }
 
 // Value implements the driver.Valuer interface for database serialization.
 func (s SqlNull) Value() (driver.Value, error) {
 	return NULL, nil
+}
+
+type SqlClauseValue struct {
+	Val string
+}
+
+func (s SqlClauseValue) String() string {
+	return s.Val
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (s SqlClauseValue) MarshalJSON() ([]byte, error) {
+	return []byte(s.Val), nil
+}
+
+// Value implements the driver.Valuer interface for database serialization.
+func (s SqlClauseValue) Value() (driver.Value, error) {
+	return s.Val, nil
 }

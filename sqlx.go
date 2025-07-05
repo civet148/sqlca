@@ -31,7 +31,7 @@ func (e *Engine) getDB() (db *sqlx.DB) {
 	return e.db
 }
 
-func (e *Engine) setModel(models ...interface{}) *Engine {
+func (e *Engine) setModel(models ...any) *Engine {
 	var strCamelTableName string
 	for _, v := range models {
 
@@ -131,7 +131,7 @@ func (e *Engine) setModel(models ...interface{}) *Engine {
 }
 
 // clone engine
-func (e *Engine) clone(models ...interface{}) *Engine {
+func (e *Engine) clone(models ...any) *Engine {
 
 	engine := &Engine{
 		strDSN:          e.strDSN,
@@ -189,7 +189,7 @@ func (e *Engine) execQuery() (rowsAffected int64, err error) {
 	}
 	var rows *sql.Rows
 
-	//log.Debugf("query [%v] args %v", query, args)
+	log.Debugf("query [%v] args %v", query, args)
 	rows, err = queryer.Query(query, args...)
 	if err != nil {
 		return 0, err
@@ -240,7 +240,7 @@ func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err
 	return rowsAffected, total, nil
 }
 
-func (e *Engine) txQuery(dest interface{}, strSql string, args ...interface{}) (count int64, err error) {
+func (e *Engine) txQuery(dest interface{}, strSql string, args ...any) (count int64, err error) {
 	var rows *sql.Rows
 	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
 	c := e.Counter()
@@ -439,7 +439,7 @@ func (e *Engine) getJoins() (strJoins string) {
 	return
 }
 
-func (e *Engine) setPkValue(value interface{}) {
+func (e *Engine) setPkValue(value any) {
 
 	var strValue string
 	switch value.(type) {
@@ -936,7 +936,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 
 	if len(cols) == 0 {
 		//may be model is a base type slice
-		args, ok := e.model.([]interface{})
+		args, ok := e.model.([]any)
 		if !ok {
 			return
 		}
@@ -1092,12 +1092,17 @@ func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) 
 }
 
 func (e *Engine) buildSqlExprs(query string, args ...any) types.Expr {
-	if !strings.Contains(query, "%") && !strings.Contains(query, "?") && len(args) > 0 {
+	var isInSlice bool
+	if !strings.Contains(query, "?") && len(args) > 0 {
 		query = fmt.Sprintf("%s = ?", query)
+	} else {
+		if isInCondition(query, args...) {
+			isInSlice = true
+		}
 	}
 	var vars []any
 	for _, arg := range args {
-		vars = append(vars, indirectValue(arg))
+		vars = append(vars, indirectValue(arg, isInSlice))
 	}
 	return types.Expr{SQL: query, Vars: vars}
 }
@@ -1149,7 +1154,7 @@ func (e *Engine) makeInCondition(cond types.Expr) (strCondition string, args []a
 		var typ = reflect.TypeOf(v)
 		var val = reflect.ValueOf(v)
 		switch typ.Kind() {
-		case reflect.Slice:
+		case reflect.Slice, reflect.Array:
 			{
 				n := val.Len()
 				for i := 0; i < n; i++ {
@@ -1357,7 +1362,7 @@ func (e *Engine) setLockShareMode() *Engine {
 	return e
 }
 
-func (e *Engine) setAnd(query string, args ...interface{}) *Engine {
+func (e *Engine) setAnd(query string, args ...any) *Engine {
 	assert(query, "query statement is empty")
 	expr := e.buildSqlExprs(query, args...)
 	e.andConditions = append(e.andConditions, expr)
@@ -1379,8 +1384,8 @@ func (e *Engine) setOr(exprs ...types.Expr) *Engine {
 	return e
 }
 
-func (e *Engine) parseQueryAndMap(query interface{}) {
-	where := query.(map[string]interface{})
+func (e *Engine) parseQueryAndMap(query any) {
+	where := query.(map[string]any)
 	for k, v := range where {
 		if strings.Contains(k, "?") {
 			e.setAnd(k, v)
@@ -1391,9 +1396,9 @@ func (e *Engine) parseQueryAndMap(query interface{}) {
 	}
 }
 
-func (e *Engine) parseQueryOrMap(query interface{}) {
+func (e *Engine) parseQueryOrMap(query any) {
 	var qss []types.Expr
-	where := query.(map[string]interface{})
+	where := query.(map[string]any)
 	for k, v := range where {
 		if strings.Contains(k, "?") {
 			qss = append(qss, types.Expr{
@@ -1417,7 +1422,6 @@ func (e *Engine) setNormalCondition(query any, args ...any) *Engine {
 	switch qt {
 	case queryInterface_String:
 		strSql = query.(string)
-		assert(strSql, "query statement is empty")
 		expr := e.buildSqlExprs(strSql, args...)
 		e.andConditions = append(e.andConditions, expr)
 	case queryInterface_Map:

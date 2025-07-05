@@ -20,6 +20,11 @@ const (
 	queryInterface_Map     queryInterfaceType = 2
 )
 
+var (
+	inBlank    = " IN "
+	inQuestion = " IN?"
+)
+
 // convertCamelToSnake converts a CamelCase string to snake_case
 func convertCamelToSnake(s string) string {
 	// 使用正则表达式匹配大写字母前的所有字符
@@ -151,7 +156,12 @@ func (s *StringBuilder) Args() []interface{} {
 	return s.args
 }
 
-func indirectValue(v any) any {
+func indirectValue(v any, inSlices ...bool) any {
+	var inSlice bool
+	if len(inSlices) > 0 {
+		inSlice = inSlices[0]
+	}
+
 	if v == nil {
 		return types.SqlNull{}
 	}
@@ -186,7 +196,22 @@ func indirectValue(v any) any {
 				return string(data)
 			}
 		}
-	case reflect.Slice, reflect.Array, reflect.Map:
+	case reflect.Slice, reflect.Array:
+		if !inSlice {
+			data, err := json.Marshal(value.Interface())
+			if err == nil {
+				return string(data)
+			}
+		} else {
+			var strValues []string
+			var val = reflect.ValueOf(v)
+			n := val.Len()
+			for i := 0; i < n; i++ {
+				strValues = append(strValues, fmt.Sprintf("'%v'", val.Index(i).Interface()))
+			}
+			return types.SqlClauseValue{Val: strings.Join(strValues, ",")}
+		}
+	case reflect.Map:
 		data, err := json.Marshal(value.Interface())
 		if err == nil {
 			return string(data)
@@ -212,10 +237,24 @@ func quotedValue(v any) (sv string) {
 				sv = sn.String()
 			}
 		} else {
-			sv = fmt.Sprintf("'%v'", indirectValue(v))
+			var scv types.SqlClauseValue
+			if scv, ok = v.(types.SqlClauseValue); ok {
+				return scv.String()
+			} else {
+				sv = fmt.Sprintf("'%v'", indirectValue(v))
+			}
 		}
 	default:
 		sv = fmt.Sprintf("'%v'", indirectValue(v))
 	}
 	return sv
+}
+
+// 判断是否为IN、NOT IN条件
+func isInCondition(query string, args ...any) bool {
+	var upper = strings.ToUpper(query)
+	if strings.Contains(upper, inBlank) || strings.Contains(upper, inQuestion) {
+		return true
+	}
+	return false
 }

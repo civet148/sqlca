@@ -44,15 +44,15 @@ func main() {
 	//requireNoError(QueryByGroup(db))
 	//requireNoError(QueryJoins(db))
 	//requireNoError(QueryOr(db))
-	//requireNoError(QueryRawSQL(db))
+	requireNoError(QueryRawSQL(db))
 	//requireNoError(QueryByNormalVars(db))
 	//requireNoError(QueryWithJsonColumn(db))
-	requireNoError(UpdateByModel(db))
-	requireNoError(UpdateByMap(db))
+	//requireNoError(UpdateByModel(db))
+	//requireNoError(UpdateByMap(db))
 	//requireNoError(DeleteById(db))
 	//requireNoError(Transaction(db))
 	//requireNoError(TransactionWrapper(db))
-	//requireNoError(ExecRawSQL(db))
+	requireNoError(ExecRawSQL(db))
 }
 
 func requireNoError(err error) {
@@ -431,7 +431,7 @@ func ExecRawSQL(db *sqlca.Engine) error {
 	//UPDATE inventory_data SET quantity = '10' WHERE id=1867379968636358657
 	sb.Append("UPDATE inventory_data")
 	sb.Append("SET quantity = ?", 10)
-	sb.Append("WHERE id = ?", 1867379968636358657)
+	sb.Append("WHERE id = ?", productId)
 
 	strQuery := sb.String()
 	affectedRows, lastInsertId, err := db.Model(nil).ExecRaw(strQuery)

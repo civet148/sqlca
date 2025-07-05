@@ -1117,7 +1117,11 @@ func (e *Engine) buildSqlExprs(query string, args ...any) types.Expr {
 	if !strings.Contains(query, "%") && !strings.Contains(query, "?") && len(args) > 0 {
 		query = fmt.Sprintf("%s = ?", query)
 	}
-	return types.Expr{SQL: query, Vars: args}
+	var vars []any
+	for _, arg := range args {
+		vars = append(vars, indirectValue(arg))
+	}
+	return types.Expr{SQL: query, Vars: vars}
 }
 
 func (e *Engine) makeSqlxQueryPrimaryKey() (strSql string) {

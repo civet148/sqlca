@@ -488,7 +488,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 
 	strRawSql, _ := e.makeSQL(types.OperType_Query, true)
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("Query [%s]", strRawSql))
+	defer c.Stop(fmt.Sprintf("SQL [%s]", strRawSql))
 
 	rowsAffected, err = e.execQuery()
 	if err != nil {
@@ -513,7 +513,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	}
 	strSql, _ := e.makeSQL(types.OperType_Query, true)
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
+	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
 	strCountSql := e.makeSqlxQueryCount()
 	rowsAffected, total, err = e.execQueryEx(strCountSql)
@@ -548,7 +548,7 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	var strSql string
 	strSql, _ = e.makeSQL(types.OperType_Insert, true)
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("Insert [%s]", strSql))
+	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
 	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
@@ -598,7 +598,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 
 	strSql, _ := e.makeSQL(types.OperType_Upsert, true)
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("Upsert [%s]", strSql))
+	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
 	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
@@ -645,7 +645,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 
 	strSql, _ := e.makeSQL(types.OperType_Update, true)
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("Update [%s]", strSql))
+	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
 	var r sql.Result
 	var execer sqlx.Execer
@@ -654,7 +654,8 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	} else {
 		execer = e.getDB()
 	}
-	r, err = execer.Exec(strSql)
+	query, args := e.makeSQL(types.OperType_Update, false)
+	r, err = execer.Exec(query, args...)
 	if err != nil {
 		if !e.noVerbose {
 			log.Errorf("SQL [%s] error: %v", strSql, err.Error())
@@ -680,18 +681,19 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 		return 0, log.Errorf(err.Error())
 	}
 
-	strSql, _ := e.makeSQL(types.OperType_Delete, true)
+	strSql, args := e.makeSQL(types.OperType_Delete, true)
 	defer e.cleanWhereCondition()
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("Delete [%s]", strSql))
+	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
+	var execer sqlx.Execer
 	if e.operType == types.OperType_Tx {
-		_, rowsAffected, err = e.TxExec(strSql)
-		return
+		execer = e.tx
+	} else {
+		execer = e.getDB()
 	}
 	var r sql.Result
-	db := e.getDB()
-	r, err = db.Exec(strSql)
+	r, err = execer.Exec(strSql, args...)
 	if err != nil {
 		if !e.noVerbose {
 			log.Errorf("error %v model %+v", err, e.model)
@@ -715,22 +717,26 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 // QueryRaw use raw sql to query results
 // return rows affected and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
-func (e *Engine) QueryRaw(strSql string, args ...any) (rowsAffected int64, err error) {
+func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err error) {
 
-	assert(strSql, "query sql string is nil")
+	assert(query, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
 
 	var rows *sqlx.Rows
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
+	var expr = e.buildSqlExprs(query, args...)
+	strSql := expr.RawSQL(e.GetAdapter())
 
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("QueryRaw [%s]", strSql))
+	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
+
+	var queryer sqlx.Queryer
 	if e.operType == types.OperType_Tx {
-		return e.TxGet(e.model, strSql)
+		queryer = e.tx
+	} else {
+		queryer = e.getDB()
 	}
 
-	db := e.getDB()
-	if rows, err = db.Queryx(strSql); err != nil {
+	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
 		if !e.noVerbose {
 			log.Errorf("query [%v] error [%v]", strSql, err.Error())
 		}
@@ -752,22 +758,24 @@ func (e *Engine) QueryRaw(strSql string, args ...any) (rowsAffected int64, err e
 // QueryMap use raw sql to query results into a map slice (model type is []map[string]string)
 // return results and error
 // NOTE: Model function is must be called before call this function
-func (e *Engine) QueryMap(strSql string, args ...any) (rowsAffected int64, err error) {
-	assert(strSql, "query sql string is nil")
+func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err error) {
+	assert(query, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
+	var expr = e.buildSqlExprs(query, args...)
+	strSql := expr.RawSQL(e.GetAdapter())
 
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("QueryMap [%s]", strSql))
+	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
+	var queryer sqlx.Queryer
 	if e.operType == types.OperType_Tx {
-		return e.TxGet(e.model, strSql)
+		queryer = e.tx
+	} else {
+		queryer = e.getDB()
 	}
 
 	var rows *sqlx.Rows
-
-	db := e.getDB()
-	if rows, err = db.Queryx(strSql); err != nil {
+	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
 		if !e.noVerbose {
 			log.Errorf("SQL [%v] query error [%v]", strSql, err.Error())
 		}
@@ -788,22 +796,25 @@ func (e *Engine) QueryMap(strSql string, args ...any) (rowsAffected int64, err e
 
 // ExecRaw use raw sql to insert/update database, results can not be cached to redis/memcached/memory...
 // return rows affected and error, if err is not nil must be something wrong
-func (e *Engine) ExecRaw(strSql string, args ...any) (rowsAffected, lastInsertId int64, err error) {
+func (e *Engine) ExecRaw(query string, args ...any) (rowsAffected, lastInsertId int64, err error) {
 
-	assert(strSql, "query sql string is nil")
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
+	assert(query, "query sql string is nil")
+	var expr = e.buildSqlExprs(query, args...)
+	strSql := expr.RawSQL(e.GetAdapter())
+	var execer sqlx.Execer
 	if e.operType == types.OperType_Tx {
-		return e.TxExec(strSql)
+		execer = e.tx
+	} else {
+		execer = e.getDB()
 	}
 
 	var r sql.Result
 
 	log.Debugf("exec [%v]", strSql)
 	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("ExecRaw [%s]", strSql))
+	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
-	db := e.getDB()
-	if r, err = db.Exec(strSql); err != nil {
+	if r, err = execer.Exec(expr.SQL, expr.Vars...); err != nil {
 		if !e.noVerbose {
 			log.Errorf("error [%v] model [%+v]", err, e.model)
 		}

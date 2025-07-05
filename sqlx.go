@@ -203,6 +203,43 @@ func (e *Engine) execQuery() (rowsAffected int64, err error) {
 	return rowsAffected, nil
 }
 
+func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err error) {
+	var query string
+	var args []any
+	var db = e.getDB()
+	var queryer sqlx.Queryer
+	_ = queryer
+	query, args = e.makeSqlxQuery(false)
+	if e.operType == types.OperType_Tx {
+		queryer = sqlx.Queryer(e.tx)
+	} else {
+		queryer = sqlx.Queryer(db)
+	}
+	var rows *sql.Rows
+
+	//log.Debugf("query [%v] args %v", query, args)
+	rows, err = queryer.Query(query, args...)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer rows.Close()
+
+	rowsAffected, err = e.fetchRows(rows)
+	if err != nil {
+		return 0, 0, err
+	}
+	var rowsCount *sql.Rows
+	if rowsCount, err = queryer.Query(strCountSql); err != nil {
+		return 0, 0, err
+	}
+
+	defer rowsCount.Close()
+	for rowsCount.Next() {
+		total++
+	}
+	return rowsAffected, total, nil
+}
+
 func (e *Engine) txExec(strSql string, args ...interface{}) (lastInsertId, rowsAffected int64, err error) {
 	var result sql.Result
 	c := e.Counter()

@@ -536,50 +536,15 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("Query [%s]", strSql))
 
-	if e.operType == types.OperType_Tx {
-		var ignore int64
-		strCountSql := e.makeSqlxQueryCount()
-		total, err = e.TxGet(&ignore, strCountSql)
-		if err != nil {
-			return 0, 0, err
-		}
-		rowsAffected, err = e.TxGet(e.model, strSql)
-		if err != nil {
-			return 0, 0, err
-		}
-	} else {
-		var rowsQuery, rowsCount *sql.Rows
-		dbQuery := e.getDB()
-		if rowsQuery, err = dbQuery.Query(strSql); err != nil {
-			if !e.noVerbose {
-				log.Errorf("query [%v] error: %v", strSql, err.Error())
-			}
-			return
-		}
-
-		defer rowsQuery.Close()
-		if rowsAffected, err = e.fetchRows(rowsQuery); err != nil {
-			return
-		}
-
-		strCountSql := e.makeSqlxQueryCount()
-		dbCount := e.getDB()
-		if rowsCount, err = dbCount.Query(strCountSql); err != nil {
-			if !e.noVerbose {
-				log.Errorf("query [%v] error [%v]", strSql, err.Error())
-			}
-			return
-		}
-
-		defer rowsCount.Close()
-		for rowsCount.Next() {
-			total++
-		}
-	}
+	strCountSql := e.makeSqlxQueryCount()
+	rowsAffected, total, err = e.execQueryEx(strCountSql)
 	if !e.noVerbose {
 		log.Debugf("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	}
-	return
+	if err != nil {
+		return 0, 0, log.Errorf("query count sql [%v] error [%v]", strCountSql, err.Error())
+	}
+	return rowsAffected, total, nil
 }
 
 // MustFind orm find data records, returns error if not found

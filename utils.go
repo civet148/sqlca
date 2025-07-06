@@ -207,7 +207,8 @@ func indirectValue(v any, keepSlices ...bool) any {
 			var val = reflect.ValueOf(v)
 			n := val.Len()
 			for i := 0; i < n; i++ {
-				strValues = append(strValues, fmt.Sprintf("'%v'", val.Index(i).Interface()))
+				sv := fmt.Sprintf("'%v'", indirectValue(val.Index(i).Interface()))
+				strValues = append(strValues, sv)
 			}
 			return types.SqlClauseValue{Val: strings.Join(strValues, ",")}
 		}

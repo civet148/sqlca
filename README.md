@@ -564,7 +564,7 @@ func QueryRawSQL(db *sqlca.Engine) error {
     
     //SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
     
-    sb.Append("SELECT * FROM %s", "inventory_data")
+    sb.Append("SELECT * FROM inventory_data")
     sb.Append("WHERE is_frozen = ?", 0)
     sb.Append("AND quantity > ?", 10)
     strQuery := sb.String()
@@ -805,8 +805,9 @@ func UpdateByMap(db *sqlca.Engine) error {
     var updates = map[string]interface{}{
         "quantity": 2100, //更改库存
         "Price":    300,  //更改价格
+		"product_extra": nil,  //设置产品扩展数据为NULL
     }
-    //UPDATE inventory_data SET `quantity`='2100',`price`=300 WHERE `id`='1858759254329004032'
+    //UPDATE inventory_data SET `product_extra`=NULL, `quantity`='2100',`price`=300 WHERE `id`='1858759254329004032'
     _, err = db.Model(&updates).Table("inventory_data").Id(1858759254329004032).Update()
     if err != nil {
         return log.Errorf("更新错误：%s", err)
@@ -963,7 +964,8 @@ func TransactionWrapper(db *sqlca.Engine) error {
 ## 其他方法说明
 
 ### Table方法
-设置数据库表名，通过Model方法传参时默认将结构体名称的小写蛇形命名作为表名，当传入的结构体名称跟实际表名不一致时需要明确用Table方法指定表名
+设置数据库表名，通过Model方法传参时默认将结构体名称的小写蛇形命名作为表名，
+当传入的结构体名称跟实际表名不一致时需要明确用Table方法指定表名或实现TableName()接口
 
 ### Use方法
 

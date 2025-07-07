@@ -300,8 +300,8 @@ import (
 )
 
 const (
-	//MysslDSN = "root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4"
     MysqlDSN = "mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4"
+	//MysqlDSN = "root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4"
 	//PostgresDSN  = "postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public")
 	//GaussDSN  = "opengauss://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public")
 	//MssqlDSN  = "mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false")
@@ -987,26 +987,31 @@ func SwitchDatabase(db *sqlca.Engine) (err error){
 ### 前置和后置操作接口定义
 
 ```go
+//查询前置和后置hook接口
+type BeforeQueryInterface interface {
+    BeforeQuery(db *sqlca.Engine) error
+}
+type AfterQueryInterface interface {
+    AfterQuery(db *sqlca.Engine) error
+}
+//插入前置和后置hook接口
 type BeforeCreateInterface interface {
 	BeforeCreate(db *sqlca.Engine) error
 }
-
 type AfterCreateInterface interface {
 	AfterCreate(db *sqlca.Engine) error
 }
-
+//更新前置和后置hook接口
 type BeforeUpdateInterface interface {
 	BeforeUpdate(db *sqlca.Engine) error
 }
-
 type AfterUpdateInterface interface {
 	AfterUpdate(db *sqlca.Engine) error
 }
-
+//删除前置和后置hook接口
 type BeforeDeleteInterface interface {
 	BeforeDelete(db *sqlca.Engine) error
 }
-
 type AfterDeleteInterface interface {
 	AfterDelete(db *sqlca.Engine) error
 }
@@ -1068,9 +1073,6 @@ func QueryLike(db *sqlca.Engine) error {
 
 ### NewID
 当调用NewEngine时，指定SnowFlake选项后，可以用NewID生成一个雪花ID
-
-### NewFromTx
-传入一个tx对象，并返回一个Engine对象，用于在事务中执行sql操作。
 
 ### ForUpdate
 在查询语句中添加FOR UPDATE关键字，用于查询时锁定记录，避免并发修改。仅用于MySQL数据库。

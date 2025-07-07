@@ -25,6 +25,10 @@ var (
 	inQuestion = "?"
 )
 
+func NewSqlClause(fmts string, args ...any) *types.SqlClauseValue {
+	return types.NewSqlClauseValue(fmts, args...)
+}
+
 // convertCamelToSnake converts a CamelCase string to snake_case
 func convertCamelToSnake(s string) string {
 	// 使用正则表达式匹配大写字母前的所有字符

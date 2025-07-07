@@ -2,6 +2,7 @@ package types
 
 import (
 	"database/sql/driver"
+	"fmt"
 	"strings"
 )
 
@@ -248,6 +249,11 @@ func (s SqlNull) Value() (driver.Value, error) {
 
 type SqlClauseValue struct {
 	Val string
+}
+
+func NewSqlClauseValue(fmts string, args ...any) *SqlClauseValue {
+	val := fmt.Sprintf(fmts, args...)
+	return &SqlClauseValue{Val: val}
 }
 
 func (s SqlClauseValue) String() string {

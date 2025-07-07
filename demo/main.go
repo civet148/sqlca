@@ -246,7 +246,7 @@ func QueryByCondition(db *sqlca.Engine) error {
 	var dos []*models.InventoryData
 	//SELECT * FROM inventory_data WHERE `quantity` > 0 and is_frozen IN (0,1) AND create_time >= '2024-10-01 11:35:14' ORDER BY create_time DESC
 	count, err = db.Model(&dos).
-		Where("is_frozen in (?)", []int{0, 1}).
+		Where("is_frozen in (?)", []int{models.FrozenState_False, models.FrozenState_Ture}).
 		//In("is_frozen", []int{0, 1}).
 		Gt("quantity", 0).
 		Gte("create_time", "2024-10-01 11:35:14").

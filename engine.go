@@ -1126,9 +1126,9 @@ func (e *Engine) NoVerbose() *Engine {
 func (e *Engine) Like(strColumn, keyword string) *Engine {
 	switch e.adapterType {
 	case types.AdapterSqlx_MySQL:
-		e.And("LOCATE('%s', %s)", keyword, strColumn)
+		e.And(fmt.Sprintf("LOCATE('%s', %s)", keyword, strColumn))
 	default:
-		e.And("%s LIKE '%%%s%%'", strColumn, keyword)
+		e.And(fmt.Sprintf("%s LIKE '%%%s%%'", strColumn, keyword))
 	}
 	return e
 }
@@ -1223,28 +1223,23 @@ func (e *Engine) jsonExpr(strColumn, strPath string) string {
 }
 
 func (e *Engine) JsonEqual(strColumn, strPath string, value any) *Engine {
-	return e.And("%s = '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
+	return e.And("%s = ?", e.jsonExpr(strColumn, strPath), value)
 }
 
 func (e *Engine) JsonGreater(strColumn, strPath string, value any) *Engine {
-	return e.And("%s > '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
+	return e.And("%s > ?", e.jsonExpr(strColumn, strPath), value)
 }
 
 func (e *Engine) JsonLess(strColumn, strPath string, value any) *Engine {
-	return e.And("%s< '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
+	return e.And("%s< ?", e.jsonExpr(strColumn, strPath), value)
 }
 
 func (e *Engine) JsonGreaterEqual(strColumn, strPath string, value any) *Engine {
-	return e.And("%s >= '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
+	return e.And("%s >= ?", e.jsonExpr(strColumn, strPath), value)
 }
 
 func (e *Engine) JsonLessEqual(strColumn, strPath string, value any) *Engine {
-	return e.And("%s <= '%v'", e.jsonExpr(strColumn, strPath), indirectValue(value))
-}
-
-// SELECT * FROM news WHERE JSON_CONTAINS(tags,  JSON_ARRAY("#Blockchain"))
-func (e *Engine) JsonContainArray(strColumn string, value any) *Engine {
-	return e.And("JSON_CONTAINS(%s, JSON_ARRAY('%v'))", strColumn, indirectValue(value))
+	return e.And("%s <= ?", e.jsonExpr(strColumn, strPath), value)
 }
 
 func (e *Engine) NewID() ID {

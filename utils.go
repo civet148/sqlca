@@ -156,10 +156,10 @@ func (s *StringBuilder) Args() []interface{} {
 	return s.args
 }
 
-func indirectValue(v any, keepSlices ...bool) any {
-	var keepSlice bool
-	if len(keepSlices) > 0 {
-		keepSlice = keepSlices[0]
+func indirectValue(v any, isClauses ...bool) any {
+	var isClauseVal bool
+	if len(isClauses) > 0 {
+		isClauseVal = isClauses[0]
 	}
 
 	if v == nil {
@@ -197,7 +197,7 @@ func indirectValue(v any, keepSlices ...bool) any {
 			}
 		}
 	case reflect.Slice, reflect.Array:
-		if !keepSlice {
+		if !isClauseVal {
 			data, err := json.Marshal(value.Interface())
 			if err == nil {
 				return string(data)
@@ -224,22 +224,19 @@ func indirectValue(v any, keepSlices ...bool) any {
 }
 
 func quotedValue(v any) (sv string) {
-	typ := reflect.TypeOf(v)
 	val := reflect.ValueOf(v)
+	val = reflect.Indirect(val)
 
 	switch val.Kind() {
 	case reflect.String:
 		sv = fmt.Sprintf("'%v'", v.(string))
 	case reflect.Struct:
-		sn, ok := v.(types.SqlNull)
+		sn, ok := isSqlNull(v)
 		if ok {
-			// 判断类型名称和包路径是否一致
-			if typ.Name() == "SqlNull" && typ.PkgPath() == reflect.TypeOf(types.SqlNull{}).PkgPath() {
-				sv = sn.String()
-			}
+			sv = sn.String()
 		} else {
 			var scv types.SqlClauseValue
-			if scv, ok = v.(types.SqlClauseValue); ok {
+			if scv, ok = isSqlClauseValue(v); ok {
 				return scv.String()
 			} else {
 				sv = fmt.Sprintf("'%v'", indirectValue(v))
@@ -251,8 +248,30 @@ func quotedValue(v any) (sv string) {
 	return sv
 }
 
+func isSqlNull(v any) (types.SqlNull, bool) {
+	val := reflect.ValueOf(v)
+	val = reflect.Indirect(val)
+	typ := val.Type()
+	// 判断类型名称和包路径是否一致
+	if typ.Name() == "SqlNull" && typ.PkgPath() == reflect.TypeOf(types.SqlNull{}).PkgPath() {
+		return val.Interface().(types.SqlNull), true
+	}
+	return types.SqlNull{}, false
+}
+
+func isSqlClauseValue(v any) (types.SqlClauseValue, bool) {
+	val := reflect.ValueOf(v)
+	val = reflect.Indirect(val)
+	typ := val.Type()
+	// 判断类型名称和包路径是否一致
+	if typ.Name() == "SqlClauseValue" && typ.PkgPath() == reflect.TypeOf(types.SqlClauseValue{}).PkgPath() {
+		return val.Interface().(types.SqlClauseValue), true
+	}
+	return types.SqlClauseValue{}, false
+}
+
 // 判断是否为IN、NOT IN条件
-func shouldKeepSlice(query string, args ...any) bool {
+func hasClauseSlice(query string, args ...any) bool {
 	var upper = strings.ToUpper(query)
 	if strings.Contains(upper, inBlank) && strings.Contains(upper, inQuestion) {
 		return true

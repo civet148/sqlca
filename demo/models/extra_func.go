@@ -10,44 +10,44 @@ func NowTime() string {
 }
 
 func (do *InventoryData) BeforeQuery(db *sqlca.Engine) error {
-	//log.Infof("%+v", do)
+	//log.Debugf("%+v", do)
 	return nil
 }
 
 func (do *InventoryData) BeforeCreate(db *sqlca.Engine) error {
 	do.CreateTime = NowTime()
 	do.UpdateTime = NowTime()
-	//log.Infof("%+v", do)
+	//log.Debugf("%+v", do)
 	return nil
 }
 
 func (do *InventoryData) BeforeUpdate(db *sqlca.Engine) error {
 	do.UpdateTime = NowTime()
-	//log.Infof("%+v", do)
+	//log.Debugf("%+v", do)
 	return nil
 }
 
 func (do *InventoryData) BeforeDelete(db *sqlca.Engine) error {
-	//log.Infof("%+v", do)
+	//log.Debugf("%+v", do)
 	return nil
 }
 
 func (do *InventoryData) AfterQuery(db *sqlca.Engine) error {
-	//log.Infof("%+v", do)
+	//log.Debugf("%+v", do)
 	return nil
 }
 
 func (do *InventoryData) AfterCreate(db *sqlca.Engine) error {
-	//log.Infof("%+v", do)
+	//log.Debugf("%+v", do)
 	return nil
 }
 
 func (do *InventoryData) AfterUpdate(db *sqlca.Engine) error {
-	//log.Infof("%+v", do)
+	//log.Debugf("%+v", do)
 	return nil
 }
 
 func (do *InventoryData) AfterDelete(db *sqlca.Engine) error {
-	//log.Infof("%+v", do)
+	//log.Debugf("%+v", do)
 	return nil
 }

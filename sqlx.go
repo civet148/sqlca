@@ -242,7 +242,7 @@ func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err
 
 func (e *Engine) txQuery(dest interface{}, strSql string, args ...any) (count int64, err error) {
 	var rows *sql.Rows
-	strSql = e.buildSqlExprs(strSql, args...).RawSQL(e.GetAdapter())
+	strSql = e.buildSqlExpr(strSql, args...).RawSQL(e.GetAdapter())
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("query tx [%s]", strSql))
 
@@ -583,7 +583,7 @@ func (e *Engine) getQuoteColumnValue(v any) (strValue string) {
 }
 
 func (e *Engine) setWhere(query string, args ...any) {
-	e.andConditions = append(e.andConditions, e.buildSqlExprs(query, args...))
+	e.andConditions = append(e.andConditions, e.buildSqlExpr(query, args...))
 }
 
 func (e *Engine) getModelType() types.ModelType {
@@ -1091,18 +1091,16 @@ func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) 
 	return
 }
 
-func (e *Engine) buildSqlExprs(query string, args ...any) types.Expr {
-	var isClauseSlice bool
+func (e *Engine) buildSqlExpr(query string, args ...any) types.Expr {
 	if !strings.Contains(query, "?") && len(args) > 0 {
 		query = fmt.Sprintf("%s = ?", query)
-	} else {
-		if hasClauseSlice(query, args...) {
-			isClauseSlice = true
-		}
 	}
+
+	query, args = expandSqlxSlice(query, args...)
+
 	var vars []any
 	for _, arg := range args {
-		vars = append(vars, indirectValue(arg, isClauseSlice))
+		vars = append(vars, indirectValue(arg))
 	}
 	return types.Expr{SQL: query, Vars: vars}
 }
@@ -1364,7 +1362,7 @@ func (e *Engine) setLockShareMode() *Engine {
 
 func (e *Engine) setAnd(query string, args ...any) *Engine {
 	assert(query, "query statement is empty")
-	expr := e.buildSqlExprs(query, args...)
+	expr := e.buildSqlExpr(query, args...)
 	e.andConditions = append(e.andConditions, expr)
 	return e
 }
@@ -1400,18 +1398,8 @@ func (e *Engine) parseQueryOrMap(query any) {
 	var qss []types.Expr
 	where := query.(map[string]any)
 	for k, v := range where {
-		if strings.Contains(k, "?") {
-			qss = append(qss, types.Expr{
-				SQL:  k,
-				Vars: []any{v},
-			})
-		} else {
-			k = fmt.Sprintf("%s = ?", k)
-			qss = append(qss, types.Expr{
-				SQL:  k,
-				Vars: []any{v},
-			})
-		}
+		expr := e.buildSqlExpr(k, v)
+		qss = append(qss, expr)
 	}
 	e.setOr(qss...)
 }
@@ -1422,7 +1410,7 @@ func (e *Engine) setNormalCondition(query any, args ...any) *Engine {
 	switch qt {
 	case queryInterface_String:
 		strSql = query.(string)
-		expr := e.buildSqlExprs(strSql, args...)
+		expr := e.buildSqlExpr(strSql, args...)
 		e.andConditions = append(e.andConditions, expr)
 	case queryInterface_Map:
 		e.parseQueryAndMap(query)

@@ -420,8 +420,8 @@ func QueryWithJsonColumn(db *sqlca.Engine) error {
 func QueryRawSQL(db *sqlca.Engine) error {
 	var rows []*models.InventoryData
 
-	//SELECT * FROM inventory_data  WHERE is_frozen =  '0' AND quantity > '10'
-	_, err := db.Model(&rows).QueryRaw("SELECT * FROM inventory_data WHERE is_frozen IN (?) AND quantity > ?", []int{0, 1}, 10)
+	//SELECT * FROM inventory_data  WHERE is_frozen IN (1) AND quantity > '10'
+	_, err := db.Model(&rows).QueryRaw("SELECT * FROM inventory_data WHERE is_frozen in (?) AND quantity > ?", []models.FrozenState{0, 1}, 10)
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}

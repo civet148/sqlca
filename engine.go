@@ -345,10 +345,8 @@ func (e *Engine) Or(query any, args ...any) *Engine {
 	case queryInterface_String:
 		strSql = query.(string)
 		assert(strSql, "query statement is empty")
-		e.setOr(types.Expr{
-			SQL:  strSql,
-			Vars: args,
-		})
+		expr := e.buildSqlExpr(strSql, args...)
+		e.setOr(expr)
 	case queryInterface_Map:
 		e.parseQueryOrMap(query)
 	}
@@ -415,7 +413,7 @@ func (e *Engine) Offset(offset int) *Engine {
 
 // Having having [condition]
 func (e *Engine) Having(strFmt string, args ...any) *Engine {
-	expr := e.buildSqlExprs(strFmt, args...)
+	expr := e.buildSqlExpr(strFmt, args...)
 	e.setHaving(expr.RawSQL(e.GetAdapter()))
 	return e
 }
@@ -450,20 +448,14 @@ func (e *Engine) Desc(columns ...string) *Engine {
 
 // In `field_name` IN ('1','2',...)
 func (e *Engine) In(strColumn string, args ...any) *Engine {
-	v := types.Expr{
-		SQL:  strColumn,
-		Vars: args,
-	}
+	v := e.buildSqlExpr(strColumn, args...)
 	e.inConditions = append(e.inConditions, v)
 	return e
 }
 
 // NotIn `field_name` NOT IN ('1','2',...)
 func (e *Engine) NotIn(strColumn string, args ...any) *Engine {
-	v := types.Expr{
-		SQL:  strColumn,
-		Vars: args,
-	}
+	v := e.buildSqlExpr(strColumn, args...)
 	e.notConditions = append(e.notConditions, v)
 	return e
 }
@@ -716,8 +708,9 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 	//assert(e.model, "model is nil, please call Model method first")
 
 	var rows *sqlx.Rows
-	var expr = e.buildSqlExprs(query, args...)
-	strSql := expr.RawSQL(e.GetAdapter())
+	var strSql string
+	var expr = e.buildSqlExpr(query, args...)
+	strSql = expr.RawSQL(e.GetAdapter())
 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
@@ -728,6 +721,7 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 	} else {
 		queryer = e.getDB()
 	}
+	log.Debugf("query [%s] args %v", expr.SQL, expr.Vars)
 
 	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
 		return
@@ -749,7 +743,7 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err error) {
 	assert(query, "query sql string is nil")
 	//assert(e.model, "model is nil, please call Model method first")
-	var expr = e.buildSqlExprs(query, args...)
+	var expr = e.buildSqlExpr(query, args...)
 	strSql := expr.RawSQL(e.GetAdapter())
 
 	c := e.Counter()
@@ -787,7 +781,7 @@ func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err er
 func (e *Engine) ExecRaw(query string, args ...any) (rowsAffected, lastInsertId int64, err error) {
 
 	assert(query, "query sql string is nil")
-	var expr = e.buildSqlExprs(query, args...)
+	var expr = e.buildSqlExpr(query, args...)
 	strSql := expr.RawSQL(e.GetAdapter())
 	var execer sqlx.Execer
 	if e.operType == types.OperType_Tx {
@@ -844,7 +838,7 @@ func (e *Engine) TxGet(dest any, strSql string, args ...any) (count int64, err e
 func (e *Engine) TxExec(query string, args ...any) (lastInsertId, rowsAffected int64, err error) {
 	assert(e.tx, "tx instance is nil")
 	var result sql.Result
-	var expr = e.buildSqlExprs(query, args...)
+	var expr = e.buildSqlExpr(query, args...)
 	strSql := expr.RawSQL(e.GetAdapter())
 
 	c := e.Counter()
@@ -1002,7 +996,7 @@ func (e *Engine) Case(strThen string, strWhen string, args ...any) *CaseWhen {
 	}
 	cw.whens = append(cw.whens, &when{
 		strThen: strThen,
-		strWhen: e.buildSqlExprs(strWhen, args...).RawSQL(e.GetAdapter()),
+		strWhen: e.buildSqlExpr(strWhen, args...).RawSQL(e.GetAdapter()),
 	})
 	return cw
 }

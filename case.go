@@ -17,7 +17,7 @@ type CaseWhen struct {
 }
 
 func (c *CaseWhen) Case(strThen string, strWhen string, args ...interface{}) *CaseWhen {
-	expr := c.e.buildSqlExprs(strWhen, args...)
+	expr := c.e.buildSqlExpr(strWhen, args...)
 	c.whens = append(c.whens, &when{
 		strThen: strThen,
 		strWhen: expr.RawSQL(c.e.GetAdapter()),

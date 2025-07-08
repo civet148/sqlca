@@ -47,7 +47,7 @@ type Join struct {
 
 func (j *Join) On(strOn string, args ...interface{}) *Engine {
 	e := j.e
-	j.strOn = e.buildSqlExprs(strOn, args...).RawSQL()
+	j.strOn = e.buildSqlExpr(strOn, args...).RawSQL()
 	e.joins = append(e.joins, j)
 	return e
 }

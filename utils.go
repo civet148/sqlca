@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v3/types"
+	"github.com/jmoiron/sqlx"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -18,11 +19,6 @@ const (
 	queryInterface_Unknown queryInterfaceType = 0
 	queryInterface_String  queryInterfaceType = 1
 	queryInterface_Map     queryInterfaceType = 2
-)
-
-var (
-	inBlank    = " IN "
-	inQuestion = "?"
 )
 
 func NewSqlClause(fmts string, args ...any) *types.SqlClauseValue {
@@ -207,14 +203,13 @@ func indirectValue(v any, isClauses ...bool) any {
 				return string(data)
 			}
 		} else {
-			var strValues []string
+			var vars []any
 			var val = reflect.ValueOf(v)
 			n := val.Len()
 			for i := 0; i < n; i++ {
-				sv := fmt.Sprintf("'%v'", indirectValue(val.Index(i).Interface()))
-				strValues = append(strValues, sv)
+				vars = append(vars, indirectValue(val.Index(i).Interface()))
 			}
-			return types.SqlClauseValue{Val: strings.Join(strValues, ",")}
+			return vars
 		}
 	case reflect.Map:
 		data, err := json.Marshal(value.Interface())
@@ -274,11 +269,8 @@ func isSqlClauseValue(v any) (types.SqlClauseValue, bool) {
 	return types.SqlClauseValue{}, false
 }
 
-// 判断是否为IN、NOT IN条件
-func hasClauseSlice(query string, args ...any) bool {
-	var upper = strings.ToUpper(query)
-	if strings.Contains(upper, inBlank) && strings.Contains(upper, inQuestion) {
-		return true
-	}
-	return false
+// 展开数组
+func expandSqlxSlice(query string, args ...any) (string, []any) {
+	query, args, _ = sqlx.In(query, args...)
+	return query, args
 }

@@ -721,7 +721,6 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 	} else {
 		queryer = e.getDB()
 	}
-	log.Debugf("query [%s] args %v", expr.SQL, expr.Vars)
 
 	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
 		return

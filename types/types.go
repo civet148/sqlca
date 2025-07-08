@@ -7,6 +7,9 @@ import (
 )
 
 const (
+	SqlcaContextKey = "sqlca_engine_key"
+)
+const (
 	TAG_NAME_DB       = "db"
 	TAG_NAME_JSON     = "json"
 	TAG_NAME_PROTOBUF = "protobuf"

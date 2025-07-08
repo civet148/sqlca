@@ -1255,3 +1255,18 @@ func (e *Engine) LockShareMode() *Engine {
 	}
 	return e.setLockShareMode()
 }
+
+func (e *Engine) NewContext(ctx context.Context) context.Context {
+	ctx = context.WithValue(ctx, types.SqlcaContextKey, e)
+	return ctx
+}
+
+func NewContext(ctx context.Context, e *Engine) context.Context {
+	ctx = context.WithValue(ctx, types.SqlcaContextKey, e)
+	return ctx
+}
+
+func FromContext(ctx context.Context) *Engine {
+	v := ctx.Value(types.SqlcaContextKey)
+	return v.(*Engine)
+}

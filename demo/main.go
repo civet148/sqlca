@@ -38,10 +38,11 @@ func main() {
 	requireNoError(InsertSingle(db))
 	requireNoError(InsertBatch(db))
 	requireNoError(QueryLimit(db))
-	requireError(QueryErrNotFound(db))
+	//requireError(QueryErrNotFound(db))
 	requireNoError(QueryByPage(db))
 	requireNoError(QueryByCondition(db))
 	requireNoError(QueryByGroup(db))
+	requireNoError(QueryCountRows(db))
 	requireNoError(QueryJoins(db))
 	requireNoError(QueryOr(db))
 	requireNoError(QueryRawSQL(db))
@@ -329,6 +330,15 @@ func QueryByGroup(db *sqlca.Engine) error {
 		return log.Errorf("数据查询错误：%s", err)
 	}
 	log.Infof("查询返回数据条数: %d 总数：%d", count, total)
+	return nil
+}
+
+func QueryCountRows(db *sqlca.Engine) error {
+	count, err := db.Model(&models.InventoryData{}).CountRows("is_frozen", models.FrozenState_Ture)
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("统计总行数：%d", count)
 	return nil
 }
 

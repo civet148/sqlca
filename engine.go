@@ -514,7 +514,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 		return 0, 0, err
 	}
 
-	strCountSql := e.makeSqlxQueryCount()
+	strCountSql := e.makeSqlxQueryCount(false)
 	rowsAffected, total, err = e.execQueryEx(strCountSql)
 	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err != nil {
@@ -644,12 +644,8 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
 	var r sql.Result
-	var execer sqlx.Execer
-	if e.operType == types.OperType_Tx {
-		execer = e.tx
-	} else {
-		execer = e.getDB()
-	}
+	var execer = e.getExecer()
+
 	query, args := e.makeSQL(types.OperType_Update, false)
 	r, err = execer.Exec(query, args...)
 	if err != nil {
@@ -677,12 +673,8 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
-	var execer sqlx.Execer
-	if e.operType == types.OperType_Tx {
-		execer = e.tx
-	} else {
-		execer = e.getDB()
-	}
+	var execer = e.getExecer()
+
 	var r sql.Result
 	r, err = execer.Exec(strSql, args...)
 	if err != nil {
@@ -782,12 +774,7 @@ func (e *Engine) ExecRaw(query string, args ...any) (rowsAffected, lastInsertId 
 	assert(query, "query sql string is nil")
 	var expr = e.buildSqlExpr(query, args...)
 	strSql := expr.RawSQL(e.GetAdapter())
-	var execer sqlx.Execer
-	if e.operType == types.OperType_Tx {
-		execer = e.tx
-	} else {
-		execer = e.getDB()
-	}
+	var execer = e.getExecer()
 
 	var r sql.Result
 
@@ -823,6 +810,24 @@ func (e *Engine) Close() *Engine {
 func (e *Engine) AutoRollback() *Engine {
 	e.bAutoRollback = true
 	return e
+}
+
+func (e *Engine) CountRows(query string, args ...any) (count int64, err error) {
+	assert(e.strDatabaseName, "table name requires")
+	e.And(query, args...)
+	strCountSql := e.makeSqlxQueryCount(true)
+	var queryer = e.getQueryer()
+
+	var rowsCount *sql.Rows
+	if rowsCount, err = queryer.Query(strCountSql); err != nil {
+		return 0, err
+	}
+	e.verbose("caller [%v] SQL [%s]", e.getCaller(2), strCountSql)
+	defer rowsCount.Close()
+	for rowsCount.Next() {
+		_ = rowsCount.Scan(&count)
+	}
+	return count, nil
 }
 
 func (e *Engine) TxBegin() (*Engine, error) {

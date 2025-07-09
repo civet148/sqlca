@@ -178,15 +178,9 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 func (e *Engine) execQuery() (rowsAffected int64, err error) {
 	var query string
 	var args []any
-	var db = e.getDB()
-	var queryer sqlx.Queryer
-	_ = queryer
+	var queryer = e.getQueryer()
 	query, args = e.makeSqlxQuery(false)
-	if e.operType == types.OperType_Tx {
-		queryer = sqlx.Queryer(e.tx)
-	} else {
-		queryer = sqlx.Queryer(db)
-	}
+
 	var rows *sql.Rows
 
 	//log.Debugf("query [%v] args %v", query, args)
@@ -206,16 +200,10 @@ func (e *Engine) execQuery() (rowsAffected int64, err error) {
 func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err error) {
 	var query string
 	var args []any
-	var db = e.getDB()
-	var queryer sqlx.Queryer
-	_ = queryer
-	query, args = e.makeSqlxQuery(false)
-	if e.operType == types.OperType_Tx {
-		queryer = sqlx.Queryer(e.tx)
-	} else {
-		queryer = sqlx.Queryer(db)
-	}
+	var queryer = e.getQueryer()
 	var rows *sql.Rows
+
+	query, args = e.makeSqlxQuery(false)
 
 	//log.Debugf("query [%v] args %v", query, args)
 	rows, err = queryer.Query(query, args...)
@@ -235,7 +223,7 @@ func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err
 
 	defer rowsCount.Close()
 	for rowsCount.Next() {
-		total++
+		rowsCount.Scan(&total)
 	}
 	return rowsAffected, total, nil
 }
@@ -1261,20 +1249,38 @@ func (e *Engine) makeSqlxQuery(rawSQL bool) (strSqlx string, args []any) {
 	return
 }
 
-func (e *Engine) makeSqlxQueryCount() (strSqlx string) {
+func (e *Engine) makeSqlxQueryCount(withLimit bool) (strSqlx string) {
 	strWhere, _ := e.makeWhereCondition(types.OperType_Query, true)
 
+	var strLimit string
+	if withLimit {
+		strLimit = e.getLimit()
+	}
+	var groupOrDistinct bool
+	var strRawColumns = e.getRawColumns()
+	if e.getGroupBy() != "" || e.getDistinct() != "" {
+		groupOrDistinct = true
+		if len(e.groupByColumns) != 0 {
+			strRawColumns = e.groupByColumns[0]
+		}
+	} else {
+		strRawColumns = types.DATABASE_KEY_NAME_COUNT + "(" + e.GetPkName() + ")"
+	}
 	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
-		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v",
-			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
+			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), strLimit, strRawColumns, types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
 	default:
-		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
-			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
-			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), e.getOffset())
+		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v",
+			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), strRawColumns, types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), strLimit, e.getOffset())
 	}
-	return
+	if groupOrDistinct {
+		strSqlx = "SELECT COUNT(*) FROM (" + strSqlx + ") t_counter"
+	}
+	//log.Debugf("count sql [%s]", strSqlx)
+	return strSqlx
 }
 
 func (e *Engine) makeSqlxForUpdate(rawSQL bool) (strSql string, args []any) {
@@ -1426,10 +1432,30 @@ func (e *Engine) verbose(msg string, args ...any) {
 		}
 	}
 	if !e.noVerbose {
+		msg = strings.TrimSpace(msg)
 		if isError {
 			log.Errorf(msg, args...)
 		} else {
 			log.Debugf(msg, args...)
 		}
 	}
+}
+
+func (e *Engine) getQueryer() sqlx.Queryer {
+	var queryer sqlx.Queryer
+	if e.operType == types.OperType_Tx {
+		queryer = sqlx.Queryer(e.tx)
+	} else {
+		queryer = sqlx.Queryer(e.getDB())
+	}
+	return queryer
+}
+func (e *Engine) getExecer() sqlx.Execer {
+	var execer sqlx.Execer
+	if e.operType == types.OperType_Tx {
+		execer = sqlx.Execer(e.tx)
+	} else {
+		execer = sqlx.Execer(e.getDB())
+	}
+	return execer
 }

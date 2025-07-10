@@ -152,6 +152,7 @@ func (e *Engine) clone(models ...any) *Engine {
 		operType:        e.operType,
 		idgen:           e.idgen,
 		options:         e.options,
+		insertIgnore:    e.insertIgnore,
 	}
 	engine.setModel(models...)
 	return engine
@@ -1304,16 +1305,19 @@ func (e *Engine) makeSqlxUpdate(rawSQL bool) (strSqlx string, args []any) {
 }
 
 func (e *Engine) makeSqlxInsert() (strSqlx string) {
-
+	var insertInto = types.DATABASE_KEY_NAME_INSERT
+	if e.insertIgnore {
+		insertInto = types.DATABASE_KEY_NAME_INSERT_IGNORE
+	}
 	strColumns, strValues := e.getInsertColumnsAndValues()
-	strSqlx = fmt.Sprintf("%v %v %v %v %v", types.DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, types.DATABASE_KEY_NAME_VALUES, strValues)
+	strSqlx = fmt.Sprintf("%v %v %v %v %v", insertInto, e.getTableName(), strColumns, types.DATABASE_KEY_NAME_VALUES, strValues)
 	return
 }
 
 func (e *Engine) makeSqlxUpsert() (strSqlx string) {
-
 	strColumns, strValues := e.getInsertColumnsAndValues()
 	strOnConflictUpdates := e.getOnConflictUpdates()
+
 	strSqlx = fmt.Sprintf("%v %v %v %v %v %v", types.DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, types.DATABASE_KEY_NAME_VALUES, strValues, strOnConflictUpdates)
 	return
 }

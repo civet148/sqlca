@@ -468,8 +468,12 @@ func (e *Engine) exist(src []string, s string) bool {
 func (e *Engine) appendStrings(src []string, dest ...string) []string {
 	//check duplicated elements
 	for _, v := range dest {
-		if !e.exist(src, v) {
-			src = append(src, v)
+		ss := strings.Split(v, ",")
+		for _, s := range ss {
+			ts := strings.TrimSpace(s)
+			if !e.exist(src, ts) {
+				src = append(src, ts)
+			}
 		}
 	}
 	return src

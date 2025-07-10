@@ -324,7 +324,7 @@ func QueryByGroup(db *sqlca.Engine) error {
 		Gt("quantity", 0).
 		Eq("is_frozen", 0).
 		Gte("create_time", "2024-10-01 11:35:14").
-		GroupBy("create_id").
+		GroupBy("create_id", "create_name").
 		QueryEx()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)

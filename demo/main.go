@@ -98,10 +98,12 @@ func InsertSingle(db *sqlca.Engine) error {
 		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
 		VALUES ('1859078192380252161','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','轮胎','SNO_002','2000','210','{}')
 	*/
-	_, err = db.Model(&do).Insert()
+	var rowsAffected int64
+	_, rowsAffected, err = db.Model(&do).Insert()
 	if err != nil {
 		return log.Errorf("数据插入错误: %s", err)
 	}
+	log.Infof("插入数据数量：%v", rowsAffected)
 	return nil
 }
 
@@ -151,16 +153,18 @@ func InsertBatch(db *sqlca.Engine) error {
 
 	var err error
 	/*
-		INSERT INTO inventory_data
+		INSERT IGNORE INTO inventory_data
 			(`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
 		VALUES
 			('1867379968636358656','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','齿轮','SNO_001','1000','10.5','{\"avg_price\":\".8\",\"specs_value\":\"齿数：32\"}'),
 			('1867379968636358657','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','轮胎','SNO_002','2000','210','{\"avg_price\":\"450.5\",\"specs_value\":\"17英寸\"}')
 	*/
-	_, err = db.Model(&dos).Insert()
+	var rowsAffected int64
+	_, rowsAffected, err = db.Model(&dos).Ignore().Insert()
 	if err != nil {
 		return log.Errorf("数据插入错误: %s", err)
 	}
+	log.Infof("批量数据插入数量：%v", rowsAffected)
 	return nil
 }
 
@@ -546,7 +550,7 @@ func Transaction(db *sqlca.Engine) error {
 	//***************** 执行事务操作 *****************
 	quantity := float64(20)
 	weight := float64(200.3)
-	_, err = tx.Model(&models.InventoryIn{
+	_, _, err = tx.Model(&models.InventoryIn{
 		Id:         uint64(db.NewID()),
 		CreateId:   1,
 		CreateName: "admin",
@@ -605,7 +609,7 @@ func TransactionWrapper(db *sqlca.Engine) error {
 		//***************** 执行事务操作 *****************
 		quantity := float64(20)
 		weight := float64(200.3)
-		_, err = tx.Model(&models.InventoryIn{
+		_, _, err = tx.Model(&models.InventoryIn{
 			Id:         uint64(db.NewID()),
 			CreateId:   1,
 			CreateName: "admin",

@@ -106,6 +106,7 @@ type Engine struct {
 	noVerbose        bool                   // no more verbose
 	idgen            *snowflake.Node        // snowflake id generator
 	hookMethods      *hookMethods           // hook methods
+	insertIgnore     bool                   // insert ignore when conflict
 }
 
 func init() {
@@ -535,15 +536,21 @@ func (e *Engine) MustFind() (rowsAffected int64, err error) {
 	return rowsAffected, err
 }
 
+// Ignore insert ignore when primary key conflict
+func (e *Engine) Ignore() *Engine {
+	e.insertIgnore = true
+	return e
+}
+
 // Insert orm insert
 // return last insert id and error, if err is not nil must be something wrong
 // NOTE: Model function is must be called before call this function
-func (e *Engine) Insert() (lastInsertId int64, err error) {
+func (e *Engine) Insert() (lastInsertId, rowsAffected int64, err error) {
 	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
 	defer e.cleanWhereCondition()
 	if err = e.execBeforeCreateHooks(); err != nil {
-		return 0, log.Errorf(err.Error())
+		return 0, 0, log.Errorf(err.Error())
 	}
 	var strSql string
 	strSql, _ = e.makeSQL(types.OperType_Insert, true)
@@ -562,16 +569,16 @@ func (e *Engine) Insert() (lastInsertId int64, err error) {
 	}
 
 	if e.operType == types.OperType_Tx {
-		lastInsertId, _, err = e.TxExec(strSql)
+		lastInsertId, rowsAffected, err = e.TxExec(strSql)
 	} else {
-		lastInsertId, _, err = e.mysqlExec(strSql)
+		lastInsertId, rowsAffected, err = e.mysqlExec(strSql)
 	}
 	if err != nil {
-		return 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
+		return 0, 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
 	}
 	e.verbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	if err = e.execAfterCreateHooks(); err != nil {
-		return 0, log.Errorf(err.Error())
+		return 0, 0, log.Errorf(err.Error())
 	}
 	return
 }

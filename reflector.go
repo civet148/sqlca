@@ -298,7 +298,7 @@ func (e *Engine) fetchRow(rows *sql.Rows, args ...any) (count int64, err error) 
 	return
 }
 
-func (e *Engine) getStructSliceKeyValues(excludeReadOnly bool) (keys []string, values [][]string) {
+func (e *Engine) getStructSliceKeyValues(excludeReadOnly bool) (keys []string, values [][]any) {
 
 	typ := reflect.TypeOf(e.model)
 	val := reflect.ValueOf(e.model)
@@ -321,7 +321,7 @@ func (e *Engine) getStructSliceKeyValues(excludeReadOnly bool) (keys []string, v
 				}
 
 				if elemTyp.Kind() == reflect.Struct {
-					var vs []string
+					var vs []any
 					keys, vs = e.getStructFieldValues(elemTyp, elemVal, excludeReadOnly)
 					values = append(values, vs)
 				}
@@ -336,11 +336,10 @@ func (e *Engine) getStructSliceKeyValues(excludeReadOnly bool) (keys []string, v
 	return
 }
 
-func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, excludeReadOnly bool) (keys, values []string) {
+func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, excludeReadOnly bool) (keys []string, values []any) {
 
 	if typ.Kind() == reflect.Struct {
 
-		var isBool bool
 		if val.Kind() == reflect.Ptr {
 			val = val.Elem()
 		}
@@ -353,18 +352,16 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 				typField.Type = typField.Type.Elem()
 				valField = valField.Elem()
 			}
-			if typField.Type.Kind() == reflect.Bool {
-				isBool = true
-			}
-			var strTagVal string
-			var strFieldVal string
+
+			var tagName string
+			var fieldVal any
+			tagName = e.getTagValue(typField)
 			if !valField.IsValid() || !valField.CanInterface() {
-				strFieldVal = fmt.Sprintf("%v", indirectValue(nil))
+				fieldVal = indirectValue(nil)
 			} else {
-				strTagVal = e.getTagValue(typField)
-				strFieldVal = fmt.Sprintf("%v", indirectValue(valField.Interface()))
+				fieldVal = indirectValue(valField.Interface())
 			}
-			if (strFieldVal == "" || strFieldVal == "0") && strTagVal == e.GetPkName() {
+			if (fieldVal == "" || fieldVal == "0") && tagName == e.GetPkName() {
 				continue
 			}
 			if excludeReadOnly {
@@ -373,14 +370,9 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 				}
 			}
 
-			//convert bool value to int value
-			if isBool {
-				strFieldVal = convertBoolString(strFieldVal)
-			}
-
-			if strTagVal != "" && strTagVal != types.SQLCA_TAG_VALUE_IGNORE {
-				keys = append(keys, strTagVal)
-				values = append(values, strFieldVal)
+			if tagName != "" && tagName != types.SQLCA_TAG_VALUE_IGNORE {
+				keys = append(keys, tagName)
+				values = append(values, fieldVal)
 			}
 		}
 	}
@@ -739,14 +731,4 @@ func convertBool2Int(v any) any {
 		}
 	}
 	return v
-}
-
-func convertBoolString(strVal string) string {
-
-	if strVal == "false" {
-		return "0"
-	} else if strVal == "true" {
-		return "1"
-	}
-	return strVal
 }

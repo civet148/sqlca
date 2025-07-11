@@ -38,7 +38,7 @@ func main() {
 	requireNoError(InsertSingle(db))
 	requireNoError(InsertBatch(db))
 	requireNoError(QueryLimit(db))
-	//requireError(QueryErrNotFound(db))
+	requireError(QueryErrNotFound(db))
 	requireNoError(QueryByPage(db))
 	requireNoError(QueryByCondition(db))
 	requireNoError(QueryByGroup(db))
@@ -54,6 +54,7 @@ func main() {
 	requireNoError(Transaction(db))
 	requireNoError(TransactionWrapper(db))
 	requireNoError(ExecRawSQL(db))
+	//requireNoError(InsertPoint(db))
 }
 
 func requireNoError(err error) {
@@ -126,10 +127,7 @@ func InsertBatch(db *sqlca.Engine) error {
 			SerialNo:   "SNO_001",
 			Quantity:   1000,
 			//Price:      10.5,
-			ProductExtra: &models.ProductExtraData{
-				SpecsValue: "齿数：32",
-				AvgPrice:   sqlca.NewDecimal(30.8),
-			},
+			ProductExtra: nil,
 		},
 		{
 			Id:         uint64(db.NewID()),
@@ -645,5 +643,45 @@ func TransactionWrapper(db *sqlca.Engine) error {
 	if err != nil {
 		return log.Errorf("事务失败：%s", err)
 	}
+	return nil
+}
+
+// 地理位置坐标插入
+func InsertPoint(db *sqlca.Engine) error {
+	//now := time.Now().Format(time.DateTime)
+	//price := 243.3
+	//_ = price
+	//do := &models.InventoryData{
+	//	Id:         uint64(db.NewID()),
+	//	CreateId:   1,
+	//	CreateName: "admin",
+	//	CreateTime: now,
+	//	UpdateId:   1,
+	//	UpdateName: "admin",
+	//	UpdateTime: now,
+	//	IsFrozen:   models.FrozenState_Ture,
+	//	Name:       "齿轮",
+	//	SerialNo:   "SNO_001",
+	//	Quantity:   1000,
+	//	Price:      &price,
+	//	Location: sqlca.Point{
+	//		X: 112.34232,
+	//		Y: -20.32432,
+	//	},
+	//}
+	//_, _, err := db.Model(&do).Insert()
+	//if err != nil {
+	//	return log.Errorf(err.Error())
+	//}
+	return nil
+}
+
+// 地理位置坐标查询
+func QueryPoint(db *sqlca.Engine) error {
+	return nil
+}
+
+// 地理位置坐标更新
+func UpdatePoint(db *sqlca.Engine) error {
 	return nil
 }

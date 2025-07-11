@@ -1021,7 +1021,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 
 	if typ.Kind() == reflect.Slice {
 		var cols2 []string
-		var values [][]string
+		var values [][]any
 		var valueQuoteSlice []string
 		var excludeIndexes []int
 		cols2, values = e.getStructSliceKeyValues(true)
@@ -1062,7 +1062,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 			if k == e.GetPkName() && e.isPkValueNil() {
 				continue
 			}
-			vq := fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()) // column value format
+			vq := fmt.Sprintf("%v", quotedValue(v)) // column value format
 			cols = append(cols, c)
 			vals = append(vals, vq)
 		}

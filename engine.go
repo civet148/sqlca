@@ -819,9 +819,8 @@ func (e *Engine) AutoRollback() *Engine {
 	return e
 }
 
-func (e *Engine) CountRows(query string, args ...any) (count int64, err error) {
+func (e *Engine) CountRows() (count int64, err error) {
 	assert(e.strDatabaseName, "table name requires")
-	e.And(query, args...)
 	strCountSql := e.makeSqlxQueryCount(true)
 	var queryer = e.getQueryer()
 

@@ -35,26 +35,26 @@ func main() {
 		return
 	}
 
-	requireNoError(InsertSingle(db))
-	requireNoError(InsertBatch(db))
-	requireNoError(QueryLimit(db))
-	requireError(QueryErrNotFound(db))
-	requireNoError(QueryByPage(db))
-	requireNoError(QueryByCondition(db))
-	requireNoError(QueryByGroup(db))
-	requireNoError(QueryCountRows(db))
-	requireNoError(QueryJoins(db))
-	requireNoError(QueryOr(db))
-	requireNoError(QueryRawSQL(db))
-	requireNoError(QueryByNormalVars(db))
-	requireNoError(QueryWithJsonColumn(db))
-	requireNoError(UpdateByModel(db))
-	requireNoError(UpdateByMap(db))
-	requireNoError(DeleteById(db))
-	requireNoError(Transaction(db))
-	requireNoError(TransactionWrapper(db))
-	requireNoError(ExecRawSQL(db))
-	//requireNoError(InsertPoint(db))
+	//requireNoError(InsertSingle(db))
+	//requireNoError(InsertBatch(db))
+	//requireNoError(QueryLimit(db))
+	//requireError(QueryErrNotFound(db))
+	//requireNoError(QueryByPage(db))
+	//requireNoError(QueryByCondition(db))
+	//requireNoError(QueryByGroup(db))
+	//requireNoError(QueryCountRows(db))
+	//requireNoError(QueryJoins(db))
+	//requireNoError(QueryOr(db))
+	//requireNoError(QueryRawSQL(db))
+	//requireNoError(QueryByNormalVars(db))
+	//requireNoError(QueryWithJsonColumn(db))
+	//requireNoError(UpdateByModel(db))
+	//requireNoError(UpdateByMap(db))
+	//requireNoError(DeleteById(db))
+	//requireNoError(Transaction(db))
+	//requireNoError(TransactionWrapper(db))
+	//requireNoError(ExecRawSQL(db))
+	requireNoError(UpsertPoint(db))
 }
 
 func requireNoError(err error) {
@@ -647,42 +647,44 @@ func TransactionWrapper(db *sqlca.Engine) error {
 	return nil
 }
 
-// 地理位置坐标插入
-func InsertPoint(db *sqlca.Engine) error {
-	//now := time.Now().Format(time.DateTime)
-	//price := 243.3
-	//_ = price
-	//do := &models.InventoryData{
-	//	Id:         uint64(db.NewID()),
-	//	CreateId:   1,
-	//	CreateName: "admin",
-	//	CreateTime: now,
-	//	UpdateId:   1,
-	//	UpdateName: "admin",
-	//	UpdateTime: now,
-	//	IsFrozen:   models.FrozenState_Ture,
-	//	Name:       "齿轮",
-	//	SerialNo:   "SNO_001",
-	//	Quantity:   1000,
-	//	Price:      &price,
-	//	Location: sqlca.Point{
-	//		X: 112.34232,
-	//		Y: -20.32432,
-	//	},
-	//}
-	//_, _, err := db.Model(&do).Insert()
-	//if err != nil {
-	//	return log.Errorf(err.Error())
-	//}
-	return nil
-}
+// 地理位置坐标插入/更新
+func UpsertPoint(db *sqlca.Engine) error {
+	now := time.Now().Format(time.DateTime)
+	price := 243.3
+	id := db.NewID()
+	do := &models.InventoryData{
+		Id:         uint64(id),
+		CreateId:   1,
+		CreateName: "admin",
+		CreateTime: now,
+		UpdateId:   1,
+		UpdateName: "admin",
+		UpdateTime: now,
+		IsFrozen:   models.FrozenState_Ture,
+		Name:       "齿轮",
+		SerialNo:   "SNO_001",
+		Quantity:   1000,
+		Price:      &price,
+		Location: sqlca.Point{
+			X: 112.34232,
+			Y: -20.32432,
+		},
+	}
+	_, _, err := db.Model(&do).Insert()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
 
-// 地理位置坐标查询
-func QueryPoint(db *sqlca.Engine) error {
-	return nil
-}
-
-// 地理位置坐标更新
-func UpdatePoint(db *sqlca.Engine) error {
+	_, err = db.Model(&do).Select("location").Update()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	var updates = map[string]any{
+		"location": sqlca.Point{X: 110.234, Y: -10.23},
+	}
+	_, err = db.Model(updates).Table("inventory_data").Id(id).Update()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
 	return nil
 }

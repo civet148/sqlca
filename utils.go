@@ -234,11 +234,16 @@ func quotedValue(v any) (sv string) {
 		if ok {
 			sv = sn.String()
 		} else {
-			var scv types.SqlClauseValue
-			if scv, ok = isSqlClauseValue(v); ok {
-				return scv.String()
+			if valuer, ok := val.Interface().(driver.Valuer); ok {
+				result, _ := valuer.Value()
+				sv = fmt.Sprintf("%v", result)
 			} else {
-				sv = fmt.Sprintf("'%v'", indirectValue(v))
+				var scv types.SqlClauseValue
+				if scv, ok = isSqlClauseValue(v); ok {
+					return scv.String()
+				} else {
+					sv = fmt.Sprintf("'%v'", indirectValue(v))
+				}
 			}
 		}
 	default:

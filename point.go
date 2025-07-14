@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"github.com/civet148/sqlca/v3/types"
 	"strconv"
 	"strings"
 )
@@ -16,7 +17,7 @@ type Point struct {
 
 // Value 实现driver.Valuer接口，将Point转换为数据库可存储的格式
 func (p Point) Value() (driver.Value, error) {
-	return fmt.Sprintf("POINT(%f,%f)", p.X, p.Y), nil
+	return types.NewSqlClauseValue("POINT(%f,%f)", p.X, p.Y), nil
 }
 
 // Scan 实现sql.Scanner接口，将数据库中的值转换为Point类型

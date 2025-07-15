@@ -686,5 +686,12 @@ func UpsertPoint(db *sqlca.Engine) error {
 	if err != nil {
 		return log.Errorf(err.Error())
 	}
+
+	var do2 *models.InventoryData
+	_, err = db.Model(&do2).Id(id).Query()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("do2 %+v", do2)
 	return nil
 }

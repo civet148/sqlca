@@ -674,7 +674,8 @@ func UpsertPoint(db *sqlca.Engine) error {
 	if err != nil {
 		return log.Errorf(err.Error())
 	}
-
+	do.Location.X = 111.23
+	do.Location.Y = -21.53
 	_, err = db.Model(&do).Select("location").Update()
 	if err != nil {
 		return log.Errorf(err.Error())

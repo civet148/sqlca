@@ -558,17 +558,18 @@ func QueryWithJsonColumn(db *sqlca.Engine) error {
 ```go
 // 获取查询结果行数
 func QueryCountRows(db *sqlca.Engine) error {
-	// SELECT COUNT(*) FROM inventory_data WHERE is_frozen = true
-	count, err := db.Model(&models.InventoryData{}).CountRows("is_frozen", models.FrozenState_Ture)
-	if err != nil {
-		return log.Errorf(err.Error())
-	}
-	log.Infof("select 统计总行数：%d", count)
-	
-	count, err = db.Model(&models.InventoryData{}).
-		GroupBy("create_id").
-		CountRows("create_time > ? AND is_frozen = ?", "2025-06-01 00:00:00", models.FrozenState_False)
-	log.Infof("group by 统计总行数：%d", count)
+    // SELECT COUNT(*) FROM inventory_data WHERE is_frozen = true
+    count, err := db.Model(&models.InventoryData{}).Where("is_frozen", models.FrozenState_Ture).CountRows()
+    if err != nil {
+    return log.Errorf(err.Error())
+    }
+    log.Infof("select 统计总行数：%d", count)
+
+    count, err = db.Model(&models.InventoryData{}).
+    GroupBy("create_id").
+    Where("create_time > ? AND is_frozen = ?", "2025-06-01 00:00:00", models.FrozenState_False).
+    CountRows()
+    log.Infof("group by 统计总行数：%d", count)
 	return nil
 }
 

@@ -460,7 +460,6 @@ func (e *Engine) getFetcher(rows *sql.Rows) (fetcher *Fetcher, err error) {
 		return
 	}
 	for i, v := range fetcher.arrValues {
-
 		fetcher.mapValues[fetcher.cols[i]] = string(v)
 	}
 	return
@@ -503,7 +502,6 @@ func (e *Engine) fetchToStruct(fetcher *Fetcher, typ reflect.Type, val reflect.V
 
 func (e *Engine) fetchToStructField(fetcher *Fetcher, typ reflect.Type, field reflect.StructField, val reflect.Value, ptr ...reflect.Value) {
 
-	//log.Debugf("typField name [%s] type [%s] valField can addr [%v]", field.Name, field.Type.Kind(), val.CanAddr())
 	switch typ.Kind() {
 	case reflect.Struct:
 		{
@@ -625,7 +623,6 @@ func handleTagValue(strTagName, strTagValue string) string {
 		for _, vv := range vs {
 			ss := strings.Split(vv, "=")
 			if len(ss) <= 1 {
-				//log.Warnf("protobuf tag value [%v] is not a invalid format", strTagValue)
 				continue
 			} else {
 				if ss[0] == types.PROTOBUF_VALUE_NAME {

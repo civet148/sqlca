@@ -1,5 +1,7 @@
 package models
 
+import "github.com/civet148/sqlca/v3"
+
 type FrozenState int
 
 const (
@@ -49,7 +51,7 @@ type InventoryData struct {
 	Quantity     float64           `json:"quantity" db:"quantity" `                                             //产品库存
 	Price        *float64          `json:"price" db:"price" `                                                   //产品均价
 	ProductExtra *ProductExtraData `json:"product_extra" db:"product_extra" sqlca:"isnull"`                     //产品附带数据(JSON文本)
-	//Location     sqlca.Point       `json:"location" db:"location" `                                             // 地理位置坐标
+	Location     sqlca.Point       `json:"location" db:"location" `                                             // 地理位置坐标
 }
 
 func (do *InventoryData) GetId() uint64                       { return do.Id }

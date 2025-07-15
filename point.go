@@ -1,11 +1,13 @@
 package sqlca
 
 import (
+	"bytes"
 	"database/sql/driver"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
+	"github.com/civet148/sqlca/v3/types"
+	"math"
 )
 
 // Point 表示数据库中的point类型
@@ -16,43 +18,61 @@ type Point struct {
 
 // Value 实现driver.Valuer接口，将Point转换为数据库可存储的格式
 func (p Point) Value() (driver.Value, error) {
-	return fmt.Sprintf("POINT(%f,%f)", p.X, p.Y), nil
+	return types.NewSqlClauseValue("POINT(%f,%f)", p.X, p.Y), nil
 }
 
-// Scan 实现sql.Scanner接口，将数据库中的值转换为Point类型
-func (p *Point) Scan(value interface{}) error {
-	if value == nil {
+// Scan 实现sql.Scanner接口，用于解析MySQL的POINT类型数据(0x000000000101000000E5D022DBF98E5B40F6285C8FC27524C0 => POINT(110.234 -10.23))
+func (p *Point) Scan(src any) error {
+	// 检查输入类型
+	var data []byte
+	switch v := src.(type) {
+	case []byte:
+		data = v
+	case string:
+		data = []byte(v)
+	default:
+		return fmt.Errorf("invalid type for Point: %T", src)
+	}
+
+	hexStr := fmt.Sprintf("0x%X", data)
+	data = []byte(hexStr)
+	// 检查数据是否为空
+	if len(data) == 0 {
 		return nil
 	}
 
-	var s string
-	switch v := value.(type) {
-	case string:
-		s = v
-	case []byte:
-		s = string(v)
-	default:
-		return fmt.Errorf("unsupported type for Point.Scan: %T", value)
+	// 处理十六进制格式的数据
+	// 移除可能的前缀"0x"
+	data = bytes.TrimPrefix(data, []byte("0x"))
+
+	// 检查数据长度是否足够
+	if len(data) < 42 { // 至少需要42个十六进制字符 (21个字节)
+		return fmt.Errorf("invalid Point data: too short, length: %d", len(data))
 	}
 
-	// 解析格式如"(123.45,67.89)"的字符串
-	s = strings.TrimPrefix(s, "(")
-	s = strings.TrimSuffix(s, ")")
-	parts := strings.Split(s, ",")
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid point format: %s", s)
-	}
+	// 解析WKB格式的POINT数据
+	// 前9个字节是头部信息，后面16个字节是坐标数据
+	// 这里我们假设数据是小端字节序
 
-	var err error
-	p.X, err = strconv.ParseFloat(parts[0], 64)
-	if err != nil {
-		return fmt.Errorf("invalid x coordinate: %s, error: %v", parts[0], err)
+	// 解析X坐标 (第10-17字节)
+	xBytes := make([]byte, 8)
+	for i := 0; i < 8; i++ {
+		_, err := fmt.Sscanf(string(data[18+2*i:20+2*i]), "%02x", &xBytes[i])
+		if err != nil {
+			return fmt.Errorf("parse X coordinate failed: %w", err)
+		}
 	}
+	p.X = math.Float64frombits(binary.LittleEndian.Uint64(xBytes))
 
-	p.Y, err = strconv.ParseFloat(parts[1], 64)
-	if err != nil {
-		return fmt.Errorf("invalid y coordinate: %s, error: %v", parts[1], err)
+	// 解析Y坐标 (第18-25字节)
+	yBytes := make([]byte, 8)
+	for i := 0; i < 8; i++ {
+		_, err := fmt.Sscanf(string(data[34+2*i:36+2*i]), "%02x", &yBytes[i])
+		if err != nil {
+			return fmt.Errorf("parse Y coordinate failed: %w", err)
+		}
 	}
+	p.Y = math.Float64frombits(binary.LittleEndian.Uint64(yBytes))
 
 	return nil
 }

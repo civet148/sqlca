@@ -653,7 +653,6 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	var r sql.Result
 	var execer = e.getExecer()
 
-	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	query, args := e.makeSQL(types.OperType_Update, false)
 	//log.Debugf("query %s args %v", query, args)
 	r, err = execer.Exec(query, args...)
@@ -664,6 +663,7 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	if err != nil {
 		return 0, log.Errorf(err)
 	}
+	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err = e.execAfterUpdateHooks(); err != nil {
 		return 0, log.Errorf(err.Error())
 	}

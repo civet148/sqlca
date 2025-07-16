@@ -715,13 +715,7 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
-	var queryer sqlx.Queryer
-	if e.operType == types.OperType_Tx {
-		queryer = e.tx
-	} else {
-		queryer = e.getDB()
-	}
-
+	var queryer = e.getQueryer()
 	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
 		return
 	}

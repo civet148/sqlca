@@ -1226,23 +1226,23 @@ func (e *Engine) jsonExpr(strColumn, strPath string) string {
 }
 
 func (e *Engine) JsonEqual(strColumn, strPath string, value any) *Engine {
-	return e.And("%s = ?", e.jsonExpr(strColumn, strPath), value)
+	return e.And(e.jsonExpr(strColumn, strPath)+" = ?", value)
 }
 
 func (e *Engine) JsonGreater(strColumn, strPath string, value any) *Engine {
-	return e.And("%s > ?", e.jsonExpr(strColumn, strPath), value)
+	return e.And(e.jsonExpr(strColumn, strPath)+" > ?", value)
 }
 
 func (e *Engine) JsonLess(strColumn, strPath string, value any) *Engine {
-	return e.And("%s < ?", e.jsonExpr(strColumn, strPath), value)
+	return e.And(e.jsonExpr(strColumn, strPath)+" < ?", value)
 }
 
 func (e *Engine) JsonGreaterEqual(strColumn, strPath string, value any) *Engine {
-	return e.And("%s >= ?", e.jsonExpr(strColumn, strPath), value)
+	return e.And(e.jsonExpr(strColumn, strPath)+" >= ?", value)
 }
 
 func (e *Engine) JsonLessEqual(strColumn, strPath string, value any) *Engine {
-	return e.And("%s <= ?", e.jsonExpr(strColumn, strPath), value)
+	return e.And(e.jsonExpr(strColumn, strPath)+" <= ?", value)
 }
 
 func (e *Engine) NewID() ID {

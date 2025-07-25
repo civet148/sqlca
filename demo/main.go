@@ -37,6 +37,7 @@ func main() {
 
 	requireNoError(InsertSingle(db))
 	requireNoError(InsertBatch(db))
+	requireNoError(UpsertSingle(db))
 	requireNoError(QueryLimit(db))
 	requireError(QueryErrNotFound(db))
 	requireNoError(QueryByPage(db))
@@ -163,6 +164,38 @@ func InsertBatch(db *sqlca.Engine) error {
 		return log.Errorf("数据插入错误: %s", err)
 	}
 	log.Infof("批量数据插入数量：%v", rowsAffected)
+	return nil
+}
+
+func UpsertSingle(db *sqlca.Engine) error {
+	now := time.Now().Format("2006-01-02 15:04:05")
+	price := float64(12.33)
+	var do = models.InventoryData{
+		Id:         productId,
+		CreateId:   1,
+		CreateName: "admin",
+		CreateTime: now,
+		UpdateId:   1,
+		UpdateName: "admin",
+		UpdateTime: now,
+		IsFrozen:   models.FrozenState_Ture,
+		Name:       "齿轮",
+		SerialNo:   "SNO_001",
+		Quantity:   1000,
+		Price:      &price,
+		ProductExtra: &models.ProductExtraData{
+			SpecsValue: "齿数：20",
+			AvgPrice:   sqlca.NewDecimal(20.8),
+		},
+	}
+
+	var err error
+	var rowsAffected int64
+	rowsAffected, err = db.Model(&do).Upsert()
+	if err != nil {
+		return log.Errorf("数据插入错误: %s", err)
+	}
+	log.Infof("插入数据数量：%v", rowsAffected)
 	return nil
 }
 
@@ -602,7 +635,6 @@ func TransactionWrapper(db *sqlca.Engine) error {
 	strOrderNo := time.Now().Format("20060102150405.000000000")
 	err := db.TxFunc(func(tx *sqlca.Engine) error {
 		var err error
-		productId := uint64(productId)
 		now := time.Now().Format("2006-01-02 15:04:05")
 
 		//***************** 执行事务操作 *****************

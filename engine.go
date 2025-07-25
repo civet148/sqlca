@@ -1218,6 +1218,10 @@ func (e *Engine) NotNULL(strColumn string) *Engine {
 }
 
 func (e *Engine) jsonExpr(strColumn, strPath string) string {
+	switch e.adapterType {
+	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+		return fmt.Sprintf("`%s`->>'%s'", strColumn, strPath)
+	}
 	return fmt.Sprintf("`%s`->'$.%s'", strColumn, strPath)
 }
 
@@ -1230,7 +1234,7 @@ func (e *Engine) JsonGreater(strColumn, strPath string, value any) *Engine {
 }
 
 func (e *Engine) JsonLess(strColumn, strPath string, value any) *Engine {
-	return e.And("%s< ?", e.jsonExpr(strColumn, strPath), value)
+	return e.And("%s < ?", e.jsonExpr(strColumn, strPath), value)
 }
 
 func (e *Engine) JsonGreaterEqual(strColumn, strPath string, value any) *Engine {

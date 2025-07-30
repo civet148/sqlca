@@ -32,16 +32,6 @@ var (
 type ID = snowflake.ID
 type Id = ID
 
-type Options struct {
-	Debug         bool       //enable debug mode
-	Max           int        //max active connections
-	Idle          int        //max idle connections
-	SSH           *SSH       //ssh tunnel server config
-	SnowFlake     *SnowFlake //snowflake id config
-	DisableOffset bool       //disable page offset for LIMIT (default page no is 1, if true then page no start from 0)
-	DefaultLimit  int32      //limit default (0 means no limit)
-}
-
 type SnowFlake struct {
 	NodeId int64 //node id (0~1023)
 }
@@ -62,7 +52,7 @@ type nearby struct {
 type Engine struct {
 	strDSN           string                 // database source name
 	dsn              dsnDriver              // driver name and parameters
-	options          Options                // database options
+	options          *dialOption            // database options
 	db               *sqlx.DB               // DB instance masters
 	tx               *sqlx.Tx               // sql tx instance
 	adapterType      types.AdapterType      // what's adapter
@@ -107,6 +97,7 @@ type Engine struct {
 	idgen            *snowflake.Node        // snowflake id generator
 	hookMethods      *hookMethods           // hook methods
 	insertIgnore     bool                   // insert ignore when conflict
+	optfns           []Option               // option functions
 }
 
 func init() {
@@ -119,7 +110,7 @@ func init() {
 // [mssql]    "mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false"
 // [sqlite]   "sqlite:///var/lib/test.db"
 */
-func NewEngine(strUrl string, options ...*Options) (*Engine, error) {
+func NewEngine(strUrl string, opts ...Option) (*Engine, error) {
 	e := &Engine{
 		strPkName:     types.DEFAULT_PRIMARY_KEY_NAME,
 		expireTime:    types.DEFAULT_CAHCE_EXPIRE_SECONDS,
@@ -127,7 +118,7 @@ func NewEngine(strUrl string, options ...*Options) (*Engine, error) {
 		adapterType:   types.AdapterSqlx_MySQL,
 	}
 	e.dbTags = append(e.dbTags, types.TAG_NAME_DB, types.TAG_NAME_SQLCA, types.TAG_NAME_PROTOBUF, types.TAG_NAME_JSON)
-	return e.open(strUrl, options...)
+	return e.open(strUrl, opts...)
 }
 
 // get data base driver name and data source name
@@ -162,18 +153,10 @@ func (e *Engine) getDriverNameAndDSN(adapterType types.AdapterType, strUrl strin
 //
 // options:
 //  1. specify master or slave, MySQL/Postgres (optional)
-func (e *Engine) open(strUrl string, options ...*Options) (*Engine, error) {
+func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 
 	var err error
 	var adapter types.AdapterType
-	if len(options) == 0 {
-		options = append(options, &Options{
-			Debug:        false,
-			Max:          DefaultConnMax,
-			Idle:         DefaultConnIdle,
-			DefaultLimit: 0,
-		})
-	}
 	//var strDriverName, strDSN string
 	us := strings.Split(strUrl, urlSchemeSep)
 	if len(us) != 2 { //default mysql
@@ -184,19 +167,16 @@ func (e *Engine) open(strUrl string, options ...*Options) (*Engine, error) {
 		e.dsn = e.getDriverNameAndDSN(adapter, strUrl)
 	}
 	var dsn = &e.dsn
-	var opt *Options
 	var param = &dsn.parameter
 
 	e.adapterType = adapter
 	var db *sqlx.DB
-	if len(options) != 0 {
-		opt = options[0]
-		if opt.Debug {
-			e.Debug(true)
-		}
-		if opt.SSH != nil { //SSH tunnel enable
-			dsn = opt.SSH.openSSHTunnel(dsn)
-		}
+	opt := makeOption(opts...)
+	if opt.Debug {
+		e.Debug(true)
+	}
+	if opt.SSH != nil { //SSH tunnel enable
+		dsn = opt.SSH.openSSHTunnel(dsn)
 	}
 
 	if db, err = sqlx.Open(dsn.strDriverName, param.strDSN); err != nil {
@@ -208,11 +188,8 @@ func (e *Engine) open(strUrl string, options ...*Options) (*Engine, error) {
 		return nil, err
 	}
 
-	if opt != nil {
-		dsn.SetMax(opt.Max)
-		dsn.SetIdle(opt.Idle)
-	}
-
+	dsn.SetMax(opt.Max)
+	dsn.SetIdle(opt.Idle)
 	if param.max != 0 {
 		db.SetMaxOpenConns(param.max)
 	}
@@ -221,16 +198,15 @@ func (e *Engine) open(strUrl string, options ...*Options) (*Engine, error) {
 	}
 	e.setDB(db)
 
-	if opt != nil && opt.SnowFlake != nil {
+	if opt.SnowFlake != nil {
 		e.idgen, err = snowflake.NewNode(opt.SnowFlake.NodeId)
 		if err != nil {
 			return nil, log.Errorf("new snowflake id generator error [%s]", err.Error())
 		}
 	}
 	e.strDSN = strUrl
-	if opt != nil {
-		e.options = *opt
-	}
+	e.options = opt
+	e.optfns = opts
 	return e, nil
 }
 
@@ -246,7 +222,7 @@ func (e *Engine) Use(strDatabaseName string) (*Engine, error) {
 		return nil, log.Errorf("url %s invalid", strUrl)
 	}
 	ui.Path = fmt.Sprintf("/%s", strDatabaseName)
-	return NewEngine(ui.Url(), &e.options)
+	return NewEngine(ui.Url(), e.optfns...)
 }
 
 // Attach attach from a exist sqlx db instance

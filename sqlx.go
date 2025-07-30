@@ -152,6 +152,7 @@ func (e *Engine) clone(models ...any) *Engine {
 		operType:        e.operType,
 		idgen:           e.idgen,
 		options:         e.options,
+		optfns:          e.optfns,
 		insertIgnore:    e.insertIgnore,
 	}
 	engine.setModel(models...)

@@ -493,10 +493,10 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 
 	strCountSql := e.makeSqlxQueryCount(false)
 	rowsAffected, total, err = e.execQueryEx(strCountSql)
-	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err != nil {
-		return 0, 0, log.Errorf("query count sql [%v] error [%v]", strCountSql, err.Error())
+		return 0, 0, err
 	}
+	e.verbose("caller [%v] rows [%v] query [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err = e.execAfterQueryHooks(); err != nil {
 		return 0, 0, err
 	}
@@ -550,7 +550,7 @@ func (e *Engine) Insert() (lastInsertId, rowsAffected int64, err error) {
 		lastInsertId, rowsAffected, err = e.mysqlExec(strSql)
 	}
 	if err != nil {
-		return 0, 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
+		return 0, 0, log.Errorf("caller [%v] query [%s] error: %v", e.getCaller(2), strSql, err.Error())
 	}
 	e.verbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	if err = e.execAfterCreateHooks(); err != nil {
@@ -602,7 +602,7 @@ func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err 
 		}
 	}
 	if err != nil {
-		return 0, log.Errorf("SQL [%v] error: %v", strSql, err.Error())
+		return 0, log.Errorf("caller [%v] query [%s] error: %v", e.getCaller(2), strSql, err.Error())
 	}
 	e.verbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	return
@@ -630,9 +630,11 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	var execer = e.getExecer()
 
 	query, args := e.makeSQL(types.OperType_Update, false)
+
 	//log.Debugf("query %s args %v", query, args)
 	r, err = execer.Exec(query, args...)
 	if err != nil {
+		log.Errorf("caller [%v] query [%s] args %v error: %v", e.getCaller(2), query, args, err.Error())
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
@@ -662,6 +664,7 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	var r sql.Result
 	r, err = execer.Exec(strSql, args...)
 	if err != nil {
+		log.Errorf("caller [%v] query [%s] error: %v", e.getCaller(2), strSql, err.Error())
 		return
 	}
 	rowsAffected, err = r.RowsAffected()
@@ -693,6 +696,7 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 
 	var queryer = e.getQueryer()
 	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
+		log.Errorf("caller [%v] query [%s] args %v error: %v", e.getCaller(2), query, args, err.Error())
 		return
 	}
 
@@ -729,6 +733,7 @@ func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err er
 	}
 	var rows *sqlx.Rows
 	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
+		log.Errorf("caller [%v] query [%s] args %v error: %v", e.getCaller(2), query, args, err.Error())
 		return
 	}
 
@@ -1255,4 +1260,11 @@ func NewContext(ctx context.Context, e *Engine) context.Context {
 func FromContext(ctx context.Context) *Engine {
 	v := ctx.Value(types.SqlcaContextKey)
 	return v.(*Engine)
+}
+
+func NewExpr(query string, args ...any) *types.Expr {
+	return &types.Expr{
+		SQL:  query,
+		Vars: args,
+	}
 }

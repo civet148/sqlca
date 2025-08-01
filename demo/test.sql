@@ -15,9 +15,10 @@ CREATE TABLE `inventory_data` (
   `serial_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '产品编号',
   `quantity` decimal(16,3) NOT NULL DEFAULT '0.000' COMMENT '产品库存',
   `price` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT '产品均价',
-  `product_extra` json DEFAULT NULL COMMENT '产品附带数据(JSON文本)',
+  `product_extra` text COLLATE utf8mb4_unicode_ci COMMENT '产品附带数据(JSON文本)',
+  `location` point DEFAULT NULL COMMENT '地理位置',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存数据表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='产品库存数据表';
 
 CREATE TABLE `inventory_in` (
   `id` bigint unsigned NOT NULL COMMENT '主键ID',

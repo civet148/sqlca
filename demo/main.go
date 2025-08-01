@@ -55,6 +55,7 @@ func main() {
 	requireNoError(TransactionWrapper(db))
 	requireNoError(ExecRawSQL(db))
 	requireNoError(UpsertPoint(db))
+	requireNoError(UpdatePointByExpress(db))
 }
 
 func requireNoError(err error) {
@@ -242,7 +243,8 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 	count, err = db.Model(&do).Id(1899078192380252160).MustFind()
 	if err != nil {
 		if errors.Is(err, sqlca.ErrRecordNotFound) {
-			return log.Errorf("根据ID查询数据库记录无结果：%s", err)
+			log.Infof("根据ID查询数据库记录无结果：%s (正常)", err)
+			return err
 		}
 		return log.Errorf("数据库错误：%s", err)
 	}
@@ -725,5 +727,17 @@ func UpsertPoint(db *sqlca.Engine) error {
 		return log.Errorf(err.Error())
 	}
 	log.Infof("do2 %+v", do2)
+	return nil
+}
+
+func UpdatePointByExpress(db *sqlca.Engine) error {
+	var upmap = map[string]any{
+		"location": sqlca.NewExpr("POINT(?, ?)", 113.234, 22.39236),
+	}
+	rows, err := db.Model(upmap).Table("inventory_data").Id(productId).Update()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("rows affected: %d", rows)
 	return nil
 }

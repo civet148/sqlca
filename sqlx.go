@@ -210,7 +210,7 @@ func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err
 	//log.Debugf("query [%v] args %v", query, args)
 	rows, err = queryer.Query(query, args...)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, log.Errorf("caller [%v] query [%s] args %v error: %v", e.getCaller(3), query, args, err.Error())
 	}
 	defer rows.Close()
 
@@ -220,7 +220,7 @@ func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err
 	}
 	var rowsCount *sql.Rows
 	if rowsCount, err = queryer.Query(strCountSql); err != nil {
-		return 0, 0, err
+		return 0, 0, log.Errorf("caller [%v] query [%s] error: %v", e.getCaller(3), strCountSql, err.Error())
 	}
 
 	defer rowsCount.Close()
@@ -1301,7 +1301,6 @@ func (e *Engine) makeSqlxUpdate(rawSQL bool) (strSqlx string, args []any) {
 	strSqlx = fmt.Sprintf("%v %v %v %v %v %v",
 		types.DATABASE_KEY_NAME_UPDATE, e.getTableName(), types.DATABASE_KEY_NAME_SET,
 		e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), strWhere, e.getLimit())
-	assert(strSqlx, "update sql is nil")
 	return
 }
 

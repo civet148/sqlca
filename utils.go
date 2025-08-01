@@ -230,20 +230,13 @@ func quotedValue(v any) (sv string) {
 	case reflect.String:
 		sv = fmt.Sprintf("'%v'", v.(string))
 	case reflect.Struct:
-		sn, ok := isSqlNull(v)
-		if ok {
-			sv = sn.String()
+		if valuer, ok := val.Interface().(driver.Valuer); ok {
+			result, _ := valuer.Value()
+			sv = fmt.Sprintf("%v", result)
 		} else {
-			if valuer, ok := val.Interface().(driver.Valuer); ok {
-				result, _ := valuer.Value()
-				sv = fmt.Sprintf("%v", result)
-			} else {
-				var scv types.SqlClauseValue
-				if scv, ok = isSqlClauseValue(v); ok {
-					return scv.String()
-				} else {
-					sv = fmt.Sprintf("'%v'", indirectValue(v))
-				}
+			sv, ok = quotedStruct(v)
+			if !ok {
+				sv = fmt.Sprintf("'%v'", indirectValue(v))
 			}
 		}
 	default:
@@ -252,30 +245,27 @@ func quotedValue(v any) (sv string) {
 	return sv
 }
 
-func isSqlNull(v any) (types.SqlNull, bool) {
+func quotedStruct(v any) (sv string, ok bool) {
 	val := reflect.ValueOf(v)
 	val = reflect.Indirect(val)
-	typ := val.Type()
-	// 判断类型名称和包路径是否一致
-	if typ.Name() == "SqlNull" && typ.PkgPath() == reflect.TypeOf(types.SqlNull{}).PkgPath() {
-		return val.Interface().(types.SqlNull), true
+	switch s := val.Interface().(type) {
+	case types.Expr:
+		return s.RawSQL(), true
+	case types.SqlNull:
+		return s.String(), true
+	case types.SqlClauseValue:
+		return s.String(), true
 	}
-	return types.SqlNull{}, false
-}
-
-func isSqlClauseValue(v any) (types.SqlClauseValue, bool) {
-	val := reflect.ValueOf(v)
-	val = reflect.Indirect(val)
-	typ := val.Type()
-	// 判断类型名称和包路径是否一致
-	if typ.Name() == "SqlClauseValue" && typ.PkgPath() == reflect.TypeOf(types.SqlClauseValue{}).PkgPath() {
-		return val.Interface().(types.SqlClauseValue), true
-	}
-	return types.SqlClauseValue{}, false
+	return sv, false
 }
 
 // 展开数组
 func expandSqlxSlice(query string, args ...any) (string, []any) {
 	query, args, _ = sqlx.In(query, args...)
 	return query, args
+}
+
+func canUnmarshalJson(v string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(v), &js) == nil
 }

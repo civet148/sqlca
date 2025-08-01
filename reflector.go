@@ -565,7 +565,7 @@ func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, 
 
 	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
 		vp := val.Addr()
-		if strings.TrimSpace(v) != "" {
+		if strings.TrimSpace(v) != "" && canUnmarshalJson(v) {
 			if err = json.Unmarshal([]byte(v), vp.Interface()); err != nil {
 				return log.Errorf("json.Unmarshal [%s] error [%s]", v, err)
 			}

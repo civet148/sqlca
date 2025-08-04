@@ -226,18 +226,18 @@ func quotedValue(v any) (sv string) {
 	val := reflect.ValueOf(v)
 	val = reflect.Indirect(val)
 
+	if valuer, ok := val.Interface().(driver.Valuer); ok {
+		result, _ := valuer.Value()
+		return fmt.Sprintf("%v", result)
+	}
+	var ok bool
 	switch val.Kind() {
 	case reflect.String:
 		sv = fmt.Sprintf("'%v'", v.(string))
 	case reflect.Struct:
-		if valuer, ok := val.Interface().(driver.Valuer); ok {
-			result, _ := valuer.Value()
-			sv = fmt.Sprintf("%v", result)
-		} else {
-			sv, ok = quotedStruct(v)
-			if !ok {
-				sv = fmt.Sprintf("'%v'", indirectValue(v))
-			}
+		sv, ok = quotedStruct(v)
+		if !ok {
+			sv = fmt.Sprintf("'%v'", indirectValue(v))
 		}
 	default:
 		sv = fmt.Sprintf("'%v'", indirectValue(v))

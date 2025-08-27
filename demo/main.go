@@ -209,8 +209,8 @@ func QueryLimit(db *sqlca.Engine) error {
 
 	//SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 2
 	count, err = db.Model(&dos).
-		Select("id, name, serial_no, quantity").
-		Limit(2).
+		Select("id, name, serial_no, quantity, product_extra").
+		Limit(5).
 		Desc("create_time").
 		Query()
 	if err != nil {

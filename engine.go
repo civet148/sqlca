@@ -919,6 +919,13 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	var tx *Engine
 	c := e.Counter()
 	defer c.Stop("TxFunc")
+	defer func() {
+		// 这是一个安全措施，防止因为代码panic导致连接泄露
+		if r := recover(); r != nil {
+			_ = tx.TxRollback()
+			panic(r) // 重新抛出 panic
+		}
+	}()
 	if tx, err = e.TxBegin(); err != nil {
 		return err
 	}

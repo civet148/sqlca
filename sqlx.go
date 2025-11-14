@@ -1,6 +1,7 @@
 package sqlca
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/civet148/log"
@@ -133,7 +134,13 @@ func (e *Engine) setModel(models ...any) *Engine {
 // clone engine
 func (e *Engine) clone(models ...any) *Engine {
 
+	var hasCtx bool
+	var ctx context.Context
+	if len(models) > 0 {
+		ctx, hasCtx = models[0].(context.Context)
+	}
 	engine := &Engine{
+		ctx:             ctx,
 		strDSN:          e.strDSN,
 		dsn:             e.dsn,
 		db:              e.db,
@@ -155,7 +162,11 @@ func (e *Engine) clone(models ...any) *Engine {
 		optfns:          e.optfns,
 		insertIgnore:    e.insertIgnore,
 	}
-	engine.setModel(models...)
+	if hasCtx {
+		engine.setModel(models[1:]...)
+	} else {
+		engine.setModel(models...)
+	}
 	return engine
 }
 

@@ -50,6 +50,7 @@ type nearby struct {
 }
 
 type Engine struct {
+	ctx              context.Context
 	strDSN           string                 // database source name
 	dsn              dsnDriver              // driver name and parameters
 	options          *dialOption            // database options

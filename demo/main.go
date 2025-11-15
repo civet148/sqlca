@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v3"
@@ -206,9 +207,11 @@ func QueryLimit(db *sqlca.Engine) error {
 	var err error
 	var count int64
 	var dos []*models.InventoryData
+	ctx, closer := context.WithTimeout(context.Background(), 5*time.Second)
+	defer closer()
 
 	//SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 2
-	count, err = db.Model(&dos).
+	count, err = db.Model(ctx, &dos).
 		Select("id, name, serial_no, quantity, product_extra").
 		Limit(5).
 		Desc("create_time").
@@ -228,8 +231,10 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 	var err error
 	var count int64
 	var do *models.InventoryData
+	ctx, closer := context.WithTimeout(context.Background(), 30*time.Second)
+	defer closer()
 
-	count, err = db.Model(&do).Id(productId).MustFind()
+	count, err = db.Model(ctx, &do).Id(productId).MustFind()
 	if err != nil {
 		if errors.Is(err, sqlca.ErrRecordNotFound) {
 			log.Infof("根据ID查询数据库记录无结果：%s", err)
@@ -240,7 +245,7 @@ func QueryErrNotFound(db *sqlca.Engine) error {
 	log.Infof("查询结果条数: %d 数据: %+v", count, do)
 
 	//SELECT * FROM inventory_data WHERE id=1899078192380252160
-	count, err = db.Model(&do).Id(1899078192380252160).MustFind()
+	count, err = db.Model(ctx, &do).Id(1899078192380252160).MustFind()
 	if err != nil {
 		if errors.Is(err, sqlca.ErrRecordNotFound) {
 			log.Infof("根据ID查询数据库记录无结果：%s (正常)", err)
@@ -260,9 +265,11 @@ func QueryByPage(db *sqlca.Engine) error {
 	var err error
 	var count, total int64
 	var dos []*models.InventoryData
+	ctx, closer := context.WithTimeout(context.Background(), 30*time.Second)
+	defer closer()
 
 	//SELECT  * FROM inventory_data WHERE 1=1 ORDER BY create_time DESC LIMIT 0,20
-	count, total, err = db.Model(&dos).
+	count, total, err = db.Model(ctx, &dos).
 		Page(1, 20).
 		Desc("create_time").
 		QueryEx()

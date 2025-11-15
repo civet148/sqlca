@@ -628,12 +628,9 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
 	var r sql.Result
-	var execer = e.getExecer()
-
 	query, args := e.makeSQL(types.OperType_Update, false)
 
-	//log.Debugf("query %s args %v", query, args)
-	r, err = execer.Exec(query, args...)
+	r, err = e.exec(query, args...)
 	if err != nil {
 		log.Errorf("caller [%v] query [%s] args %v error: %v", e.getCaller(2), query, args, err.Error())
 		return
@@ -660,10 +657,8 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
-	var execer = e.getExecer()
-
 	var r sql.Result
-	r, err = execer.Exec(strSql, args...)
+	r, err = e.exec(strSql, args...)
 	if err != nil {
 		log.Errorf("caller [%v] query [%s] error: %v", e.getCaller(2), strSql, err.Error())
 		return
@@ -695,8 +690,7 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
-	var queryer = e.getQueryer()
-	if rows, err = queryer.Queryx(expr.SQL, expr.Vars...); err != nil {
+	if rows, err = e.queryx(expr.SQL, expr.Vars...); err != nil {
 		log.Errorf("caller [%v] query [%s] args %v error: %v", e.getCaller(2), query, args, err.Error())
 		return
 	}
@@ -758,7 +752,6 @@ func (e *Engine) ExecRaw(query string, args ...any) (rowsAffected, lastInsertId 
 	assert(query, "query sql string is nil")
 	var expr = e.buildSqlExpr(query, args...)
 	strSql := expr.RawSQL(e.GetAdapter())
-	var execer = e.getExecer()
 
 	var r sql.Result
 
@@ -766,7 +759,7 @@ func (e *Engine) ExecRaw(query string, args ...any) (rowsAffected, lastInsertId 
 	c := e.Counter()
 	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
 
-	if r, err = execer.Exec(expr.SQL, expr.Vars...); err != nil {
+	if r, err = e.exec(expr.SQL, expr.Vars...); err != nil {
 		return
 	}
 
@@ -799,10 +792,9 @@ func (e *Engine) AutoRollback() *Engine {
 func (e *Engine) CountRows() (count int64, err error) {
 	assert(e.strDatabaseName, "table name requires")
 	strCountSql := e.makeSqlxQueryCount(true)
-	var queryer = e.getQueryer()
 
 	var rowsCount *sql.Rows
-	if rowsCount, err = queryer.Query(strCountSql); err != nil {
+	if rowsCount, err = e.query(strCountSql); err != nil {
 		return 0, err
 	}
 	e.verbose("caller [%v] SQL [%s]", e.getCaller(2), strCountSql)

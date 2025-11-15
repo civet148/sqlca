@@ -269,3 +269,16 @@ func canUnmarshalJson(v string) bool {
 	var js json.RawMessage
 	return json.Unmarshal([]byte(v), &js) == nil
 }
+
+// ConvertPtr 返回任意类型的指针
+func ConvertPtr[T any](v T) *T {
+	return &v
+}
+
+// ConvertVal 返回指针指向的值，如果指针为nil则返回类型的零值
+func ConvertVal[T any](v *T) (ret T) {
+	if v == nil {
+		return
+	}
+	return *v
+}

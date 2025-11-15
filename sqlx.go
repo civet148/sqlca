@@ -1,6 +1,7 @@
 package sqlca
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/civet148/log"
@@ -133,7 +134,13 @@ func (e *Engine) setModel(models ...any) *Engine {
 // clone engine
 func (e *Engine) clone(models ...any) *Engine {
 
+	var hasCtx bool
+	var ctx context.Context
+	if len(models) > 0 {
+		ctx, hasCtx = models[0].(context.Context)
+	}
 	engine := &Engine{
+		ctx:             ctx,
 		strDSN:          e.strDSN,
 		dsn:             e.dsn,
 		db:              e.db,
@@ -155,7 +162,11 @@ func (e *Engine) clone(models ...any) *Engine {
 		optfns:          e.optfns,
 		insertIgnore:    e.insertIgnore,
 	}
-	engine.setModel(models...)
+	if hasCtx {
+		engine.setModel(models[1:]...)
+	} else {
+		engine.setModel(models...)
+	}
 	return engine
 }
 
@@ -180,13 +191,12 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 func (e *Engine) execQuery() (rowsAffected int64, err error) {
 	var query string
 	var args []any
-	var queryer = e.getQueryer()
 	query, args = e.makeSqlxQuery(false)
 
 	var rows *sql.Rows
 
 	//log.Debugf("query [%v] args %v", query, args)
-	rows, err = queryer.Query(query, args...)
+	rows, err = e.query(query, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -202,13 +212,12 @@ func (e *Engine) execQuery() (rowsAffected int64, err error) {
 func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err error) {
 	var query string
 	var args []any
-	var queryer = e.getQueryer()
 	var rows *sql.Rows
 
 	query, args = e.makeSqlxQuery(false)
 
 	//log.Debugf("query [%v] args %v", query, args)
-	rows, err = queryer.Query(query, args...)
+	rows, err = e.query(query, args...)
 	if err != nil {
 		return 0, 0, log.Errorf("caller [%v] query [%s] args %v error: %v", e.getCaller(3), query, args, err.Error())
 	}
@@ -219,7 +228,7 @@ func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err
 		return 0, 0, err
 	}
 	var rowsCount *sql.Rows
-	if rowsCount, err = queryer.Query(strCountSql); err != nil {
+	if rowsCount, err = e.query(strCountSql); err != nil {
 		return 0, 0, log.Errorf("caller [%v] query [%s] error: %v", e.getCaller(3), strCountSql, err.Error())
 	}
 
@@ -1449,6 +1458,33 @@ func (e *Engine) verbose(msg string, args ...any) {
 	}
 }
 
+func (e *Engine) query(query string, args ...any) (rows *sql.Rows, err error) {
+	if e.ctx != nil {
+		var queryer = e.getQueryerCtx()
+		return queryer.QueryContext(e.ctx, query, args...)
+	}
+	var queryer = e.getQueryer()
+	return queryer.Query(query, args...)
+}
+
+func (e *Engine) queryx(query string, args ...any) (rows *sqlx.Rows, err error) {
+	if e.ctx != nil {
+		var queryer = e.getQueryerCtx()
+		return queryer.QueryxContext(e.ctx, query, args...)
+	}
+	var queryer = e.getQueryer()
+	return queryer.Queryx(query, args...)
+}
+
+func (e *Engine) exec(query string, args ...any) (result sql.Result, err error) {
+	if e.ctx != nil {
+		var execer = e.getExecerCtx()
+		return execer.ExecContext(e.ctx, query, args...)
+	}
+	var execer = e.getExecer()
+	return execer.Exec(query, args...)
+}
+
 func (e *Engine) getQueryer() sqlx.Queryer {
 	var queryer sqlx.Queryer
 	if e.operType == types.OperType_Tx {
@@ -1458,12 +1494,33 @@ func (e *Engine) getQueryer() sqlx.Queryer {
 	}
 	return queryer
 }
+
+func (e *Engine) getQueryerCtx() sqlx.QueryerContext {
+	var queryer sqlx.QueryerContext
+	if e.operType == types.OperType_Tx {
+		queryer = sqlx.QueryerContext(e.tx)
+	} else {
+		queryer = sqlx.QueryerContext(e.getDB())
+	}
+	return queryer
+}
+
 func (e *Engine) getExecer() sqlx.Execer {
 	var execer sqlx.Execer
 	if e.operType == types.OperType_Tx {
 		execer = sqlx.Execer(e.tx)
 	} else {
 		execer = sqlx.Execer(e.getDB())
+	}
+	return execer
+}
+
+func (e *Engine) getExecerCtx() sqlx.ExecerContext {
+	var execer sqlx.ExecerContext
+	if e.operType == types.OperType_Tx {
+		execer = sqlx.ExecerContext(e.tx)
+	} else {
+		execer = sqlx.ExecerContext(e.getDB())
 	}
 	return execer
 }

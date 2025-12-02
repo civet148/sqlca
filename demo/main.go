@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v3"
 	"github.com/civet148/sqlca/v3/demo/models"
@@ -20,11 +21,16 @@ func main() {
 		sqlca.WithDebug(),
 		sqlca.WithMaxConn(100),
 		sqlca.WithIdleConn(5),
+		//SSH tunnel config
 		//sqlca.WithSSH(&sqlca.SSH{
 		//	User:     "root",
 		//	Password: "123456",
 		//	Host:     "192.168.2.19:22",
 		//}),
+		//redis distribution lock config
+		sqlca.WithRedisConfig(&sqlca.RedisConfig{
+			Address: "192.168.1.20:6379",
+		}),
 		sqlca.WithSnowFlake(&sqlca.SnowFlake{
 			NodeId: 1,
 		}),
@@ -57,6 +63,7 @@ func main() {
 	requireNoError(ExecRawSQL(db))
 	requireNoError(UpsertPoint(db))
 	requireNoError(UpdatePointByExpress(db))
+	requireNoError(DistributionLock(db))
 }
 
 func requireNoError(err error) {
@@ -740,6 +747,25 @@ func UpsertPoint(db *sqlca.Engine) error {
 func UpdatePointByExpress(db *sqlca.Engine) error {
 	var upmap = map[string]any{
 		"location": sqlca.NewExpr("POINT(?, ?)", 113.234, 22.39236),
+	}
+	rows, err := db.Model(upmap).Table("inventory_data").Id(productId).Update()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("rows affected: %d", rows)
+	return nil
+}
+
+func DistributionLock(db *sqlca.Engine) error {
+	key := fmt.Sprintf("test:inventory_data:product_id:%v", productId)
+	unlock, err := db.Lock(key, 10*time.Second)
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	defer unlock()
+
+	var upmap = map[string]any{
+		"location": sqlca.NewExpr("POINT(?, ?)", 116.2, 22.1),
 	}
 	rows, err := db.Model(upmap).Table("inventory_data").Id(productId).Update()
 	if err != nil {

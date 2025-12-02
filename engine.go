@@ -9,6 +9,7 @@ import (
 	_ "gitee.com/opengauss/openGauss-connector-go-pq" //open gauss golang driver of gitee.com
 	"github.com/bwmarrin/snowflake"
 	"github.com/civet148/log"
+	"github.com/civet148/redigo"
 	"github.com/civet148/sqlca/v3/types"
 	_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
 	"github.com/gansidui/geohash"
@@ -16,8 +17,8 @@ import (
 	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
 	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
-	//_ "github.com/opengauss-mirror/openGauss-connector-go-pq" //open gauss golang driver of github.com
 	"strings"
+	"time"
 )
 
 const (
@@ -99,6 +100,7 @@ type Engine struct {
 	hookMethods      *hookMethods           // hook methods
 	insertIgnore     bool                   // insert ignore when conflict
 	optfns           []Option               // option functions
+	redisClient      *redigo.Redigo         // redis-go client
 }
 
 func init() {
@@ -172,14 +174,37 @@ func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 
 	e.adapterType = adapter
 	var db *sqlx.DB
-	opt := makeOption(opts...)
-	if opt.Debug {
+	dialOptions := parseDialOption(opts...)
+	if dialOptions.Debug {
 		e.Debug(true)
 	}
-	if opt.SSH != nil { //SSH tunnel enable
-		dsn = opt.SSH.openSSHTunnel(dsn)
+	if dialOptions.SSH != nil { //SSH tunnel enable
+		dsn = dialOptions.SSH.openSSHTunnel(dsn)
 	}
 
+	if rc := dialOptions.RedisConfig; rc != nil {
+		var redisOpts = []redigo.Option{
+			redigo.WithAddress(rc.Address),
+			redigo.WithPassword(rc.Password),
+			redigo.WithDB(rc.DB),
+			redigo.WithMaxIdle(rc.MaxIdle),
+			redigo.WithMaxActive(rc.MaxActive),
+			redigo.WithClientName(rc.ClientName),
+			redigo.WithWait(true),
+			redigo.WithMaxConnLifetime(rc.MaxConnLifetime),
+			redigo.WithSkipVerify(rc.SkipVerify),
+			redigo.WithUseTLS(rc.UseTLS),
+		}
+		if rc.ConnTimeout != nil {
+			redisOpts = append(redisOpts, redigo.WithConnTimeout(*rc.ConnTimeout))
+		}
+		if rc.TlsConfig != nil {
+			redisOpts = append(redisOpts, redigo.WithTLSConfig(rc.TlsConfig))
+		}
+		if e.redisClient == nil {
+			e.redisClient = redigo.NewRedigo(redisOpts...)
+		}
+	}
 	if db, err = sqlx.Open(dsn.strDriverName, param.strDSN); err != nil {
 		//log.Errorf("open database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
 		return nil, err
@@ -189,8 +214,8 @@ func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 		return nil, err
 	}
 
-	dsn.SetMax(opt.Max)
-	dsn.SetIdle(opt.Idle)
+	dsn.SetMax(dialOptions.Max)
+	dsn.SetIdle(dialOptions.Idle)
 	if param.max != 0 {
 		db.SetMaxOpenConns(param.max)
 	}
@@ -199,14 +224,14 @@ func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 	}
 	e.setDB(db)
 
-	if opt.SnowFlake != nil {
-		e.idgen, err = snowflake.NewNode(opt.SnowFlake.NodeId)
+	if dialOptions.SnowFlake != nil {
+		e.idgen, err = snowflake.NewNode(dialOptions.SnowFlake.NodeId)
 		if err != nil {
 			return nil, log.Errorf("new snowflake id generator error [%s]", err.Error())
 		}
 	}
 	e.strDSN = strUrl
-	e.options = opt
+	e.options = dialOptions
 	e.optfns = opts
 	return e, nil
 }
@@ -1267,4 +1292,18 @@ func NewExpr(query string, args ...any) *types.Expr {
 		SQL:  query,
 		Vars: args,
 	}
+}
+
+func (e *Engine) Lock(key string, expiry time.Duration) (unlock func() error, err error) {
+	if e.redisClient == nil {
+		log.Panic("redis client not set")
+	}
+	return e.redisClient.BlockLock(key, expiry)
+}
+
+func (e *Engine) TryLock(key string, expiry, timeout time.Duration) (unlock func() error, err error) {
+	if e.redisClient == nil {
+		log.Panic("redis client not set")
+	}
+	return e.redisClient.TryLock(key, expiry, timeout)
 }

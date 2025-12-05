@@ -161,6 +161,7 @@ func (e *Engine) clone(models ...any) *Engine {
 		options:         e.options,
 		optfns:          e.optfns,
 		insertIgnore:    e.insertIgnore,
+		redisClient:     e.redisClient,
 	}
 	if hasCtx {
 		engine.setModel(models[1:]...)

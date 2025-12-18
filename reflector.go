@@ -63,13 +63,13 @@ func (s *ModelReflector) ParseModel(tagNames ...string) *ModelReflector {
 	switch kind {
 	case reflect.Struct:
 		{
-			s.parseStructField(typ, val, tagNames...)
+			s.parseStructFields(typ, val, tagNames...)
 		}
 	case reflect.Slice:
 		{
 			typ = val.Type().Elem()
 			val = reflect.New(typ).Elem()
-			s.parseStructField(typ, val, tagNames...)
+			s.parseStructFields(typ, val, tagNames...)
 		}
 	case reflect.Map:
 		{
@@ -104,19 +104,22 @@ func (s *ModelReflector) convertMapString(ms map[string]string) (mi map[string]a
 }
 
 // get struct field's tag value
-func (s *ModelReflector) getTag(sf reflect.StructField, tagName string) (strValue string, ignore bool) {
-	strValue = sf.Tag.Get(tagName)
-	if strValue == types.SQLCA_TAG_VALUE_IGNORE {
-		return "", true
+func (s *ModelReflector) getTag(sf reflect.StructField, tagNames ...string) (strValue string, ignore bool) {
+	for _, tagName := range tagNames {
+		strValue = handleTagValue(tagName, sf.Tag.Get(tagName))
+		if strValue == types.SQLCA_TAG_VALUE_IGNORE {
+			return "", true
+		}
+		if strValue != "" {
+			return strValue, false
+		}
 	}
-	if strValue == "" {
-		return "", true
-	}
+
 	return strValue, false
 }
 
 // parse struct fields
-func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, tagNames ...string) {
+func (s *ModelReflector) parseStructFields(typ reflect.Type, val reflect.Value, tagNames ...string) {
 	kind := typ.Kind()
 	if kind == reflect.Struct {
 		NumField := val.NumField()
@@ -128,7 +131,7 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 				typField.Type = typField.Type.Elem()
 				valField = valField.Elem()
 			}
-			tagVal, ignore := s.getTag(typField, types.TAG_NAME_DB)
+			tagVal, ignore := s.getTag(typField, types.TAG_NAME_DB, types.TAG_NAME_GORM, types.TAG_NAME_XORM, types.TAG_NAME_PROTOBUF)
 			if ignore {
 				continue
 			}
@@ -145,7 +148,7 @@ func (s *ModelReflector) parseStructField(typ reflect.Type, val reflect.Value, t
 			}
 			if typField.Type.Kind() == reflect.Struct {
 				if tagVal == "" {
-					s.parseStructField(typField.Type, valField, tagNames...) //recurse every field that type is a struct
+					s.parseStructFields(typField.Type, valField, tagNames...) //recurse every field that type is a struct
 				} else {
 					s.Dict[tagVal] = indirectValue(valField.Interface())
 					s.Columns = append(s.Columns, tagVal)

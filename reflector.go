@@ -614,7 +614,6 @@ func handleTagValue(strTagName, strTagValue string) string {
 	}
 
 	if strTagName == types.TAG_NAME_JSON {
-
 		vs := strings.Split(strTagValue, ",")
 		strTagValue = vs[0]
 	} else if strTagName == types.TAG_NAME_PROTOBUF {
@@ -631,6 +630,14 @@ func handleTagValue(strTagName, strTagValue string) string {
 				}
 			}
 		}
+	} else {
+		vs := strings.Split(strTagValue, ";")
+		col := vs[0]
+		if strings.Contains(col, ":") {
+			vs = strings.Split(col, ":")
+			col = vs[1]
+		}
+		strTagValue = col
 	}
 	return strTagValue
 }

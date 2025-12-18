@@ -35,7 +35,7 @@ func main() {
 			NodeId: 1,
 		}),
 	}
-	db, err = sqlca.NewEngine("mysql://root:12345678@127.0.0.1:3306/test?charset=utf8mb4", opts...)
+	db, err = sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", opts...)
 	if err != nil {
 		log.Errorf("connect database error: %s", err)
 		return

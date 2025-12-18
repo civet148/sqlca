@@ -120,7 +120,7 @@ func NewEngine(strUrl string, opts ...Option) (*Engine, error) {
 		slowQueryTime: types.DEFAULT_SLOW_QUERY_ALERT_TIME,
 		adapterType:   types.AdapterSqlx_MySQL,
 	}
-	e.dbTags = append(e.dbTags, types.TAG_NAME_DB, types.TAG_NAME_SQLCA, types.TAG_NAME_PROTOBUF, types.TAG_NAME_JSON)
+	e.dbTags = append(e.dbTags, types.TAG_NAME_DB, types.TAG_NAME_SQLCA, types.TAG_NAME_GORM, types.TAG_NAME_XORM, types.TAG_NAME_PROTOBUF, types.TAG_NAME_JSON)
 	return e.open(strUrl, opts...)
 }
 

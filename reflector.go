@@ -635,10 +635,12 @@ func handleTagValue(strTagName, strTagValue string) string {
 		}
 	} else {
 		vs := strings.Split(strTagValue, ";")
-		col := vs[0]
-		if strings.Contains(col, ":") {
-			vs = strings.Split(col, ":")
-			col = vs[1]
+		var col string
+		for _, col = range vs {
+			if strings.Contains(col, "column") {
+				vs = strings.Split(col, ":")
+				col = vs[1]
+			}
 		}
 		strTagValue = col
 	}

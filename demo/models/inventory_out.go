@@ -1,6 +1,8 @@
 package models
 
-const TableNameInventoryOut = "`inventory_out`" //出库主表
+import "github.com/civet148/sqlca/v3"
+
+const TableNameInventoryOut = "inventory_out" //出库主表
 
 const (
 	INVENTORY_OUT_COLUMN_ID          = "id"
@@ -22,53 +24,50 @@ const (
 )
 
 type InventoryOut struct {
-	Id         uint64  `gorm:"column:id;index;"`          //主键ID
-	CreateId   uint64  `gorm:"column:create_id;index;"`   //创建人ID
-	CreateName string  `gorm:"column:create_name;index;"` //创建人姓名
-	CreateTime string  `gorm:"column:create_time;index;"` //创建时间
-	UpdateId   uint64  `gorm:"column:update_id;index;"`   //更新人ID
-	UpdateName string  `gorm:"column:update_name;index;"` //更新人姓名
-	UpdateTime string  `gorm:"column:update_time;index;"` //更新时间
-	IsDeleted  int8    `gorm:"column:is_deleted;index;"`  //删除状态(0: 未删除 1: 已删除)
-	DeleteTime string  `gorm:"column:delete_time;index;"` //删除时间
-	ProductId  uint64  `gorm:"column:product_id;index;"`  //产品ID
-	OrderNo    string  `gorm:"column:order_no;index;"`    //出库单号
-	UserId     uint64  `gorm:"column:user_id;index;"`     //收货人ID
-	UserName   string  `gorm:"column:user_name;index;"`   //收货人姓名
-	Quantity   float64 `gorm:"column:quantity;index;"`    //数量
-	Weight     float64 `gorm:"column:weight;index;"`      //净重
-	Remark     string  `gorm:"column:remark;index;"`      //备注
+	BaseModel
+	Id         uint64        `json:"id,omitempty" db:"id" gorm:"column:id;primaryKey;autoIncrement"`                  //主键ID
+	IsDeleted  int8          `json:"is_deleted,omitempty" db:"is_deleted" gorm:"column:is_deleted"`                   //删除状态(0: 未删除 1: 已删除)
+	DeleteTime string        `json:"delete_time,omitempty" db:"delete_time" gorm:"column:delete_time" sqlca:"isnull"` //删除时间
+	ProductId  uint64        `json:"product_id,omitempty" db:"product_id" gorm:"column:product_id"`                   //产品ID
+	OrderNo    string        `json:"order_no,omitempty" db:"order_no" gorm:"column:order_no"`                         //出库单号
+	UserId     uint64        `json:"user_id,omitempty" db:"user_id" gorm:"column:user_id"`                            //收货人ID
+	UserName   string        `json:"user_name,omitempty" db:"user_name" gorm:"column:user_name"`                      //收货人姓名
+	Quantity   float64       `json:"quantity,omitempty" db:"quantity" gorm:"column:quantity"`                         //数量
+	Weight     sqlca.Decimal `json:"weight,omitempty" db:"weight" gorm:"column:weight"`                               //净重
+	Remark     string        `json:"remark,omitempty" db:"remark" gorm:"column:remark"`                               //备注
 }
 
-func (do *InventoryOut) GetId() uint64          { return do.Id }
-func (do *InventoryOut) SetId(v uint64)         { do.Id = v }
-func (do *InventoryOut) GetCreateId() uint64    { return do.CreateId }
-func (do *InventoryOut) SetCreateId(v uint64)   { do.CreateId = v }
-func (do *InventoryOut) GetCreateName() string  { return do.CreateName }
-func (do *InventoryOut) SetCreateName(v string) { do.CreateName = v }
-func (do *InventoryOut) GetCreateTime() string  { return do.CreateTime }
-func (do *InventoryOut) SetCreateTime(v string) { do.CreateTime = v }
-func (do *InventoryOut) GetUpdateId() uint64    { return do.UpdateId }
-func (do *InventoryOut) SetUpdateId(v uint64)   { do.UpdateId = v }
-func (do *InventoryOut) GetUpdateName() string  { return do.UpdateName }
-func (do *InventoryOut) SetUpdateName(v string) { do.UpdateName = v }
-func (do *InventoryOut) GetUpdateTime() string  { return do.UpdateTime }
-func (do *InventoryOut) SetUpdateTime(v string) { do.UpdateTime = v }
-func (do *InventoryOut) GetIsDeleted() int8     { return do.IsDeleted }
-func (do *InventoryOut) SetIsDeleted(v int8)    { do.IsDeleted = v }
-func (do *InventoryOut) GetDeleteTime() string  { return do.DeleteTime }
-func (do *InventoryOut) SetDeleteTime(v string) { do.DeleteTime = v }
-func (do *InventoryOut) GetProductId() uint64   { return do.ProductId }
-func (do *InventoryOut) SetProductId(v uint64)  { do.ProductId = v }
-func (do *InventoryOut) GetOrderNo() string     { return do.OrderNo }
-func (do *InventoryOut) SetOrderNo(v string)    { do.OrderNo = v }
-func (do *InventoryOut) GetUserId() uint64      { return do.UserId }
-func (do *InventoryOut) SetUserId(v uint64)     { do.UserId = v }
-func (do *InventoryOut) GetUserName() string    { return do.UserName }
-func (do *InventoryOut) SetUserName(v string)   { do.UserName = v }
-func (do *InventoryOut) GetQuantity() float64   { return do.Quantity }
-func (do *InventoryOut) SetQuantity(v float64)  { do.Quantity = v }
-func (do *InventoryOut) GetWeight() float64     { return do.Weight }
-func (do *InventoryOut) SetWeight(v float64)    { do.Weight = v }
-func (do *InventoryOut) GetRemark() string      { return do.Remark }
-func (do *InventoryOut) SetRemark(v string)     { do.Remark = v }
+func (do *InventoryOut) GetId() uint64             { return do.Id }
+func (do *InventoryOut) SetId(v uint64)            { do.Id = v }
+func (do *InventoryOut) GetCreateId() uint64       { return do.CreateId }
+func (do *InventoryOut) SetCreateId(v uint64)      { do.CreateId = v }
+func (do *InventoryOut) GetCreateName() string     { return do.CreateName }
+func (do *InventoryOut) SetCreateName(v string)    { do.CreateName = v }
+func (do *InventoryOut) GetCreateTime() string     { return do.CreateTime }
+func (do *InventoryOut) SetCreateTime(v string)    { do.CreateTime = v }
+func (do *InventoryOut) GetUpdateId() uint64       { return do.UpdateId }
+func (do *InventoryOut) SetUpdateId(v uint64)      { do.UpdateId = v }
+func (do *InventoryOut) GetUpdateName() string     { return do.UpdateName }
+func (do *InventoryOut) SetUpdateName(v string)    { do.UpdateName = v }
+func (do *InventoryOut) GetUpdateTime() string     { return do.UpdateTime }
+func (do *InventoryOut) SetUpdateTime(v string)    { do.UpdateTime = v }
+func (do *InventoryOut) GetIsDeleted() int8        { return do.IsDeleted }
+func (do *InventoryOut) SetIsDeleted(v int8)       { do.IsDeleted = v }
+func (do *InventoryOut) GetDeleteTime() string     { return do.DeleteTime }
+func (do *InventoryOut) SetDeleteTime(v string)    { do.DeleteTime = v }
+func (do *InventoryOut) GetProductId() uint64      { return do.ProductId }
+func (do *InventoryOut) SetProductId(v uint64)     { do.ProductId = v }
+func (do *InventoryOut) GetOrderNo() string        { return do.OrderNo }
+func (do *InventoryOut) SetOrderNo(v string)       { do.OrderNo = v }
+func (do *InventoryOut) GetUserId() uint64         { return do.UserId }
+func (do *InventoryOut) SetUserId(v uint64)        { do.UserId = v }
+func (do *InventoryOut) GetUserName() string       { return do.UserName }
+func (do *InventoryOut) SetUserName(v string)      { do.UserName = v }
+func (do *InventoryOut) GetQuantity() float64      { return do.Quantity }
+func (do *InventoryOut) SetQuantity(v float64)     { do.Quantity = v }
+func (do *InventoryOut) GetWeight() sqlca.Decimal  { return do.Weight }
+func (do *InventoryOut) SetWeight(v sqlca.Decimal) { do.Weight = v }
+func (do *InventoryOut) GetRemark() string         { return do.Remark }
+func (do *InventoryOut) SetRemark(v string)        { do.Remark = v }
+
+////////////////////// ----- 自定义代码请写在下面 ----- //////////////////////

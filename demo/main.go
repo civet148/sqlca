@@ -78,25 +78,31 @@ func requireError(err error) {
 	}
 }
 
-/*
-[单条插入]
-*/
-func InsertSingle(db *sqlca.Engine) error {
+func createBaseModel() models.BaseModel {
 	now := time.Now().Format("2006-01-02 15:04:05")
-	price := float64(12.33)
-	var do = models.InventoryData{
-		Id:         uint64(db.NewID()),
+	return models.BaseModel{
 		CreateId:   1,
 		CreateName: "admin",
 		CreateTime: now,
 		UpdateId:   1,
 		UpdateName: "admin",
 		UpdateTime: now,
-		IsFrozen:   models.FrozenState_Ture,
-		Name:       "齿轮",
-		SerialNo:   "SNO_001",
-		Quantity:   1000,
-		Price:      &price,
+	}
+}
+
+/*
+[单条插入]
+*/
+func InsertSingle(db *sqlca.Engine) error {
+	price := float64(12.33)
+	var do = models.InventoryData{
+		Id:        uint64(db.NewID()),
+		BaseModel: createBaseModel(),
+		IsFrozen:  models.FrozenState_Ture,
+		Name:      "齿轮",
+		SerialNo:  "SNO_001",
+		Quantity:  1000,
+		Price:     &price,
 		ProductExtra: &models.ProductExtraData{
 			SpecsValue: "齿数：30",
 			AvgPrice:   sqlca.NewDecimal(30.8),
@@ -121,35 +127,24 @@ func InsertSingle(db *sqlca.Engine) error {
 [批量插入]
 */
 func InsertBatch(db *sqlca.Engine) error {
-	now := time.Now().Format("2006-01-02 15:04:05")
 	var dos = []models.InventoryData{
 		{
-			Id:         uint64(db.NewID()),
-			CreateId:   1,
-			CreateName: "admin",
-			CreateTime: now,
-			UpdateId:   1,
-			UpdateName: "admin",
-			UpdateTime: now,
-			IsFrozen:   0,
-			Name:       "齿轮",
-			SerialNo:   "SNO_001",
-			Quantity:   1000,
+			Id:        uint64(db.NewID()),
+			BaseModel: createBaseModel(),
+			IsFrozen:  0,
+			Name:      "齿轮",
+			SerialNo:  "SNO_001",
+			Quantity:  1000,
 			//Price:      10.5,
 			ProductExtra: nil,
 		},
 		{
-			Id:         uint64(db.NewID()),
-			CreateId:   1,
-			CreateName: "admin",
-			CreateTime: now,
-			UpdateId:   1,
-			UpdateName: "admin",
-			UpdateTime: now,
-			IsFrozen:   0,
-			Name:       "轮胎",
-			SerialNo:   "SNO_002",
-			Quantity:   2000,
+			Id:        uint64(db.NewID()),
+			BaseModel: createBaseModel(),
+			IsFrozen:  0,
+			Name:      "轮胎",
+			SerialNo:  "SNO_002",
+			Quantity:  2000,
 			//Price:      210,
 			ProductExtra: &models.ProductExtraData{
 				SpecsValue: "17英寸",
@@ -176,21 +171,15 @@ func InsertBatch(db *sqlca.Engine) error {
 }
 
 func UpsertSingle(db *sqlca.Engine) error {
-	now := time.Now().Format("2006-01-02 15:04:05")
 	price := float64(12.33)
 	var do = models.InventoryData{
-		Id:         productId,
-		CreateId:   1,
-		CreateName: "admin",
-		CreateTime: now,
-		UpdateId:   1,
-		UpdateName: "admin",
-		UpdateTime: now,
-		IsFrozen:   models.FrozenState_Ture,
-		Name:       "齿轮",
-		SerialNo:   "SNO_001",
-		Quantity:   1000,
-		Price:      &price,
+		Id:        productId,
+		BaseModel: createBaseModel(),
+		IsFrozen:  models.FrozenState_Ture,
+		Name:      "齿轮",
+		SerialNo:  "SNO_001",
+		Quantity:  1000,
+		Price:     &price,
 		ProductExtra: &models.ProductExtraData{
 			SpecsValue: "齿数：20",
 			AvgPrice:   sqlca.NewDecimal(20.8),
@@ -585,7 +574,6 @@ func Transaction(db *sqlca.Engine) error {
 		-- TRANSACTION END
 	*/
 
-	now := time.Now().Format("2006-01-02 15:04:05")
 	tx, err := db.TxBegin()
 	if err != nil {
 		return log.Errorf("开启事务失败：%s", err)
@@ -598,20 +586,15 @@ func Transaction(db *sqlca.Engine) error {
 	quantity := float64(20)
 	weight := float64(200.3)
 	_, _, err = tx.Model(&models.InventoryIn{
-		Id:         uint64(db.NewID()),
-		CreateId:   1,
-		CreateName: "admin",
-		CreateTime: now,
-		UpdateId:   1,
-		UpdateName: "admin",
-		UpdateTime: now,
-		ProductId:  productId,
-		OrderNo:    strOrderNo,
-		UserId:     3,
-		UserName:   "lazy",
-		Quantity:   quantity,
-		Weight:     weight,
-		Remark:     "产品入库",
+		Id:        uint64(db.NewID()),
+		BaseModel: createBaseModel(),
+		ProductId: productId,
+		OrderNo:   strOrderNo,
+		UserId:    3,
+		UserName:  "lazy",
+		Quantity:  quantity,
+		Weight:    sqlca.NewDecimal(weight),
+		Remark:    "产品入库",
 	}).Insert()
 	if err != nil {
 		return log.Errorf("数据插入错误: %s", err)
@@ -650,26 +633,19 @@ func TransactionWrapper(db *sqlca.Engine) error {
 	strOrderNo := time.Now().Format("20060102150405.000000000")
 	err := db.TxFunc(func(tx *sqlca.Engine) error {
 		var err error
-		now := time.Now().Format("2006-01-02 15:04:05")
-
 		//***************** 执行事务操作 *****************
 		quantity := float64(20)
 		weight := float64(200.3)
 		_, _, err = tx.Model(&models.InventoryIn{
-			Id:         uint64(db.NewID()),
-			CreateId:   1,
-			CreateName: "admin",
-			CreateTime: now,
-			UpdateId:   1,
-			UpdateName: "admin",
-			UpdateTime: now,
-			ProductId:  productId,
-			OrderNo:    strOrderNo,
-			UserId:     3,
-			UserName:   "lazy",
-			Quantity:   quantity,
-			Weight:     weight,
-			Remark:     "产品入库",
+			Id:        uint64(db.NewID()),
+			BaseModel: createBaseModel(),
+			ProductId: productId,
+			OrderNo:   strOrderNo,
+			UserId:    3,
+			UserName:  "lazy",
+			Quantity:  quantity,
+			Weight:    sqlca.NewDecimal(weight),
+			Remark:    "产品入库",
 		}).Insert()
 		if err != nil {
 			return log.Errorf("数据插入错误: %s", err)
@@ -696,22 +672,16 @@ func TransactionWrapper(db *sqlca.Engine) error {
 
 // 地理位置坐标插入/更新
 func UpsertPoint(db *sqlca.Engine) error {
-	now := time.Now().Format(time.DateTime)
 	price := 243.3
 	id := db.NewID()
 	do := &models.InventoryData{
-		Id:         uint64(id),
-		CreateId:   1,
-		CreateName: "admin",
-		CreateTime: now,
-		UpdateId:   1,
-		UpdateName: "admin",
-		UpdateTime: now,
-		IsFrozen:   models.FrozenState_Ture,
-		Name:       "齿轮",
-		SerialNo:   "SNO_001",
-		Quantity:   1000,
-		Price:      &price,
+		Id:        uint64(id),
+		BaseModel: createBaseModel(),
+		IsFrozen:  models.FrozenState_Ture,
+		Name:      "齿轮",
+		SerialNo:  "SNO_001",
+		Quantity:  1000,
+		Price:     &price,
 		Location: sqlca.Point{
 			X: 112.34232,
 			Y: -20.32432,

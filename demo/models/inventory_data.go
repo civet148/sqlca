@@ -2,24 +2,7 @@ package models
 
 import "github.com/civet148/sqlca/v3"
 
-type FrozenState int
-
-const (
-	FrozenState_False = 0
-	FrozenState_Ture  = 1
-)
-
-func (s FrozenState) String() string {
-	switch s {
-	case FrozenState_Ture:
-		return "True"
-	case FrozenState_False:
-		return "False"
-	}
-	return "<FrozenState_Unknown>"
-}
-
-const TableNameInventoryData = "`inventory_data`" //库存数据表
+const TableNameInventoryData = "inventory_data" //产品库存数据表
 
 const (
 	INVENTORY_DATA_COLUMN_ID            = "id"
@@ -35,23 +18,19 @@ const (
 	INVENTORY_DATA_COLUMN_QUANTITY      = "quantity"
 	INVENTORY_DATA_COLUMN_PRICE         = "price"
 	INVENTORY_DATA_COLUMN_PRODUCT_EXTRA = "product_extra"
+	INVENTORY_DATA_COLUMN_LOCATION      = "location"
 )
 
 type InventoryData struct {
-	Id           uint64            `json:"id" db:"id" gorm:"primarykey"`                                        //产品ID
-	CreateId     uint64            `json:"create_id" db:"create_id" `                                           //创建人ID
-	CreateName   string            `json:"create_name" db:"create_name" `                                       //创建人姓名
-	CreateTime   string            `json:"create_time" db:"create_time" gorm:"autoCreateTime" sqlca:"readonly"` //创建时间
-	UpdateId     uint64            `json:"update_id" db:"update_id" `                                           //更新人ID
-	UpdateName   string            `json:"update_name" db:"update_name" `                                       //更新人姓名
-	UpdateTime   string            `json:"update_time" db:"update_time" gorm:"autoUpdateTime" sqlca:"readonly"` //更新时间
-	IsFrozen     FrozenState       `json:"is_frozen" db:"is_frozen" `                                           //冻结状态(0: 未冻结 1: 已冻结)
-	Name         string            `json:"name" db:"name" `                                                     //产品名称
-	SerialNo     string            `json:"serial_no" db:"serial_no" `                                           //产品编号
-	Quantity     float64           `json:"quantity" db:"quantity" `                                             //产品库存
-	Price        *float64          `json:"price" db:"price" `                                                   //产品均价
-	ProductExtra *ProductExtraData `json:"product_extra" db:"product_extra" sqlca:"isnull"`                     //产品附带数据(JSON文本)
-	Location     sqlca.Point       `json:"location" db:"location" `                                             // 地理位置坐标
+	BaseModel
+	Id           uint64            `json:"id,omitempty" db:"id" gorm:"column:id;primaryKey;autoIncrement"`                        //产品ID
+	IsFrozen     FrozenState       `json:"is_frozen,omitempty" db:"is_frozen" gorm:"column:is_frozen"`                            //冻结状态(0: 未冻结 1: 已冻结)
+	Name         string            `json:"name,omitempty" db:"name" gorm:"column:name"`                                           //产品名称
+	SerialNo     string            `json:"serial_no,omitempty" db:"serial_no" gorm:"column:serial_no"`                            //产品编号
+	Quantity     float64           `json:"quantity,omitempty" db:"quantity" gorm:"column:quantity"`                               //产品库存
+	Price        *float64          `json:"price,omitempty" db:"price" gorm:"column:price"`                                        //产品均价
+	ProductExtra *ProductExtraData `json:"product_extra,omitempty" db:"product_extra" gorm:"column:product_extra" sqlca:"isnull"` //产品附带数据(JSON文本)
+	Location     sqlca.Point       `json:"location,omitempty" db:"location" gorm:"column:location" sqlca:"isnull"`                //地理位置
 }
 
 func (do *InventoryData) GetId() uint64                       { return do.Id }
@@ -80,7 +59,7 @@ func (do *InventoryData) GetPrice() *float64                  { return do.Price 
 func (do *InventoryData) SetPrice(v *float64)                 { do.Price = v }
 func (do *InventoryData) GetProductExtra() *ProductExtraData  { return do.ProductExtra }
 func (do *InventoryData) SetProductExtra(v *ProductExtraData) { do.ProductExtra = v }
+func (do *InventoryData) GetLocation() sqlca.Point            { return do.Location }
+func (do *InventoryData) SetLocation(v sqlca.Point)           { do.Location = v }
 
-func (do *InventoryData) TableName() string {
-	return "inventory_data"
-}
+////////////////////// ----- 自定义代码请写在下面 ----- //////////////////////

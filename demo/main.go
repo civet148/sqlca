@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/civet148/decimal"
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v3"
 	"github.com/civet148/sqlca/v3/demo/models"
@@ -105,7 +106,7 @@ func InsertSingle(db *sqlca.Engine) error {
 		Price:     &price,
 		ProductExtra: &models.ProductExtraData{
 			SpecsValue: "齿数：30",
-			AvgPrice:   sqlca.NewDecimal(30.8),
+			AvgPrice:   decimal.NewDecimal(30.8),
 		},
 	}
 
@@ -148,7 +149,7 @@ func InsertBatch(db *sqlca.Engine) error {
 			//Price:      210,
 			ProductExtra: &models.ProductExtraData{
 				SpecsValue: "17英寸",
-				AvgPrice:   sqlca.NewDecimal(450.5),
+				AvgPrice:   decimal.NewDecimal(450.5),
 			},
 		},
 	}
@@ -182,7 +183,7 @@ func UpsertSingle(db *sqlca.Engine) error {
 		Price:     &price,
 		ProductExtra: &models.ProductExtraData{
 			SpecsValue: "齿数：20",
-			AvgPrice:   sqlca.NewDecimal(20.8),
+			AvgPrice:   decimal.NewDecimal(20.8),
 		},
 	}
 
@@ -593,7 +594,7 @@ func Transaction(db *sqlca.Engine) error {
 		UserId:    3,
 		UserName:  "lazy",
 		Quantity:  quantity,
-		Weight:    sqlca.NewDecimal(weight),
+		Weight:    decimal.NewDecimal(weight),
 		Remark:    "产品入库",
 	}).Insert()
 	if err != nil {
@@ -644,7 +645,7 @@ func TransactionWrapper(db *sqlca.Engine) error {
 			UserId:    3,
 			UserName:  "lazy",
 			Quantity:  quantity,
-			Weight:    sqlca.NewDecimal(weight),
+			Weight:    decimal.NewDecimal(weight),
 			Remark:    "产品入库",
 		}).Insert()
 		if err != nil {

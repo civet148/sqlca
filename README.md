@@ -389,7 +389,7 @@ func InsertBatch(db *sqlca.Engine) error {
             Price:      10.5,
             ProductExtra: models.ProductExtraData{
                 SpecsValue: "齿数：32",
-                AvgPrice:   sqlca.NewDecimal(30.8),
+                AvgPrice:   decimal.NewDecimal(30.8),
             },
         },
         {
@@ -405,7 +405,7 @@ func InsertBatch(db *sqlca.Engine) error {
             Price:      210,
             ProductExtra: models.ProductExtraData{
                 SpecsValue: "17英寸",
-                AvgPrice:   sqlca.NewDecimal(450.5),
+                AvgPrice:   decimal.NewDecimal(450.5),
             },
         },
     }

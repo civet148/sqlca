@@ -4,14 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v3/types"
-	"github.com/jmoiron/sqlx"
 	"math/rand"
 	"reflect"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/civet148/log"
+	"github.com/civet148/sqlca/v3/types"
+	"github.com/jmoiron/sqlx"
 )
 
 type tableIndex struct {
@@ -545,16 +546,6 @@ func (e *Engine) setDescColumns(strColumns ...string) {
 	}
 }
 
-func (e *Engine) setCustomizeUpdates(strUpdates ...string) {
-	if len(strUpdates) > 0 {
-		e.strUpdates = strUpdates
-	}
-}
-
-func (e *Engine) getCustomizeUpdates() []string {
-	return e.strUpdates
-}
-
 // SELECT ... FROM xxx ORDER BY c1, c2 ASC, c3 DESC
 func (e *Engine) getAscAndDesc() (strAscDesc string) {
 
@@ -971,16 +962,10 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 
 func (e *Engine) getOnConflictDo() (strDo string) {
 	var strUpdates string
-	var strCustomizeUpdates = e.getCustomizeUpdates()
 	switch e.adapterType {
 	case types.AdapterSqlx_MySQL:
 		{
-			if len(strCustomizeUpdates) != 0 {
-				strUpdates = strings.Join(strCustomizeUpdates, ",")
-			} else {
-				strUpdates = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
-			}
-
+			strUpdates = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 			if !isNilOrFalse(strUpdates) {
 				if e.isPkInteger() { // primary key type is a integer
 					strDo = fmt.Sprintf("%v", strUpdates)
@@ -991,11 +976,7 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 		}
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
 		{
-			if len(strCustomizeUpdates) != 0 {
-				strUpdates = strings.Join(strCustomizeUpdates, ",")
-			} else {
-				strUpdates = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
-			}
+			strUpdates = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v RETURNING \"%v\"", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}

@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	_ "gitee.com/opengauss/openGauss-connector-go-pq" //open gauss golang driver of gitee.com
 	"github.com/bwmarrin/snowflake"
 	"github.com/civet148/log"
@@ -17,8 +20,6 @@ import (
 	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
 	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
-	"strings"
-	"time"
 )
 
 const (
@@ -92,7 +93,6 @@ type Engine struct {
 	slowQueryOn      bool                   // enable slow query alert (default off)
 	strCaseWhen      string                 // case..when...then...else...end
 	nearby           *nearby                // nearby
-	strUpdates       []string               // customize updates when using Upsert() ON DUPLICATE KEY UPDATE
 	joins            []*Join                // inner/left/right/full-outer join(s)
 	selected         bool                   // column(s) selected
 	noVerbose        bool                   // no more verbose
@@ -591,15 +591,13 @@ func (e *Engine) Insert() (lastInsertId, rowsAffected int64, err error) {
 // updates -> customize updates condition when key(s) conflict
 // [MySQL]
 // INSERT INTO messages(id, message_type, unread_count) VALUES('10000', '2', '1', '3')
-// ON DUPLICATE KEY UPDATE message_type=values(message_type), unread_count=unread_count+values(unread_count)
+// ON DUPLICATE KEY UPDATE ...
 // ---------------------------------------------------------------------------------------------------------------------------------------
-// e.Model(&do).Table("messages").Upsert("message_type=values(message_type)", "unread_count=unread_count+values(unread_count)")
 // ---------------------------------------------------------------------------------------------------------------------------------------
-func (e *Engine) Upsert(strCustomizeUpdates ...string) (lastInsertId int64, err error) {
+func (e *Engine) Upsert() (lastInsertId int64, err error) {
 
 	//assert(e.model, "model is nil, please call Model method first")
 	assert(e.strTableName, "table name not found")
-	e.setCustomizeUpdates(strCustomizeUpdates...)
 
 	defer e.cleanWhereCondition()
 

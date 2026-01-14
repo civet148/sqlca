@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v3"
 	"github.com/civet148/sqlca/v3/demo/models"
-	"time"
 )
 
 const (
@@ -29,7 +30,7 @@ func main() {
 		//}),
 		//redis distribution lock config
 		sqlca.WithRedisConfig(&sqlca.RedisConfig{
-			Address: "192.168.1.20:6379",
+			Address: "192.168.0.20:6379",
 		}),
 		sqlca.WithSnowFlake(&sqlca.SnowFlake{
 			NodeId: 1,

@@ -2,11 +2,12 @@ package sqlca
 
 import (
 	"fmt"
-	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v3/types"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/civet148/log"
+	"github.com/civet148/sqlca/v3/types"
 )
 
 const (
@@ -39,34 +40,30 @@ func (ui *UrlInfo) Url() string {
 	return fmt.Sprintf("%s://%s:%s@%s%s?%s", ui.Scheme, ui.User, ui.Password, ui.Host, ui.Path, strQueries)
 }
 
-type dsnDriver struct {
-	strDriverName string
-	parameter     dsnParameter
-}
-
 type dsnParameter struct {
-	host     string //ip:port
-	ip       string //ip
-	port     string //port
-	user     string
-	password string
-	db       string
-	charset  string
-	max      int
-	idle     int
-	strDSN   string
-	queries  map[string]string
+	DriverName string
+	Host       string //ip:port
+	Ip         string //ip
+	Port       string //port
+	User       string
+	Password   string
+	DB         string
+	Charset    string
+	Max        int
+	Idle       int
+	DSN        string
+	Queries    map[string]string
 }
 
-func (d *dsnDriver) SetMax(max int) {
+func (d *dsnParameter) SetMax(max int) {
 	if max > 0 {
-		d.parameter.max = max
+		d.Max = max
 	}
 }
 
-func (d *dsnDriver) SetIdle(idle int) {
+func (d *dsnParameter) SetIdle(idle int) {
 	if idle > 0 {
-		d.parameter.idle = idle
+		d.Idle = idle
 	}
 }
 
@@ -74,28 +71,28 @@ func (d *dsnParameter) parseUrlInfo(ui *UrlInfo) {
 	var ok bool
 	var val string
 
-	d.user = ui.User
-	d.host = ui.Host
-	d.ip, d.port = getHostPort(d.host)
-	d.password = ui.Password
-	d.db = parseDatabaseName(ui.Path)
-	d.charset = ui.Queries[urlQueryCharset]
-	d.queries = ui.Queries
+	d.User = ui.User
+	d.Host = ui.Host
+	d.Ip, d.Port = getHostPort(d.Host)
+	d.Password = ui.Password
+	d.DB = parseDatabaseName(ui.Path)
+	d.Charset = ui.Queries[urlQueryCharset]
+	d.Queries = ui.Queries
 
 	if val, ok = ui.Queries[urlQueryMax]; ok {
 		if val != "" {
-			d.max, _ = strconv.Atoi(val)
+			d.Max, _ = strconv.Atoi(val)
 		} else {
-			d.max = 100
+			d.Max = 100
 		}
 		delete(ui.Queries, urlQueryMax)
 	}
 
 	if val, ok = ui.Queries[urlQueryIdle]; ok {
 		if val != "" {
-			d.idle, _ = strconv.Atoi(val)
+			d.Idle, _ = strconv.Atoi(val)
 		} else {
-			d.idle = 1
+			d.Idle = 1
 		}
 		delete(ui.Queries, urlQueryIdle)
 	}
@@ -221,13 +218,13 @@ func (e *Engine) parseMysqlUrl(strUrl string) (parameter dsnParameter) {
 	ui := ParseUrl(strUrl)
 	parameter.parseUrlInfo(ui)
 	e.setDatabaseName(parseDatabaseName(ui.Path))
-	parameter.strDSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
+	parameter.DSN = fmt.Sprintf("%s:%s@tcp(%s)%s", ui.User, ui.Password, ui.Host, ui.Path)
 	var queries []string
 	for k, v := range ui.Queries {
 		queries = append(queries, fmt.Sprintf("%v=%v", k, v))
 	}
 	if len(queries) > 0 {
-		parameter.strDSN += fmt.Sprintf("?%s", strings.Join(queries, "&"))
+		parameter.DSN += fmt.Sprintf("?%s", strings.Join(queries, "&"))
 	}
 	return
 }
@@ -239,7 +236,7 @@ func (e *Engine) parsePostgresUrl(strUrl string) (parameter dsnParameter) {
 	e.setDatabaseName(parseDatabaseName(ui.Path))
 	strDatabase := e.getDatabaseName()
 	strIP, strPort := getHostPort(ui.Host)
-	parameter.strDSN = buildPostgresDSN(strIP, strPort, ui.User, ui.Password, strDatabase, ui.Queries)
+	parameter.DSN = buildPostgresDSN(strIP, strPort, ui.User, ui.Password, strDatabase, ui.Queries)
 	return
 }
 
@@ -263,7 +260,7 @@ func (e *Engine) parseSqliteUrl(strUrl string) (parameter dsnParameter) {
 
 	s := strings.Split(strUrl, urlSchemeSep)
 	assert(len(s) == 2, "invalid url [%v] of sqlite, eg. 'sqlite:///var/lib/my.db'", strUrl)
-	parameter.strDSN = s[1]
+	parameter.DSN = s[1]
 	return
 }
 
@@ -273,7 +270,7 @@ func (e *Engine) parseMssqlUrl(strUrl string) (parameter dsnParameter) {
 	ui := ParseUrl(strUrl)
 	parameter.parseUrlInfo(ui)
 	e.setDatabaseName(parseDatabaseName(ui.Path))
-	parameter.strDSN = buildMssqlDSN(parameter.ip, parameter.port, parameter.user, parameter.password, parameter.db, parameter.queries)
+	parameter.DSN = buildMssqlDSN(parameter.Ip, parameter.Port, parameter.User, parameter.Password, parameter.DB, parameter.Queries)
 	return
 }
 
@@ -302,30 +299,30 @@ func buildMssqlDSN(strIP, strPort, strUser, strPassword, strDatabase string, que
 }
 
 //root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4
-func (e *Engine) parseMysqlDSN(adapterType types.AdapterType, strMySQLDSN string) (dsn dsnDriver) {
+func (e *Engine) parseMysqlDSN(adapterType types.AdapterType, strMySQLDSN string) (dsn dsnParameter) {
 	var strQueries string
 	var querySlice []string
 	var strUserPassword string
-	dsn.parameter.queries = make(map[string]string, 0)
+	dsn.Queries = make(map[string]string, 0)
 	strDatabaseName := trimBetween(strMySQLDSN, "/", "?")
-	dsn.strDriverName = adapterType.DriverName()
-	dsn.parameter.strDSN = strMySQLDSN
-	dsn.parameter.db = strDatabaseName
-	dsn.parameter.host = trimBetween(strMySQLDSN, "(", ")")
-	dsn.parameter.ip, dsn.parameter.port = getHostPort(dsn.parameter.host)
+	dsn.DriverName = adapterType.DriverName()
+	dsn.DSN = strMySQLDSN
+	dsn.DB = strDatabaseName
+	dsn.Host = trimBetween(strMySQLDSN, "(", ")")
+	dsn.Ip, dsn.Port = getHostPort(dsn.Host)
 	strQueries = cutLeft(strMySQLDSN, "?")
 	strUserPassword = cutRight(strMySQLDSN, "@")
 	ss := strings.Split(strUserPassword, ":")
-	dsn.parameter.user = ss[0]
-	dsn.parameter.password = ss[1]
+	dsn.User = ss[0]
+	dsn.Password = ss[1]
 	querySlice = strings.Split(strQueries, "&")
 	for _, q := range querySlice {
 		qv := strings.Split(q, "=")
 		if len(qv) == 2 {
 			if qv[0] == urlQueryCharset {
-				dsn.parameter.charset = qv[1]
+				dsn.Charset = qv[1]
 			}
-			dsn.parameter.queries[qv[0]] = qv[1]
+			dsn.Queries[qv[0]] = qv[1]
 		}
 	}
 	e.setDatabaseName(strDatabaseName)

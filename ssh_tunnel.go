@@ -3,14 +3,15 @@ package sqlca
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"strings"
+
 	"github.com/civet148/gotools/wss"
 	_ "github.com/civet148/gotools/wss/tcpsock" //required (register socket instance)
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v3/types"
 	"github.com/elliotchance/sshtunnel"
 	"golang.org/x/crypto/ssh"
-	"net"
-	"strings"
 )
 
 const (
@@ -42,8 +43,8 @@ func (s *SSH) setDefaultPort() {
 		s.Host += ":22"
 	}
 }
-func (s *SSH) openSSHTunnel(dsn *dsnDriver) (d *dsnDriver) {
-	var adapter = types.GetAdapterType(dsn.strDriverName)
+func (s *SSH) openSSHTunnel(dsn *dsnParameter) (d *dsnParameter) {
+	var adapter = types.GetAdapterType(dsn.DriverName)
 
 	if ok := s.startSSHTunnel(dsn); !ok {
 		err := fmt.Errorf("start SSH tunnel service failed, please make sure your tunnel server config [%+v] is correct", s)
@@ -64,7 +65,7 @@ func (s *SSH) openSSHTunnel(dsn *dsnDriver) (d *dsnDriver) {
 	return d
 }
 
-func (s *SSH) startSSHTunnel(dsn *dsnDriver) (ok bool) {
+func (s *SSH) startSSHTunnel(dsn *dsnParameter) (ok bool) {
 
 	s.setDefaultPort()
 
@@ -91,7 +92,7 @@ func (s *SSH) startSSHTunnel(dsn *dsnDriver) (ok bool) {
 		s.authMethod,
 
 		// The destination host and port of the actual server.
-		dsn.parameter.host,
+		dsn.Host,
 
 		// The local port you want to bind the remote port to. specifying "0" will lead to a random port.
 		fmt.Sprintf("%d", s.listenPort),
@@ -165,32 +166,32 @@ func (s *SSH) tryListenRandomPort() (port int, ok bool) {
 	return
 }
 
-func (s *SSH) buildMysqlTunnelDSN(dsn *dsnDriver) *dsnDriver {
+func (s *SSH) buildMysqlTunnelDSN(dsn *dsnParameter) *dsnParameter {
 	log.Debugf("buildMysqlTunnelDSN dsn [%+v] ssh [%+v]", dsn, s)
 	var kvs []string
-	var parameter = &dsn.parameter
-	parameter.strDSN = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?", parameter.user, parameter.password, s.listenIP, s.listenPort, parameter.db)
-	for k, v := range parameter.queries {
+	var parameter = dsn
+	parameter.DSN = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?", parameter.User, parameter.Password, s.listenIP, s.listenPort, parameter.DB)
+	for k, v := range parameter.Queries {
 		kvs = append(kvs, fmt.Sprintf("%s=%s", k, v))
 	}
 	if len(kvs) > 0 {
-		parameter.strDSN += strings.Join(kvs, "&")
+		parameter.DSN += strings.Join(kvs, "&")
 	}
 	return dsn
 }
 
-func (s *SSH) buildPostgresTunnelDSN(dsn *dsnDriver) *dsnDriver {
+func (s *SSH) buildPostgresTunnelDSN(dsn *dsnParameter) *dsnParameter {
 	log.Debugf("buildPostgresTunnelDSN dsn [%+v] ssh [%+v]", dsn, s)
 	var strListenPort = fmt.Sprintf("%d", s.listenPort)
-	var parameter = &dsn.parameter
-	parameter.strDSN = buildPostgresDSN(s.listenIP, strListenPort, parameter.user, parameter.password, parameter.db, parameter.queries)
+	var parameter = dsn
+	parameter.DSN = buildPostgresDSN(s.listenIP, strListenPort, parameter.User, parameter.Password, parameter.DB, parameter.Queries)
 	return dsn
 }
 
-func (s *SSH) buildMssqlTunnelDSN(dsn *dsnDriver) *dsnDriver {
+func (s *SSH) buildMssqlTunnelDSN(dsn *dsnParameter) *dsnParameter {
 	log.Debugf("buildMssqlTunnelDSN dsn [%+v] ssh [%+v]", dsn, s)
 	var strListenPort = fmt.Sprintf("%d", s.listenPort)
-	var parameter = &dsn.parameter
-	parameter.strDSN = buildMssqlDSN(s.listenIP, strListenPort, parameter.user, parameter.password, parameter.db, parameter.queries)
+	var parameter = dsn
+	parameter.DSN = buildMssqlDSN(s.listenIP, strListenPort, parameter.User, parameter.Password, parameter.DB, parameter.Queries)
 	return dsn
 }

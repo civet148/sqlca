@@ -2,8 +2,9 @@ package sqlca
 
 import (
 	"crypto/tls"
-	"github.com/civet148/log"
 	"time"
+
+	"github.com/civet148/log"
 )
 
 type RedisConfig struct {
@@ -32,6 +33,7 @@ type dialOption struct {
 	DisableOffset bool         //disable page offset for LIMIT (default page no is 1, if true then page no start from 0)
 	DefaultLimit  int32        //limit default (0 means no limit)
 	RedisConfig   *RedisConfig //redis config
+	AutoMigrate   bool         //auto migrate database schema
 }
 
 type Option func(*dialOption)
@@ -94,5 +96,11 @@ func WithSnowFlake(snowflake *SnowFlake) Option {
 func WithRedisConfig(rc *RedisConfig) Option {
 	return func(opt *dialOption) {
 		opt.RedisConfig = rc
+	}
+}
+
+func WithAutoMigrate() Option {
+	return func(opt *dialOption) {
+		opt.AutoMigrate = true
 	}
 }

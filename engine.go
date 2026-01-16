@@ -54,7 +54,7 @@ type nearby struct {
 type Engine struct {
 	ctx              context.Context
 	strDSN           string                 // database source name
-	dsn              dsnDriver              // driver name and parameters
+	dsn              dsnParameter           // driver name and parameters
 	options          *dialOption            // database options
 	db               *sqlx.DB               // DB instance masters
 	tx               *sqlx.Tx               // sql tx instance
@@ -125,21 +125,21 @@ func NewEngine(strUrl string, opts ...Option) (*Engine, error) {
 }
 
 // get data base driver name and data source name
-func (e *Engine) getDriverNameAndDSN(adapterType types.AdapterType, strUrl string) (driver dsnDriver) {
+func (e *Engine) getDriverNameAndDSN(adapterType types.AdapterType, strUrl string) (driver dsnParameter) {
 
-	driver.strDriverName = adapterType.DriverName()
 	switch adapterType {
 	case types.AdapterSqlx_MySQL:
-		driver.parameter = e.parseMysqlUrl(strUrl)
+		driver = e.parseMysqlUrl(strUrl)
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
-		driver.parameter = e.parsePostgresUrl(strUrl)
+		driver = e.parsePostgresUrl(strUrl)
 	case types.AdapterSqlx_Sqlite:
-		driver.parameter = e.parseSqliteUrl(strUrl)
+		driver = e.parseSqliteUrl(strUrl)
 	case types.AdapterSqlx_Mssql:
-		driver.parameter = e.parseMssqlUrl(strUrl)
+		driver = e.parseMssqlUrl(strUrl)
 	default:
 		panic(fmt.Sprintf("unknown adapter [%s]", adapterType))
 	}
+	driver.DriverName = adapterType.DriverName()
 	return
 }
 
@@ -169,9 +169,7 @@ func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 		adapter = types.GetAdapterType(us[0])
 		e.dsn = e.getDriverNameAndDSN(adapter, strUrl)
 	}
-	var dsn = &e.dsn
-	var param = &dsn.parameter
-
+	var param = &e.dsn
 	e.adapterType = adapter
 	var db *sqlx.DB
 	dialOptions := parseDialOption(opts...)
@@ -179,7 +177,7 @@ func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 		e.Debug(true)
 	}
 	if dialOptions.SSH != nil { //SSH tunnel enable
-		dsn = dialOptions.SSH.openSSHTunnel(dsn)
+		param = dialOptions.SSH.openSSHTunnel(param)
 	}
 
 	if rc := dialOptions.RedisConfig; rc != nil {
@@ -205,7 +203,7 @@ func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 			e.redisClient = redigo.NewRedigo(redisOpts...)
 		}
 	}
-	if db, err = sqlx.Open(dsn.strDriverName, param.strDSN); err != nil {
+	if db, err = sqlx.Open(param.DriverName, param.DSN); err != nil {
 		//log.Errorf("open database driver name [%v] DSN [%v] error [%v]", dsn.strDriverName, parameter.strDSN, err.Error())
 		return nil, err
 	}
@@ -214,13 +212,13 @@ func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 		return nil, err
 	}
 
-	dsn.SetMax(dialOptions.Max)
-	dsn.SetIdle(dialOptions.Idle)
-	if param.max != 0 {
-		db.SetMaxOpenConns(param.max)
+	param.SetMax(dialOptions.Max)
+	param.SetIdle(dialOptions.Idle)
+	if param.Max != 0 {
+		db.SetMaxOpenConns(param.Max)
 	}
-	if param.idle != 0 {
-		db.SetMaxIdleConns(param.idle)
+	if param.Idle != 0 {
+		db.SetMaxIdleConns(param.Idle)
 	}
 	e.setDB(db)
 
@@ -1304,4 +1302,9 @@ func (e *Engine) TryLock(key string, expiry, timeout time.Duration) (unlock func
 		log.Panic("redis client not set")
 	}
 	return e.redisClient.TryLock(key, expiry, timeout)
+}
+
+func (e *Engine) AutoMigrate(models ...any) (err error) {
+
+	return nil
 }

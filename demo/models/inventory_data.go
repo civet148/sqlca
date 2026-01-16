@@ -23,14 +23,14 @@ const (
 
 type InventoryData struct {
 	BaseModel
-	Id           uint64            `json:"id,omitempty" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`                                  //产品ID
-	IsFrozen     FrozenState       `json:"is_frozen,omitempty" db:"is_frozen" gorm:"column:is_frozen;type:tinyint(1);default:0;"`            //冻结状态(0: 未冻结 1: 已冻结)
-	Name         string            `json:"name,omitempty" db:"name" gorm:"column:name;type:varchar(255);"`                                   //产品名称
-	SerialNo     string            `json:"serial_no,omitempty" db:"serial_no" gorm:"column:serial_no;type:varchar(64);"`                     //产品编号
-	Quantity     float64           `json:"quantity,omitempty" db:"quantity" gorm:"column:quantity;type:decimal(16,3);default:0.000;"`        //产品库存
-	Price        *float64          `json:"price,omitempty" db:"price" gorm:"column:price;type:decimal(16,2);default:0.00;"`                  //产品均价
-	ProductExtra *ProductExtraData `json:"product_extra,omitempty" db:"product_extra" gorm:"column:product_extra;type:text;" sqlca:"isnull"` //产品附带数据(JSON文本)
-	Location     sqlca.Point       `json:"location,omitempty" db:"location" gorm:"column:location;type:point;" sqlca:"isnull"`               //地理位置
+	Id           uint64            `json:"id,omitempty" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`                                               //产品ID
+	IsFrozen     FrozenState       `json:"is_frozen,omitempty" db:"is_frozen" gorm:"column:is_frozen;type:tinyint(1);default:0;" sqlca:"isnull"`          //
+	Name         string            `json:"name,omitempty" db:"name" gorm:"column:name;type:varchar(255);" sqlca:"isnull"`                                 //
+	SerialNo     string            `json:"serial_no,omitempty" db:"serial_no" gorm:"column:serial_no;type:varchar(64);index:i_serial_no;" sqlca:"isnull"` //
+	Quantity     float64           `json:"quantity,omitempty" db:"quantity" gorm:"column:quantity;type:decimal(16,3);default:0.000;" sqlca:"isnull"`      //
+	Price        *float64          `json:"price,omitempty" db:"price" gorm:"column:price;type:decimal(16,2);default:0.00;" sqlca:"isnull"`                //
+	ProductExtra *ProductExtraData `json:"product_extra,omitempty" db:"product_extra" gorm:"column:product_extra;type:text;" sqlca:"isnull"`              //
+	Location     sqlca.Point       `json:"location,omitempty" db:"location" gorm:"column:location;type:point;" sqlca:"isnull"`                            //
 }
 
 func (do InventoryData) TableName() string { return "inventory_data" }

@@ -15,7 +15,7 @@ import (
 	"github.com/civet148/log"
 	"github.com/civet148/redigo"
 	"github.com/civet148/sqlca/v3/types"
-
+	"gorm.io/gorm/logger"
 	//_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
 	"github.com/gansidui/geohash"
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
@@ -1318,6 +1318,7 @@ func (e *Engine) AutoMigrate(ctx context.Context, cb MigrateAfterCB, models ...a
 	if err != nil {
 		return err
 	}
+	db.Logger.LogMode(logger.Error)
 	err = db.AutoMigrate(models...)
 	if err != nil {
 		return err

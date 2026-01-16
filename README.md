@@ -1028,31 +1028,31 @@ func SwitchDatabase(db *sqlca.Engine) (err error){
 ```go
 //查询前置和后置hook接口
 type BeforeQueryInterface interface {
-    BeforeQuery(db *sqlca.Engine) error
+    BeforeQueryData(db *sqlca.Engine) error
 }
 type AfterQueryInterface interface {
-    AfterQuery(db *sqlca.Engine) error
+    AfterQueryData(db *sqlca.Engine) error
 }
 //插入前置和后置hook接口
 type BeforeCreateInterface interface {
-	BeforeCreate(db *sqlca.Engine) error
+	BeforeCreateData(db *sqlca.Engine) error
 }
 type AfterCreateInterface interface {
-	AfterCreate(db *sqlca.Engine) error
+	AfterCreateData(db *sqlca.Engine) error
 }
 //更新前置和后置hook接口
 type BeforeUpdateInterface interface {
-	BeforeUpdate(db *sqlca.Engine) error
+	BeforeUpdateData(db *sqlca.Engine) error
 }
 type AfterUpdateInterface interface {
-	AfterUpdate(db *sqlca.Engine) error
+	AfterUpdateData(db *sqlca.Engine) error
 }
 //删除前置和后置hook接口
 type BeforeDeleteInterface interface {
-	BeforeDelete(db *sqlca.Engine) error
+	BeforeDeleteData(db *sqlca.Engine) error
 }
 type AfterDeleteInterface interface {
-	AfterDelete(db *sqlca.Engine) error
+	AfterDeleteData(db *sqlca.Engine) error
 }
 ```
 

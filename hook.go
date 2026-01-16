@@ -1,40 +1,41 @@
 package sqlca
 
 import (
-	"github.com/civet148/log"
 	"reflect"
+
+	"github.com/civet148/log"
 )
 
 type BeforeQueryInterface interface {
-	BeforeQuery(db *Engine) error
+	BeforeQueryData(db *Engine) error
 }
 
 type AfterQueryInterface interface {
-	AfterQuery(db *Engine) error
+	AfterQueryData(db *Engine) error
 }
 
 type BeforeCreateInterface interface {
-	BeforeCreate(db *Engine) error
+	BeforeCreateData(db *Engine) error
 }
 
 type AfterCreateInterface interface {
-	AfterCreate(db *Engine) error
+	AfterCreateData(db *Engine) error
 }
 
 type BeforeUpdateInterface interface {
-	BeforeUpdate(db *Engine) error
+	BeforeUpdateData(db *Engine) error
 }
 
 type AfterUpdateInterface interface {
-	AfterUpdate(db *Engine) error
+	AfterUpdateData(db *Engine) error
 }
 
 type BeforeDeleteInterface interface {
-	BeforeDelete(db *Engine) error
+	BeforeDeleteData(db *Engine) error
 }
 
 type AfterDeleteInterface interface {
-	AfterDelete(db *Engine) error
+	AfterDeleteData(db *Engine) error
 }
 
 type hookMethods struct {
@@ -140,7 +141,7 @@ func (e *Engine) execBeforeQueryHooks() (err error) {
 			if hook == nil {
 				continue
 			}
-			if err = hook.BeforeQuery(e.clone()); err != nil {
+			if err = hook.BeforeQueryData(e.clone()); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}
@@ -154,7 +155,7 @@ func (e *Engine) execBeforeCreateHooks() (err error) {
 			if hook == nil {
 				continue
 			}
-			if err = hook.BeforeCreate(e.clone()); err != nil {
+			if err = hook.BeforeCreateData(e.clone()); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}
@@ -168,7 +169,7 @@ func (e *Engine) execBeforeUpdateHooks() (err error) {
 			if hook == nil {
 				continue
 			}
-			if err = hook.BeforeUpdate(e.clone()); err != nil {
+			if err = hook.BeforeUpdateData(e.clone()); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}
@@ -182,7 +183,7 @@ func (e *Engine) execBeforeDeleteHooks() (err error) {
 			if hook == nil {
 				continue
 			}
-			if err = hook.BeforeDelete(e.clone()); err != nil {
+			if err = hook.BeforeDeleteData(e.clone()); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}
@@ -199,7 +200,7 @@ func (e *Engine) execAfterQueryHooks() (err error) {
 			if hook == nil {
 				continue
 			}
-			if err = hook.AfterQuery(e.clone()); err != nil {
+			if err = hook.AfterQueryData(e.clone()); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}
@@ -213,7 +214,7 @@ func (e *Engine) execAfterCreateHooks() (err error) {
 			if hook == nil {
 				continue
 			}
-			if err = hook.AfterCreate(e.clone()); err != nil {
+			if err = hook.AfterCreateData(e.clone()); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}
@@ -227,7 +228,7 @@ func (e *Engine) execAfterUpdateHooks() (err error) {
 			if hook == nil {
 				continue
 			}
-			if err = hook.AfterUpdate(e.clone()); err != nil {
+			if err = hook.AfterUpdateData(e.clone()); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}
@@ -241,7 +242,7 @@ func (e *Engine) execAfterDeleteHooks() (err error) {
 			if hook == nil {
 				continue
 			}
-			if err = hook.AfterDelete(e.clone()); err != nil {
+			if err = hook.AfterDeleteData(e.clone()); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}

@@ -6,20 +6,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
-
 	_ "gitee.com/opengauss/openGauss-connector-go-pq" //open gauss golang driver of gitee.com
 	"github.com/bwmarrin/snowflake"
 	"github.com/civet148/log"
 	"github.com/civet148/redigo"
 	"github.com/civet148/sqlca/v3/types"
-	_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
+	//_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
 	"github.com/gansidui/geohash"
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
 	"github.com/jmoiron/sqlx"          //sqlx package
 	_ "github.com/lib/pq"              //postgres golang driver
 	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
+	"gorm.io/gorm"
+	"strings"
+	"time"
 )
 
 const (
@@ -107,7 +107,7 @@ func init() {
 }
 
 /*
-// [mysql]    "mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4"
+// [mysql]    "mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4&timeout=60s&parseTime=true&loc=Local"
 // [postgres] "postgres://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public"
 // [opengauss] "opengauss://root:123456@127.0.0.1:5432/test?sslmode=disable&search_path=public"
 // [mssql]    "mssql://sa:123456@127.0.0.1:1433/mydb?instance=SQLExpress&windows=false"
@@ -1304,7 +1304,21 @@ func (e *Engine) TryLock(key string, expiry, timeout time.Duration) (unlock func
 	return e.redisClient.TryLock(key, expiry, timeout)
 }
 
-func (e *Engine) AutoMigrate(models ...any) (err error) {
-
+func (e *Engine) AutoMigrate(ctx context.Context, cb MigrateAfterCB, models ...any) (err error) {
+	var dialector gorm.Dialector
+	dialector, err = createDialector(e.adapterType, e.dsn.DSN)
+	if err != nil {
+		return err
+	}
+	var db *gorm.DB
+	db, err = gorm.Open(dialector)
+	if err != nil {
+		return err
+	}
+	err = db.AutoMigrate(models...)
+	if err != nil {
+		return err
+	}
+	cb(ctx, e) // callback function after migration
 	return nil
 }

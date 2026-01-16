@@ -1322,6 +1322,8 @@ func (e *Engine) AutoMigrate(ctx context.Context, cb MigrateAfterCB, models ...a
 	if err != nil {
 		return err
 	}
-	cb(ctx, e) // callback function after migration
+	if cb != nil {
+		cb(ctx, e) // callback function after migration
+	}
 	return nil
 }

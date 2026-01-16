@@ -6,11 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"strings"
+	"time"
+
 	_ "gitee.com/opengauss/openGauss-connector-go-pq" //open gauss golang driver of gitee.com
 	"github.com/bwmarrin/snowflake"
 	"github.com/civet148/log"
 	"github.com/civet148/redigo"
 	"github.com/civet148/sqlca/v3/types"
+
 	//_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
 	"github.com/gansidui/geohash"
 	_ "github.com/go-sql-driver/mysql" //mysql golang driver
@@ -18,8 +23,6 @@ import (
 	_ "github.com/lib/pq"              //postgres golang driver
 	_ "github.com/mattn/go-sqlite3"    //sqlite3 golang driver
 	"gorm.io/gorm"
-	"strings"
-	"time"
 )
 
 const (
@@ -1306,7 +1309,7 @@ func (e *Engine) TryLock(key string, expiry, timeout time.Duration) (unlock func
 
 func (e *Engine) AutoMigrate(ctx context.Context, cb MigrateAfterCB, models ...any) (err error) {
 	var dialector gorm.Dialector
-	dialector, err = createDialector(e.adapterType, e.dsn.DSN)
+	dialector, err = createDialector(e.adapterType, e.dsn)
 	if err != nil {
 		return err
 	}

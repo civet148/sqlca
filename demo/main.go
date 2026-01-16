@@ -42,29 +42,30 @@ func main() {
 		return
 	}
 
-	requireNoError(InsertSingle(db))
-	requireNoError(InsertBatch(db))
-	requireNoError(UpsertSingle(db))
-	requireNoError(QueryLimit(db))
-	requireError(QueryErrNotFound(db))
-	requireNoError(QueryByPage(db))
-	requireNoError(QueryByCondition(db))
-	requireNoError(QueryByGroup(db))
-	requireNoError(QueryCountRows(db))
-	requireNoError(QueryJoins(db))
-	requireNoError(QueryOr(db))
-	requireNoError(QueryRawSQL(db))
-	requireNoError(QueryByNormalVars(db))
-	requireNoError(QueryWithJsonColumn(db))
-	requireNoError(UpdateByModel(db))
-	requireNoError(UpdateByMap(db))
-	requireNoError(DeleteById(db))
-	requireNoError(Transaction(db))
-	requireNoError(TransactionWrapper(db))
-	requireNoError(ExecRawSQL(db))
-	requireNoError(UpsertPoint(db))
-	requireNoError(UpdatePointByExpress(db))
-	requireNoError(DistributionLock(db))
+	requireNoError(AutoMigrate(db))
+	//requireNoError(InsertSingle(db))
+	//requireNoError(InsertBatch(db))
+	//requireNoError(UpsertSingle(db))
+	//requireNoError(QueryLimit(db))
+	//requireError(QueryErrNotFound(db))
+	//requireNoError(QueryByPage(db))
+	//requireNoError(QueryByCondition(db))
+	//requireNoError(QueryByGroup(db))
+	//requireNoError(QueryCountRows(db))
+	//requireNoError(QueryJoins(db))
+	//requireNoError(QueryOr(db))
+	//requireNoError(QueryRawSQL(db))
+	//requireNoError(QueryByNormalVars(db))
+	//requireNoError(QueryWithJsonColumn(db))
+	//requireNoError(UpdateByModel(db))
+	//requireNoError(UpdateByMap(db))
+	//requireNoError(DeleteById(db))
+	//requireNoError(Transaction(db))
+	//requireNoError(TransactionWrapper(db))
+	//requireNoError(ExecRawSQL(db))
+	//requireNoError(UpsertPoint(db))
+	//requireNoError(UpdatePointByExpress(db))
+	//requireNoError(DistributionLock(db))
 }
 
 func requireNoError(err error) {
@@ -89,6 +90,18 @@ func createBaseModel() models.BaseModel {
 		UpdateName: "admin",
 		UpdateTime: now,
 	}
+}
+
+func AutoMigrate(db *sqlca.Engine) (err error) {
+	return db.AutoMigrate(context.Background(), AutoMigrateCallback,
+		&models.InventoryData{},
+		&models.InventoryOut{},
+		&models.InventoryIn{},
+	)
+}
+
+func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
+	log.Infof("AutoMigrateCallback...")
 }
 
 /*

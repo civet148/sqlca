@@ -14,7 +14,7 @@ type BaseModel struct {
 	UpdateId   uint64 `json:"update_id,omitempty" db:"update_id" gorm:"column:update_id"`                                                //更新人ID
 	UpdateName string `json:"update_name,omitempty" db:"update_name" gorm:"column:update_name"`                                          //更新人姓名
 	UpdateTime string `json:"update_time,omitempty" db:"update_time" gorm:"column:update_time;default:CURRENT_TIMESTAMP;autoUpdateTime"` //更新时间
-	isExist    bool   `db:"-"`                                                                                                           //数据是否在数据库中存在
+	isExist    bool   `gorm:"-" db:"-"`                                                                                                  //数据是否在数据库中存在
 }
 
 // 是否为数据库中存在的数据

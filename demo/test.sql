@@ -11,12 +11,12 @@ CREATE TABLE `inventory_data` (
   `update_name` longtext COLLATE utf8mb4_unicode_ci,
   `update_time` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT 'CURRENT_TIMESTAMP',
   `is_frozen` tinyint(1) DEFAULT '0',
-  `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `serial_no` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '产品：名称；不能为空',
+  `serial_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '产品序列号',
   `quantity` decimal(16,3) DEFAULT '0.000',
   `price` decimal(16,2) DEFAULT '0.00',
-  `product_extra` text COLLATE utf8mb4_unicode_ci,
   `location` point DEFAULT NULL,
+  `product_extra` json DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `i_serial_no` (`serial_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='产品库存数据表';

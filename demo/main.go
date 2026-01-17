@@ -43,29 +43,29 @@ func main() {
 	}
 
 	requireNoError(AutoMigrate(db))
-	//requireNoError(InsertSingle(db))
-	//requireNoError(InsertBatch(db))
-	//requireNoError(UpsertSingle(db))
-	//requireNoError(QueryLimit(db))
-	//requireError(QueryErrNotFound(db))
-	//requireNoError(QueryByPage(db))
-	//requireNoError(QueryByCondition(db))
-	//requireNoError(QueryByGroup(db))
-	//requireNoError(QueryCountRows(db))
-	//requireNoError(QueryJoins(db))
-	//requireNoError(QueryOr(db))
-	//requireNoError(QueryRawSQL(db))
-	//requireNoError(QueryByNormalVars(db))
-	//requireNoError(QueryWithJsonColumn(db))
-	//requireNoError(UpdateByModel(db))
-	//requireNoError(UpdateByMap(db))
-	//requireNoError(DeleteById(db))
-	//requireNoError(Transaction(db))
-	//requireNoError(TransactionWrapper(db))
-	//requireNoError(ExecRawSQL(db))
-	//requireNoError(UpsertPoint(db))
-	//requireNoError(UpdatePointByExpress(db))
-	//requireNoError(DistributionLock(db))
+	requireNoError(InsertSingle(db))
+	requireNoError(InsertBatch(db))
+	requireNoError(UpsertSingle(db))
+	requireNoError(QueryLimit(db))
+	requireError(QueryErrNotFound(db))
+	requireNoError(QueryByPage(db))
+	requireNoError(QueryByCondition(db))
+	requireNoError(QueryByGroup(db))
+	requireNoError(QueryCountRows(db))
+	requireNoError(QueryJoins(db))
+	requireNoError(QueryOr(db))
+	requireNoError(QueryRawSQL(db))
+	requireNoError(QueryByNormalVars(db))
+	requireNoError(QueryWithJsonColumn(db))
+	requireNoError(UpdateByModel(db))
+	requireNoError(UpdateByMap(db))
+	requireNoError(DeleteById(db))
+	requireNoError(Transaction(db))
+	requireNoError(TransactionWrapper(db))
+	requireNoError(ExecRawSQL(db))
+	requireNoError(UpsertPoint(db))
+	requireNoError(UpdatePointByExpress(db))
+	requireNoError(DistributionLock(db))
 }
 
 func requireNoError(err error) {
@@ -80,9 +80,10 @@ func requireError(err error) {
 	}
 }
 
-func createBaseModel() models.BaseModel {
+func createBaseModel(id sqlca.ID) models.BaseModel {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	return models.BaseModel{
+		Id:         uint64(id),
 		CreateId:   1,
 		CreateName: "admin",
 		CreateTime: now,
@@ -110,8 +111,7 @@ func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 func InsertSingle(db *sqlca.Engine) error {
 	price := float64(12.33)
 	var do = models.InventoryData{
-		Id:        uint64(db.NewID()),
-		BaseModel: createBaseModel(),
+		BaseModel: createBaseModel(db.NewID()),
 		IsFrozen:  models.FrozenState_Ture,
 		Name:      "齿轮",
 		SerialNo:  "SNO_001",
@@ -143,8 +143,7 @@ func InsertSingle(db *sqlca.Engine) error {
 func InsertBatch(db *sqlca.Engine) error {
 	var dos = []models.InventoryData{
 		{
-			Id:        uint64(db.NewID()),
-			BaseModel: createBaseModel(),
+			BaseModel: createBaseModel(db.NewID()),
 			IsFrozen:  0,
 			Name:      "齿轮",
 			SerialNo:  "SNO_001",
@@ -153,8 +152,7 @@ func InsertBatch(db *sqlca.Engine) error {
 			ProductExtra: nil,
 		},
 		{
-			Id:        uint64(db.NewID()),
-			BaseModel: createBaseModel(),
+			BaseModel: createBaseModel(db.NewID()),
 			IsFrozen:  0,
 			Name:      "轮胎",
 			SerialNo:  "SNO_002",
@@ -187,8 +185,7 @@ func InsertBatch(db *sqlca.Engine) error {
 func UpsertSingle(db *sqlca.Engine) error {
 	price := float64(12.33)
 	var do = models.InventoryData{
-		Id:        productId,
-		BaseModel: createBaseModel(),
+		BaseModel: createBaseModel(productId),
 		IsFrozen:  models.FrozenState_Ture,
 		Name:      "齿轮",
 		SerialNo:  "SNO_001",
@@ -600,8 +597,7 @@ func Transaction(db *sqlca.Engine) error {
 	quantity := float64(20)
 	weight := float64(200.3)
 	_, _, err = tx.Model(&models.InventoryIn{
-		Id:        uint64(db.NewID()),
-		BaseModel: createBaseModel(),
+		BaseModel: createBaseModel(db.NewID()),
 		ProductId: productId,
 		OrderNo:   strOrderNo,
 		UserId:    3,
@@ -651,8 +647,7 @@ func TransactionWrapper(db *sqlca.Engine) error {
 		quantity := float64(20)
 		weight := float64(200.3)
 		_, _, err = tx.Model(&models.InventoryIn{
-			Id:        uint64(db.NewID()),
-			BaseModel: createBaseModel(),
+			BaseModel: createBaseModel(db.NewID()),
 			ProductId: productId,
 			OrderNo:   strOrderNo,
 			UserId:    3,
@@ -689,8 +684,7 @@ func UpsertPoint(db *sqlca.Engine) error {
 	price := 243.3
 	id := db.NewID()
 	do := &models.InventoryData{
-		Id:        uint64(id),
-		BaseModel: createBaseModel(),
+		BaseModel: createBaseModel(db.NewID()),
 		IsFrozen:  models.FrozenState_Ture,
 		Name:      "齿轮",
 		SerialNo:  "SNO_001",

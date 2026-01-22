@@ -1328,3 +1328,16 @@ func (e *Engine) AutoMigrate(ctx context.Context, cb MigrateAfterCB, models ...a
 	}
 	return nil
 }
+
+func (e *Engine) PrepareExec(query string, exec func(stmt *sqlx.Stmt) error) (err error) {
+	var stmt *sqlx.Stmt
+	stmt, err = e.db.Preparex(query)
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	defer stmt.Close()
+	if err = exec(stmt); err != nil {
+		return err
+	}
+	return nil
+}

@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/civet148/sqlca/v3"
 )
 
@@ -37,12 +39,8 @@ type InventoryData struct {
 func (do InventoryData) TableName() string { return "inventory_data" }
 
 func (do InventoryData) GetId() uint64                      { return do.Id }
-func (do InventoryData) GetCreateId() uint64                { return do.CreateId }
-func (do InventoryData) GetCreateName() string              { return do.CreateName }
-func (do InventoryData) GetCreateTime() string              { return do.CreateTime }
-func (do InventoryData) GetUpdateId() uint64                { return do.UpdateId }
-func (do InventoryData) GetUpdateName() string              { return do.UpdateName }
-func (do InventoryData) GetUpdateTime() string              { return do.UpdateTime }
+func (do InventoryData) GetCreateTime() time.Time           { return do.CreateTime }
+func (do InventoryData) GetUpdateTime() time.Time           { return do.UpdateTime }
 func (do InventoryData) GetIsFrozen() FrozenState           { return do.IsFrozen }
 func (do InventoryData) GetName() string                    { return do.Name }
 func (do InventoryData) GetSerialNo() string                { return do.SerialNo }
@@ -52,12 +50,8 @@ func (do InventoryData) GetLocation() sqlca.Point           { return do.Location
 func (do InventoryData) GetProductExtra() *ProductExtraData { return do.ProductExtra }
 
 func (do *InventoryData) SetId(v uint64)                      { do.Id = v }
-func (do *InventoryData) SetCreateId(v uint64)                { do.CreateId = v }
-func (do *InventoryData) SetCreateName(v string)              { do.CreateName = v }
-func (do *InventoryData) SetCreateTime(v string)              { do.CreateTime = v }
-func (do *InventoryData) SetUpdateId(v uint64)                { do.UpdateId = v }
-func (do *InventoryData) SetUpdateName(v string)              { do.UpdateName = v }
-func (do *InventoryData) SetUpdateTime(v string)              { do.UpdateTime = v }
+func (do *InventoryData) SetCreateTime(v time.Time)           { do.CreateTime = v }
+func (do *InventoryData) SetUpdateTime(v time.Time)           { do.UpdateTime = v }
 func (do *InventoryData) SetIsFrozen(v FrozenState)           { do.IsFrozen = v }
 func (do *InventoryData) SetName(v string)                    { do.Name = v }
 func (do *InventoryData) SetSerialNo(v string)                { do.SerialNo = v }

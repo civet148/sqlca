@@ -8,7 +8,7 @@ import (
 
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v3"
-	"github.com/civet148/sqlca/v3/demo/models"
+	"github.com/civet148/sqlca/v3/example/models"
 )
 
 const (
@@ -41,31 +41,31 @@ func main() {
 		log.Errorf("connect database error: %s", err)
 		return
 	}
-
-	requireNoError(AutoMigrate(db))
-	requireNoError(InsertSingle(db))
-	requireNoError(InsertBatch(db))
-	requireNoError(UpsertSingle(db))
-	requireNoError(QueryLimit(db))
-	requireError(QueryErrNotFound(db))
-	requireNoError(QueryByPage(db))
-	requireNoError(QueryByCondition(db))
-	requireNoError(QueryByGroup(db))
-	requireNoError(QueryCountRows(db))
-	requireNoError(QueryJoins(db))
-	requireNoError(QueryOr(db))
-	requireNoError(QueryRawSQL(db))
-	requireNoError(QueryByNormalVars(db))
-	requireNoError(QueryWithJsonColumn(db))
-	requireNoError(UpdateByModel(db))
-	requireNoError(UpdateByMap(db))
-	requireNoError(DeleteById(db))
-	requireNoError(Transaction(db))
-	requireNoError(TransactionWrapper(db))
-	requireNoError(ExecRawSQL(db))
-	requireNoError(UpsertPoint(db))
-	requireNoError(UpdatePointByExpress(db))
-	requireNoError(DistributionLock(db))
+	requireNoError(MigrateModel(db))
+	//requireNoError(AutoMigrate(db))
+	//requireNoError(InsertSingle(db))
+	//requireNoError(InsertBatch(db))
+	//requireNoError(UpsertSingle(db))
+	//requireNoError(QueryLimit(db))
+	//requireError(QueryErrNotFound(db))
+	//requireNoError(QueryByPage(db))
+	//requireNoError(QueryByCondition(db))
+	//requireNoError(QueryByGroup(db))
+	//requireNoError(QueryCountRows(db))
+	//requireNoError(QueryJoins(db))
+	//requireNoError(QueryOr(db))
+	//requireNoError(QueryRawSQL(db))
+	//requireNoError(QueryByNormalVars(db))
+	//requireNoError(QueryWithJsonColumn(db))
+	//requireNoError(UpdateByModel(db))
+	//requireNoError(UpdateByMap(db))
+	//requireNoError(DeleteById(db))
+	//requireNoError(Transaction(db))
+	//requireNoError(TransactionWrapper(db))
+	//requireNoError(ExecRawSQL(db))
+	//requireNoError(UpsertPoint(db))
+	//requireNoError(UpdatePointByExpress(db))
+	//requireNoError(DistributionLock(db))
 }
 
 func requireNoError(err error) {
@@ -80,15 +80,15 @@ func requireError(err error) {
 	}
 }
 
+func MigrateModel(db *sqlca.Engine) (err error) {
+	return db.AutoMigrate(context.Background(), nil, &models.User{}, &models.UserProfile{}, &models.Role{})
+}
+
 func createBaseModel(id sqlca.ID) models.BaseModel {
-	now := time.Now().Format("2006-01-02 15:04:05")
+	now := time.Now()
 	return models.BaseModel{
 		Id:         uint64(id),
-		CreateId:   1,
-		CreateName: "admin",
 		CreateTime: now,
-		UpdateId:   1,
-		UpdateName: "admin",
 		UpdateTime: now,
 	}
 }

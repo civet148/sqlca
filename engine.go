@@ -1308,6 +1308,10 @@ func (e *Engine) TryLock(key string, expiry, timeout time.Duration) (unlock func
 }
 
 func (e *Engine) AutoMigrate(ctx context.Context, cb MigrateAfterCB, models ...any) (err error) {
+	if !e.options.AutoMigrate {
+		log.Warnf("auto migration is not enable")
+		return nil
+	}
 	var dialector gorm.Dialector
 	dialector, err = createDialector(e.adapterType, e.dsn)
 	if err != nil {

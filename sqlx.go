@@ -244,8 +244,8 @@ func (e *Engine) execQueryEx(strCountSql string) (rowsAffected, total int64, err
 func (e *Engine) txQuery(dest interface{}, strSql string, args ...any) (count int64, err error) {
 	var rows *sql.Rows
 	strSql = e.buildSqlExpr(strSql, args...).RawSQL(e.GetAdapter())
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("query tx [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("TX-Query [%s]", strSql)
 
 	rows, err = e.tx.Query(strSql)
 	if err != nil {

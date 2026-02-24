@@ -7,10 +7,10 @@ import (
 )
 
 type BaseModel struct {
-	Id         uint64    `json:"id,omitempty" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`                                                                        //产品ID
-	CreateTime time.Time `json:"create_time,omitempty" db:"create_time" gorm:"column:create_time;type:datetime;not null;index;default:CURRENT_TIMESTAMP;autoCreateTime"` //创建时间
-	UpdateTime time.Time `json:"update_time,omitempty" db:"update_time" gorm:"column:update_time;type:datetime;not null;index;default:CURRENT_TIMESTAMP;autoUpdateTime"` //更新时间
-	isExist    bool      `gorm:"-" db:"-"`                                                                                                                               //数据是否在数据库中存在
+	Id         uint64    `json:"id,omitempty" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`                                                                         //产品ID
+	CreateTime time.Time `json:"create_time,omitempty" db:"create_time" gorm:"column:create_time;type:timestamp;not null;index;default:CURRENT_TIMESTAMP;autoCreateTime"` //创建时间
+	UpdateTime time.Time `json:"update_time,omitempty" db:"update_time" gorm:"column:update_time;type:timestamp;not null;index;default:CURRENT_TIMESTAMP;autoUpdateTime"` //更新时间
+	isExist    bool      `gorm:"-" db:"-"`                                                                                                                                //数据是否在数据库中存在
 }
 
 // 是否为数据库中存在的数据

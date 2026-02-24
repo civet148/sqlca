@@ -35,6 +35,7 @@ func main() {
 		sqlca.WithSnowFlake(&sqlca.SnowFlake{
 			NodeId: 1,
 		}),
+		sqlca.WithAutoMigrate(),
 	}
 	db, err = sqlca.NewEngine("mysql://root:123456@127.0.0.1:3306/test?charset=utf8mb4", opts...)
 	if err != nil {
@@ -81,7 +82,7 @@ func requireError(err error) {
 }
 
 func MigrateModel(db *sqlca.Engine) (err error) {
-	return db.AutoMigrate(context.Background(), nil, &models.User{}, &models.UserProfile{}, &models.Role{})
+	return db.AutoMigrate(context.Background(), nil, &models.User{}, &models.UserProfile{}, &models.Role{}, &models.InventoryData{}, &models.InventoryIn{}, &models.InventoryOut{})
 }
 
 func createBaseModel(id sqlca.ID) models.BaseModel {

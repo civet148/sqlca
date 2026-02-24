@@ -1,12 +1,35 @@
 package models
 
-// 主模型
+import "time"
+
+const TableNameUsers = "users" //
+
+const (
+	USERS_COLUMN_ID          = "id"
+	USERS_COLUMN_CREATE_TIME = "create_time"
+	USERS_COLUMN_UPDATE_TIME = "update_time"
+	USERS_COLUMN_USER_NAME   = "user_name"
+	USERS_COLUMN_EMAIL       = "email"
+)
+
 type User struct {
 	BaseModel
-	UserName string `gorm:"uniqueIndex;size:32;"`
-	Email    string `gorm:"uniqueIndex;size:64;"`
-	// 一对一
-	Profile UserProfile `gorm:"foreignKey:UserID"`
-	// 多对多
-	Roles []Role `gorm:"many2many:user_roles;"`
+	UserName string `json:"user_name,omitempty" db:"user_name" gorm:"column:user_name;type:varchar(32);uniqueIndex:idx_users_user_name;" sqlca:"isnull"` //
+	Email    string `json:"email,omitempty" db:"email" gorm:"column:email;type:varchar(64);uniqueIndex:idx_users_email;" sqlca:"isnull"`                 //
 }
+
+func (do User) TableName() string { return "users" }
+
+func (do User) GetId() uint64            { return do.Id }
+func (do User) GetCreateTime() time.Time { return do.CreateTime }
+func (do User) GetUpdateTime() time.Time { return do.UpdateTime }
+func (do User) GetUserName() string      { return do.UserName }
+func (do User) GetEmail() string         { return do.Email }
+
+func (do *User) SetId(v uint64)            { do.Id = v }
+func (do *User) SetCreateTime(v time.Time) { do.CreateTime = v }
+func (do *User) SetUpdateTime(v time.Time) { do.UpdateTime = v }
+func (do *User) SetUserName(v string)      { do.UserName = v }
+func (do *User) SetEmail(v string)         { do.Email = v }
+
+////////////////////// ----- 自定义代码请写在下面 ----- //////////////////////

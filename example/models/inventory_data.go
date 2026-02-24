@@ -1,20 +1,13 @@
 package models
 
-import (
-	"time"
+import "time"
+import "github.com/civet148/sqlca/v3"
 
-	"github.com/civet148/sqlca/v3"
-)
-
-const TableNameInventoryData = "inventory_data" //产品库存数据表
+const TableNameInventoryData = "inventory_data" //
 
 const (
 	INVENTORY_DATA_COLUMN_ID            = "id"
-	INVENTORY_DATA_COLUMN_CREATE_ID     = "create_id"
-	INVENTORY_DATA_COLUMN_CREATE_NAME   = "create_name"
 	INVENTORY_DATA_COLUMN_CREATE_TIME   = "create_time"
-	INVENTORY_DATA_COLUMN_UPDATE_ID     = "update_id"
-	INVENTORY_DATA_COLUMN_UPDATE_NAME   = "update_name"
 	INVENTORY_DATA_COLUMN_UPDATE_TIME   = "update_time"
 	INVENTORY_DATA_COLUMN_IS_FROZEN     = "is_frozen"
 	INVENTORY_DATA_COLUMN_NAME          = "name"

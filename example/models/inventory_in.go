@@ -1,20 +1,13 @@
 package models
 
-import (
-	"time"
+import "time"
+import "github.com/civet148/sqlca/v3"
 
-	"github.com/civet148/sqlca/v3"
-)
-
-const TableNameInventoryIn = "inventory_in" //入库主表
+const TableNameInventoryIn = "inventory_in" //
 
 const (
 	INVENTORY_IN_COLUMN_ID          = "id"
-	INVENTORY_IN_COLUMN_CREATE_ID   = "create_id"
-	INVENTORY_IN_COLUMN_CREATE_NAME = "create_name"
 	INVENTORY_IN_COLUMN_CREATE_TIME = "create_time"
-	INVENTORY_IN_COLUMN_UPDATE_ID   = "update_id"
-	INVENTORY_IN_COLUMN_UPDATE_NAME = "update_name"
 	INVENTORY_IN_COLUMN_UPDATE_TIME = "update_time"
 	INVENTORY_IN_COLUMN_IS_DELETED  = "is_deleted"
 	INVENTORY_IN_COLUMN_DELETE_TIME = "delete_time"
@@ -30,7 +23,7 @@ const (
 type InventoryIn struct {
 	BaseModel
 	IsDeleted  int8          `json:"is_deleted,omitempty" db:"is_deleted" gorm:"column:is_deleted;type:tinyint(1);default:0;" sqlca:"isnull"`            //
-	DeleteTime string        `json:"delete_time,omitempty" db:"delete_time" gorm:"column:delete_time;type:datetime;" sqlca:"isnull"`                     //
+	DeleteTime time.Time     `json:"delete_time,omitempty" db:"delete_time" gorm:"column:delete_time;type:datetime;" sqlca:"isnull"`                     //
 	ProductId  uint64        `json:"product_id,omitempty" db:"product_id" gorm:"column:product_id;type:bigint unsigned;" sqlca:"isnull"`                 //
 	OrderNo    string        `json:"order_no,omitempty" db:"order_no" gorm:"column:order_no;type:varchar(64);uniqueIndex:UNIQ_ORDER_NO;" sqlca:"isnull"` //
 	UserId     uint64        `json:"user_id,omitempty" db:"user_id" gorm:"column:user_id;type:bigint unsigned;default:0;" sqlca:"isnull"`                //
@@ -42,23 +35,24 @@ type InventoryIn struct {
 
 func (do InventoryIn) TableName() string { return "inventory_in" }
 
-func (do InventoryIn) GetId() uint64              { return do.Id }
-func (do InventoryIn) GetCreateTime() time.Time   { return do.CreateTime }
-func (do InventoryIn) GetUpdateTime() time.Time   { return do.UpdateTime }
-func (do InventoryIn) GetIsDeleted() int8         { return do.IsDeleted }
-func (do InventoryIn) GetDeleteTime() string      { return do.DeleteTime }
-func (do InventoryIn) GetProductId() uint64       { return do.ProductId }
-func (do InventoryIn) GetOrderNo() string         { return do.OrderNo }
-func (do InventoryIn) GetUserId() uint64          { return do.UserId }
-func (do InventoryIn) GetUserName() string        { return do.UserName }
-func (do InventoryIn) GetQuantity() float64       { return do.Quantity }
-func (do InventoryIn) GetWeight() sqlca.Decimal   { return do.Weight }
-func (do InventoryIn) GetRemark() string          { return do.Remark }
+func (do InventoryIn) GetId() uint64            { return do.Id }
+func (do InventoryIn) GetCreateTime() time.Time { return do.CreateTime }
+func (do InventoryIn) GetUpdateTime() time.Time { return do.UpdateTime }
+func (do InventoryIn) GetIsDeleted() int8       { return do.IsDeleted }
+func (do InventoryIn) GetDeleteTime() time.Time { return do.DeleteTime }
+func (do InventoryIn) GetProductId() uint64     { return do.ProductId }
+func (do InventoryIn) GetOrderNo() string       { return do.OrderNo }
+func (do InventoryIn) GetUserId() uint64        { return do.UserId }
+func (do InventoryIn) GetUserName() string      { return do.UserName }
+func (do InventoryIn) GetQuantity() float64     { return do.Quantity }
+func (do InventoryIn) GetWeight() sqlca.Decimal { return do.Weight }
+func (do InventoryIn) GetRemark() string        { return do.Remark }
+
 func (do *InventoryIn) SetId(v uint64)            { do.Id = v }
 func (do *InventoryIn) SetCreateTime(v time.Time) { do.CreateTime = v }
 func (do *InventoryIn) SetUpdateTime(v time.Time) { do.UpdateTime = v }
 func (do *InventoryIn) SetIsDeleted(v int8)       { do.IsDeleted = v }
-func (do *InventoryIn) SetDeleteTime(v string)    { do.DeleteTime = v }
+func (do *InventoryIn) SetDeleteTime(v time.Time) { do.DeleteTime = v }
 func (do *InventoryIn) SetProductId(v uint64)     { do.ProductId = v }
 func (do *InventoryIn) SetOrderNo(v string)       { do.OrderNo = v }
 func (do *InventoryIn) SetUserId(v uint64)        { do.UserId = v }

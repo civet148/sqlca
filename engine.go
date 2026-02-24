@@ -483,8 +483,8 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	}
 
 	strRawSql, _ := e.makeSQL(types.OperType_Query, true)
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("SQL [%s]", strRawSql))
+	stop := e.SqlCounter()
+	defer stop("SQL [%s]", strRawSql)
 	if err = e.execBeforeQueryHooks(); err != nil {
 		return 0, err
 	}
@@ -511,8 +511,8 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 		e.setLimit(fmt.Sprintf("LIMIT %v", e.options.DefaultLimit))
 	}
 	strSql, _ := e.makeSQL(types.OperType_Query, true)
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("SQL [%s]", strSql)
 
 	if err = e.execBeforeQueryHooks(); err != nil {
 		return 0, 0, err
@@ -557,8 +557,8 @@ func (e *Engine) Insert() (lastInsertId, rowsAffected int64, err error) {
 	}
 	var strSql string
 	strSql, _ = e.makeSQL(types.OperType_Insert, true)
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("SQL [%s]", strSql)
 
 	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
@@ -603,8 +603,8 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	defer e.cleanWhereCondition()
 
 	strSql, _ := e.makeSQL(types.OperType_Upsert, true)
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("SQL [%s]", strSql)
 
 	switch e.adapterType {
 	case types.AdapterSqlx_Mssql:
@@ -648,8 +648,8 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 	}
 
 	strSql, _ := e.makeSQL(types.OperType_Update, true)
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("SQL [%s]", strSql)
 
 	var r sql.Result
 	query, args := e.makeSQL(types.OperType_Update, false)
@@ -678,8 +678,8 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 
 	strSql, args := e.makeSQL(types.OperType_Delete, true)
 	defer e.cleanWhereCondition()
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("SQL [%s]", strSql)
 
 	var r sql.Result
 	r, err = e.exec(strSql, args...)
@@ -711,8 +711,8 @@ func (e *Engine) QueryRaw(query string, args ...any) (rowsAffected int64, err er
 	var expr = e.buildSqlExpr(query, args...)
 	strSql = expr.RawSQL(e.GetAdapter())
 
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("SQL [%s]", strSql)
 
 	if rows, err = e.queryx(expr.SQL, expr.Vars...); err != nil {
 		log.Errorf("caller [%v] query [%s] args %v error: %v", e.getCaller(2), query, args, err.Error())
@@ -738,8 +738,8 @@ func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err er
 	var expr = e.buildSqlExpr(query, args...)
 	strSql := expr.RawSQL(e.GetAdapter())
 
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("SQL [%s]", strSql)
 
 	var queryer sqlx.Queryer
 	if e.operType == types.OperType_Tx {
@@ -780,8 +780,8 @@ func (e *Engine) ExecRaw(query string, args ...any) (rowsAffected, lastInsertId 
 	var r sql.Result
 
 	log.Debugf("exec [%v]", strSql)
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("SQL [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("SQL [%s]", strSql)
 
 	if r, err = e.exec(expr.SQL, expr.Vars...); err != nil {
 		return
@@ -844,8 +844,8 @@ func (e *Engine) TxExec(query string, args ...any) (lastInsertId, rowsAffected i
 	var expr = e.buildSqlExpr(query, args...)
 	strSql := expr.RawSQL(e.GetAdapter())
 
-	c := e.Counter()
-	defer c.Stop(fmt.Sprintf("tx [%s]", strSql))
+	stop := e.SqlCounter()
+	defer stop("TX [%s]", strSql)
 
 	result, err = e.tx.Exec(expr.SQL, expr.Vars...)
 	if err != nil {
@@ -917,8 +917,8 @@ func (e *Engine) SetReadOnly(columns ...string) {
 // auto rollback when handler return error
 func (e *Engine) TxHandle(handler TxHandler) (err error) {
 	var tx *Engine
-	c := e.Counter()
-	defer c.Stop("TxHandle")
+	stop := e.SqlCounter()
+	defer stop("TxHandle")
 	if tx, err = e.TxBegin(); err != nil {
 		return err
 	}
@@ -934,8 +934,8 @@ func (e *Engine) TxHandle(handler TxHandler) (err error) {
 //	auto rollback when function return error
 func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 	var tx *Engine
-	c := e.Counter()
-	defer c.Stop("TxFunc")
+	stop := e.SqlCounter()
+	defer stop("TxFunc")
 	defer func() {
 		// 这是一个安全措施，防止因为代码panic导致连接泄露
 		if r := recover(); r != nil {
@@ -959,8 +959,8 @@ func (e *Engine) TxFunc(fn func(tx *Engine) error) (err error) {
 //	auto rollback when function return error
 func (e *Engine) TxFuncContext(ctx context.Context, fn func(ctx context.Context, tx *Engine) error) (err error) {
 	var tx *Engine
-	c := e.Counter()
-	defer c.Stop("TxFuncContext")
+	stop := e.SqlCounter()
+	defer stop("TxFuncContext")
 	if tx, err = e.TxBegin(); err != nil {
 		return
 	}

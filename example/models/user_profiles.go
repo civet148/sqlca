@@ -15,11 +15,9 @@ const (
 
 type UserProfile struct {
 	BaseModel
-	CreatedAt time.Time `json:"created_at,omitempty" db:"created_at" gorm:"column:created_at;type:timestamp;autoCreateTime;index:idx_user_profiles_created_at;default:CURRENT_TIMESTAMP;"` //
-	UpdatedAt time.Time `json:"updated_at,omitempty" db:"updated_at" gorm:"column:updated_at;type:timestamp;autoUpdateTime;index:idx_user_profiles_updated_at;default:CURRENT_TIMESTAMP;"` //
-	UserId    uint64    `json:"user_id,omitempty" db:"user_id" gorm:"column:user_id;type:bigint unsigned;uniqueIndex:idx_user_profiles_user_id;" sqlca:"isnull"`                           //
-	Avatar    string    `json:"avatar,omitempty" db:"avatar" gorm:"column:avatar;type:varchar(512);" sqlca:"isnull"`                                                                       //
-	Address   string    `json:"address,omitempty" db:"address" gorm:"column:address;type:varchar(128);" sqlca:"isnull"`                                                                    //
+	UserId  uint64 `json:"user_id,omitempty" db:"user_id" gorm:"column:user_id;type:bigint unsigned;uniqueIndex:idx_user_profiles_user_id;" sqlca:"isnull"` //
+	Avatar  string `json:"avatar,omitempty" db:"avatar" gorm:"column:avatar;type:varchar(512);" sqlca:"isnull"`                                             //
+	Address string `json:"address,omitempty" db:"address" gorm:"column:address;type:varchar(128);" sqlca:"isnull"`                                          //
 }
 
 func (do UserProfile) TableName() string { return "user_profiles" }

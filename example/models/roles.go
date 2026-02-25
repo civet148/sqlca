@@ -13,9 +13,7 @@ const (
 
 type Role struct {
 	BaseModel
-	CreatedAt time.Time `json:"created_at,omitempty" db:"created_at" gorm:"column:created_at;type:timestamp;autoCreateTime;index:idx_roles_created_at;default:CURRENT_TIMESTAMP;"` //
-	UpdatedAt time.Time `json:"updated_at,omitempty" db:"updated_at" gorm:"column:updated_at;type:timestamp;autoUpdateTime;index:idx_roles_updated_at;default:CURRENT_TIMESTAMP;"` //
-	Name      string    `json:"name,omitempty" db:"name" gorm:"column:name;type:varchar(64);uniqueIndex:idx_roles_name;" sqlca:"isnull"`                                           //
+	Name string `json:"name,omitempty" db:"name" gorm:"column:name;type:varchar(64);uniqueIndex:idx_roles_name;" sqlca:"isnull"` //
 }
 
 func (do Role) TableName() string { return "roles" }

@@ -7,8 +7,8 @@ const TableNameInventoryData = "inventory_data" //
 
 const (
 	INVENTORY_DATA_COLUMN_ID            = "id"
-	INVENTORY_DATA_COLUMN_CREATE_TIME   = "create_time"
-	INVENTORY_DATA_COLUMN_UPDATE_TIME   = "update_time"
+	INVENTORY_DATA_COLUMN_CREATED_AT    = "created_at"
+	INVENTORY_DATA_COLUMN_UPDATED_AT    = "updated_at"
 	INVENTORY_DATA_COLUMN_IS_FROZEN     = "is_frozen"
 	INVENTORY_DATA_COLUMN_NAME          = "name"
 	INVENTORY_DATA_COLUMN_SERIAL_NO     = "serial_no"
@@ -20,13 +20,15 @@ const (
 
 type InventoryData struct {
 	BaseModel
-	IsFrozen     FrozenState       `json:"is_frozen,omitempty" db:"is_frozen" gorm:"column:is_frozen;type:tinyint(1);default:0;" sqlca:"isnull"`                        //
-	Name         string            `json:"name,omitempty" db:"name" gorm:"column:name;type:varchar(255);comment:产品：名称；不能为空;" sqlca:"isnull"`                            //产品：名称；不能为空
-	SerialNo     string            `json:"serial_no,omitempty" db:"serial_no" gorm:"column:serial_no;type:varchar(64);index:i_serial_no;comment:产品序列号;" sqlca:"isnull"` //产品序列号
-	Quantity     float64           `json:"quantity,omitempty" db:"quantity" gorm:"column:quantity;type:decimal(16,3);default:0.000;" sqlca:"isnull"`                    //
-	Price        *float64          `json:"price,omitempty" db:"price" gorm:"column:price;type:decimal(16,2);default:0.00;" sqlca:"isnull"`                              //
-	Location     sqlca.Point       `json:"location,omitempty" db:"location" gorm:"column:location;type:point;" sqlca:"isnull"`                                          //
-	ProductExtra *ProductExtraData `json:"product_extra,omitempty" db:"product_extra" gorm:"column:product_extra;type:json;" sqlca:"isnull"`                            //
+	CreatedAt    time.Time         `json:"created_at,omitempty" db:"created_at" gorm:"column:created_at;type:timestamp;autoCreateTime;index:idx_inventory_data_created_at;default:CURRENT_TIMESTAMP;"` //
+	UpdatedAt    time.Time         `json:"updated_at,omitempty" db:"updated_at" gorm:"column:updated_at;type:timestamp;autoUpdateTime;index:idx_inventory_data_updated_at;default:CURRENT_TIMESTAMP;"` //
+	IsFrozen     FrozenState       `json:"is_frozen,omitempty" db:"is_frozen" gorm:"column:is_frozen;type:tinyint(1);default:0;" sqlca:"isnull"`                                                       //
+	Name         string            `json:"name,omitempty" db:"name" gorm:"column:name;type:varchar(255);comment:产品：名称；不能为空;" sqlca:"isnull"`                                                           //产品：名称；不能为空
+	SerialNo     string            `json:"serial_no,omitempty" db:"serial_no" gorm:"column:serial_no;type:varchar(64);index:i_serial_no;comment:产品序列号;" sqlca:"isnull"`                                //产品序列号
+	Quantity     float64           `json:"quantity,omitempty" db:"quantity" gorm:"column:quantity;type:decimal(16,3);default:0.000;" sqlca:"isnull"`                                                   //
+	Price        *float64          `json:"price,omitempty" db:"price" gorm:"column:price;type:decimal(16,2);default:0.00;" sqlca:"isnull"`                                                             //
+	Location     sqlca.Point       `json:"location,omitempty" db:"location" gorm:"column:location;type:point;" sqlca:"isnull"`                                                                         //
+	ProductExtra *ProductExtraData `json:"product_extra,omitempty" db:"product_extra" gorm:"column:product_extra;type:json;" sqlca:"isnull"`                                                           //
 }
 
 func (do InventoryData) TableName() string { return "inventory_data" }

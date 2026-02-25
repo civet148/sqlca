@@ -7,8 +7,8 @@ const TableNameInventoryOut = "inventory_out" //
 
 const (
 	INVENTORY_OUT_COLUMN_ID          = "id"
-	INVENTORY_OUT_COLUMN_CREATE_TIME = "create_time"
-	INVENTORY_OUT_COLUMN_UPDATE_TIME = "update_time"
+	INVENTORY_OUT_COLUMN_CREATED_AT  = "created_at"
+	INVENTORY_OUT_COLUMN_UPDATED_AT  = "updated_at"
 	INVENTORY_OUT_COLUMN_IS_DELETED  = "is_deleted"
 	INVENTORY_OUT_COLUMN_DELETE_TIME = "delete_time"
 	INVENTORY_OUT_COLUMN_PRODUCT_ID  = "product_id"
@@ -22,6 +22,8 @@ const (
 
 type InventoryOut struct {
 	BaseModel
+	CreatedAt  time.Time     `json:"created_at,omitempty" db:"created_at" gorm:"column:created_at;type:timestamp;autoCreateTime;index:idx_inventory_out_created_at;default:CURRENT_TIMESTAMP;"`  //
+	UpdatedAt  time.Time     `json:"updated_at,omitempty" db:"updated_at" gorm:"column:updated_at;type:timestamp;autoUpdateTime;index:idx_inventory_out_updated_at;default:CURRENT_TIMESTAMP;"`  //
 	IsDeleted  int8          `json:"is_deleted,omitempty" db:"is_deleted" gorm:"column:is_deleted;type:tinyint(1);default:0;" sqlca:"isnull"`                                                    //
 	DeleteTime time.Time     `json:"delete_time,omitempty" db:"delete_time" gorm:"column:delete_time;type:datetime;" sqlca:"isnull"`                                                             //
 	ProductId  uint64        `json:"product_id,omitempty" db:"product_id" gorm:"column:product_id;type:bigint unsigned;index:i_product_id;uniqueIndex:UNIQ_PROD_USER;default:0;" sqlca:"isnull"` //

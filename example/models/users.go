@@ -5,19 +5,19 @@ import "time"
 const TableNameUsers = "users" //
 
 const (
-	USERS_COLUMN_ID          = "id"
-	USERS_COLUMN_CREATE_TIME = "create_time"
-	USERS_COLUMN_UPDATE_TIME = "update_time"
-	USERS_COLUMN_USER_NAME   = "user_name"
-	USERS_COLUMN_EMAIL       = "email"
+	USERS_COLUMN_ID         = "id"
+	USERS_COLUMN_CREATED_AT = "created_at"
+	USERS_COLUMN_UPDATED_AT = "updated_at"
+	USERS_COLUMN_USER_NAME  = "user_name"
+	USERS_COLUMN_EMAIL      = "email"
 )
 
 type User struct {
 	BaseModel
-	UserName string       `json:"user_name,omitempty" db:"user_name" gorm:"column:user_name;type:varchar(32);uniqueIndex:idx_users_user_name;" sqlca:"isnull"` //
-	Email    string       `json:"email,omitempty" db:"email" gorm:"column:email;type:varchar(64);uniqueIndex:idx_users_email;" sqlca:"isnull"`                 //
-	Roles    []*Role      `json:"roles,omitempty" gorm:"many2many:user_roles;"`
-	Profile  *UserProfile `json:"profile,omitempty" db:"profile" gorm:"foreignKey:UserId;"`
+	CreatedAt time.Time `json:"created_at,omitempty" db:"created_at" gorm:"column:created_at;type:timestamp;autoCreateTime;index:idx_users_created_at;default:CURRENT_TIMESTAMP;"` //
+	UpdatedAt time.Time `json:"updated_at,omitempty" db:"updated_at" gorm:"column:updated_at;type:timestamp;autoUpdateTime;index:idx_users_updated_at;default:CURRENT_TIMESTAMP;"` //
+	UserName  string    `json:"user_name,omitempty" db:"user_name" gorm:"column:user_name;type:varchar(32);uniqueIndex:idx_users_user_name;" sqlca:"isnull"`                       //
+	Email     string    `json:"email,omitempty" db:"email" gorm:"column:email;type:varchar(64);uniqueIndex:idx_users_email;" sqlca:"isnull"`                                       //
 }
 
 func (do User) TableName() string { return "users" }

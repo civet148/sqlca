@@ -7,7 +7,7 @@ PACK_NAME="models"
 # 只读字段(不更新)
 READ_ONLY="create_time, update_time"
 # 指定表名(不指定则整个数据库全部导出)
-TABLE_NAME="-user_roles"
+TABLE_NAME=""
 # 忽略字段名(逗号分隔)
 WITH_OUT=""
 # 添加标签

@@ -32,8 +32,8 @@ type InventoryData struct {
 func (do InventoryData) TableName() string { return "inventory_data" }
 
 func (do InventoryData) GetId() uint64                      { return do.Id }
-func (do InventoryData) GetCreateTime() time.Time           { return do.CreateTime }
-func (do InventoryData) GetUpdateTime() time.Time           { return do.UpdateTime }
+func (do InventoryData) GetCreatedAt() time.Time            { return do.CreatedAt }
+func (do InventoryData) GetUpdatedAt() time.Time            { return do.UpdatedAt }
 func (do InventoryData) GetIsFrozen() FrozenState           { return do.IsFrozen }
 func (do InventoryData) GetName() string                    { return do.Name }
 func (do InventoryData) GetSerialNo() string                { return do.SerialNo }
@@ -43,8 +43,8 @@ func (do InventoryData) GetLocation() sqlca.Point           { return do.Location
 func (do InventoryData) GetProductExtra() *ProductExtraData { return do.ProductExtra }
 
 func (do *InventoryData) SetId(v uint64)                      { do.Id = v }
-func (do *InventoryData) SetCreateTime(v time.Time)           { do.CreateTime = v }
-func (do *InventoryData) SetUpdateTime(v time.Time)           { do.UpdateTime = v }
+func (do *InventoryData) SetCreatedAt(v time.Time)            { do.CreatedAt = v }
+func (do *InventoryData) SetUpdatedAt(v time.Time)            { do.UpdatedAt = v }
 func (do *InventoryData) SetIsFrozen(v FrozenState)           { do.IsFrozen = v }
 func (do *InventoryData) SetName(v string)                    { do.Name = v }
 func (do *InventoryData) SetSerialNo(v string)                { do.SerialNo = v }

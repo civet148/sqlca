@@ -36,8 +36,8 @@ type InventoryIn struct {
 func (do InventoryIn) TableName() string { return "inventory_in" }
 
 func (do InventoryIn) GetId() uint64            { return do.Id }
-func (do InventoryIn) GetCreateTime() time.Time { return do.CreateTime }
-func (do InventoryIn) GetUpdateTime() time.Time { return do.UpdateTime }
+func (do InventoryIn) GetCreatedAt() time.Time  { return do.CreatedAt }
+func (do InventoryIn) GetUpdatedAt() time.Time  { return do.UpdatedAt }
 func (do InventoryIn) GetIsDeleted() int8       { return do.IsDeleted }
 func (do InventoryIn) GetDeleteTime() time.Time { return do.DeleteTime }
 func (do InventoryIn) GetProductId() uint64     { return do.ProductId }
@@ -49,8 +49,8 @@ func (do InventoryIn) GetWeight() sqlca.Decimal { return do.Weight }
 func (do InventoryIn) GetRemark() string        { return do.Remark }
 
 func (do *InventoryIn) SetId(v uint64)            { do.Id = v }
-func (do *InventoryIn) SetCreateTime(v time.Time) { do.CreateTime = v }
-func (do *InventoryIn) SetUpdateTime(v time.Time) { do.UpdateTime = v }
+func (do *InventoryIn) SetCreatedAt(v time.Time)  { do.CreatedAt = v }
+func (do *InventoryIn) SetUpdatedAt(v time.Time)  { do.UpdatedAt = v }
 func (do *InventoryIn) SetIsDeleted(v int8)       { do.IsDeleted = v }
 func (do *InventoryIn) SetDeleteTime(v time.Time) { do.DeleteTime = v }
 func (do *InventoryIn) SetProductId(v uint64)     { do.ProductId = v }

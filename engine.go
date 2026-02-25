@@ -85,6 +85,7 @@ type Engine struct {
 	conflictColumns  []string               // conflict key on duplicate set (just for postgresql)
 	orderByColumns   []string               // order by columns
 	groupByColumns   []string               // group by columns
+	preloads         map[string][]any       // addPreload query and args
 	havingCondition  string                 // having condition
 	inConditions     []types.Expr           // in condition
 	notConditions    []types.Expr           // not in condition
@@ -122,6 +123,7 @@ func NewEngine(strUrl string, opts ...Option) (*Engine, error) {
 		expireTime:    types.DEFAULT_CAHCE_EXPIRE_SECONDS,
 		slowQueryTime: types.DEFAULT_SLOW_QUERY_ALERT_TIME,
 		adapterType:   types.AdapterSqlx_MySQL,
+		preloads:      make(map[string][]any),
 	}
 	e.dbTags = append(e.dbTags, types.TAG_NAME_DB, types.TAG_NAME_SQLCA, types.TAG_NAME_GORM, types.TAG_NAME_XORM, types.TAG_NAME_PROTOBUF, types.TAG_NAME_JSON)
 	return e.open(strUrl, opts...)
@@ -496,6 +498,9 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 	if err = e.execAfterQueryHooks(); err != nil {
 		return 0, err
 	}
+	if err = e.handlePreloads(); err != nil {
+		return 0, log.Errorf("handle preloads error: %s", err.Error())
+	}
 	return rowsAffected, nil
 }
 
@@ -526,6 +531,9 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	e.verbose("caller [%v] rows [%v] query [%s]", e.getCaller(2), rowsAffected, strSql)
 	if err = e.execAfterQueryHooks(); err != nil {
 		return 0, 0, err
+	}
+	if err = e.handlePreloads(); err != nil {
+		return 0, 0, log.Errorf("handle preloads error: %s", err.Error())
 	}
 	return rowsAffected, total, nil
 }
@@ -1344,4 +1352,20 @@ func (e *Engine) PrepareExec(query string, exec func(stmt *sqlx.Stmt) error) (er
 		return err
 	}
 	return nil
+}
+
+// Preload 是一个方法，用于预加载关联数据
+// 它接收一个查询字符串和可变参数，并返回一个 Engine 指针
+// 参数:
+//   - query: 查询字符串，用于指定预加载的关联关系
+//   - args: 可变参数，用于传递查询所需的参数
+//
+// 返回值:
+//   - *Engine: 返回引擎实例，支持链式调用
+//
+// 调用内部 addPreload 方法，实现预加载功能
+//
+//	db.Preload("Orders", "state NOT IN (?)", "cancelled").Query(&users)
+func (e *Engine) Preload(query string, args ...any) *Engine {
+	return e.addPreload(query, args...)
 }

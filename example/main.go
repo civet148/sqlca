@@ -82,24 +82,18 @@ func requireError(err error) {
 }
 
 func MigrateModel(db *sqlca.Engine) (err error) {
-	return db.AutoMigrate(context.Background(), nil, &models.User{}, &models.UserProfile{}, &models.Role{}, &models.InventoryData{}, &models.InventoryIn{}, &models.InventoryOut{})
+	return db.AutoMigrate(context.Background(), AutoMigrateCallback,
+		&models.User{}, &models.UserProfile{}, &models.Role{},
+		&models.InventoryData{}, &models.InventoryIn{}, &models.InventoryOut{})
 }
 
 func createBaseModel(id sqlca.ID) models.BaseModel {
 	now := time.Now()
 	return models.BaseModel{
-		Id:         uint64(id),
-		CreateTime: now,
-		UpdateTime: now,
+		Id:        uint64(id),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
-}
-
-func AutoMigrate(db *sqlca.Engine) (err error) {
-	return db.AutoMigrate(context.Background(), AutoMigrateCallback,
-		&models.InventoryData{},
-		&models.InventoryOut{},
-		&models.InventoryIn{},
-	)
 }
 
 func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {

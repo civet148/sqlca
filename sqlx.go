@@ -163,6 +163,7 @@ func (e *Engine) clone(models ...any) *Engine {
 		optfns:          e.optfns,
 		insertIgnore:    e.insertIgnore,
 		redisClient:     e.redisClient,
+		preloads:        make(map[string][]any),
 	}
 	if hasCtx {
 		engine.setModel(models[1:]...)

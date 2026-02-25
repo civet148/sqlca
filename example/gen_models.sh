@@ -7,7 +7,7 @@ PACK_NAME="models"
 # 只读字段(不更新)
 READ_ONLY="create_time, update_time"
 # 指定表名(不指定则整个数据库全部导出)
-TABLE_NAME=""
+TABLE_NAME="-user_roles"
 # 忽略字段名(逗号分隔)
 WITH_OUT=""
 # 添加标签
@@ -44,7 +44,7 @@ fi
 db2go --url "$DSN_URL" --out "$OUT_DIR" --table "$TABLE_NAME" --json-properties "$JSON_PROPERTIES" \
       --package "$PACK_NAME" --readonly "$READ_ONLY" --enable-decimal  --spec-type "$SPEC_TYPES" \
       --without "$WITH_OUT" --tinyint-as-bool "$TINYINT_TO_BOOL" --tag "$TAGS" \
-       --base-model "$BASE_MODEL" --export "$DEPLOY_SQL" #--dao dao --import-models "$IMPORT_MODELS"
+       --base-model "$BASE_MODEL" --export "$DEPLOY_SQL" --ignore-git #--dao dao --import-models "$IMPORT_MODELS"
 
 echo "generate go file ok, formatting..."
 gofmt -w $OUT_DIR/$PACK_NAME

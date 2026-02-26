@@ -44,7 +44,7 @@ fi
 db2go --url "$DSN_URL" --out "$OUT_DIR" --table "$TABLE_NAME" --json-properties "$JSON_PROPERTIES" \
       --package "$PACK_NAME" --readonly "$READ_ONLY" --enable-decimal  --spec-type "$SPEC_TYPES" \
       --without "$WITH_OUT" --tinyint-as-bool "$TINYINT_TO_BOOL" --tag "$TAGS" \
-       --base-model "$BASE_MODEL" --export "$DEPLOY_SQL" --ignore-git #--dao dao --import-models "$IMPORT_MODELS"
+       --base-model "$BASE_MODEL" --export "$DEPLOY_SQL" #--ignore-git --dao dao --import-models "$IMPORT_MODELS"
 
 echo "generate go file ok, formatting..."
 gofmt -w $OUT_DIR/$PACK_NAME

@@ -105,7 +105,7 @@ func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 func InsertSingle(db *sqlca.Engine) error {
 	price := float64(12.33)
 	var do = models.InventoryData{
-		Id:        db.NewID().Int64(),
+		Id:        uint64(db.NewID()),
 		BaseModel: createBaseModel(),
 		IsFrozen:  models.FrozenState_Ture,
 		Name:      "齿轮",
@@ -138,7 +138,8 @@ func InsertSingle(db *sqlca.Engine) error {
 func InsertBatch(db *sqlca.Engine) error {
 	var dos = []models.InventoryData{
 		{
-			BaseModel: createBaseModel(db.NewID()),
+			Id:        uint64(db.NewID()),
+			BaseModel: createBaseModel(),
 			IsFrozen:  0,
 			Name:      "齿轮",
 			SerialNo:  "SNO_001",
@@ -147,7 +148,8 @@ func InsertBatch(db *sqlca.Engine) error {
 			ProductExtra: nil,
 		},
 		{
-			BaseModel: createBaseModel(db.NewID()),
+			Id:        uint64(db.NewID()),
+			BaseModel: createBaseModel(),
 			IsFrozen:  0,
 			Name:      "轮胎",
 			SerialNo:  "SNO_002",
@@ -180,7 +182,8 @@ func InsertBatch(db *sqlca.Engine) error {
 func UpsertSingle(db *sqlca.Engine) error {
 	price := float64(12.33)
 	var do = models.InventoryData{
-		BaseModel: createBaseModel(productId),
+		Id:        uint64(productId),
+		BaseModel: createBaseModel(),
 		IsFrozen:  models.FrozenState_Ture,
 		Name:      "齿轮",
 		SerialNo:  "SNO_001",
@@ -592,7 +595,8 @@ func Transaction(db *sqlca.Engine) error {
 	quantity := float64(20)
 	weight := float64(200.3)
 	_, _, err = tx.Model(&models.InventoryIn{
-		BaseModel: createBaseModel(db.NewID()),
+		Id:        uint64(db.NewID()),
+		BaseModel: createBaseModel(),
 		ProductId: productId,
 		OrderNo:   strOrderNo,
 		UserId:    3,
@@ -642,7 +646,8 @@ func TransactionWrapper(db *sqlca.Engine) error {
 		quantity := float64(20)
 		weight := float64(200.3)
 		_, _, err = tx.Model(&models.InventoryIn{
-			BaseModel: createBaseModel(db.NewID()),
+			Id:        uint64(db.NewID()),
+			BaseModel: createBaseModel(),
 			ProductId: productId,
 			OrderNo:   strOrderNo,
 			UserId:    3,
@@ -679,7 +684,8 @@ func UpsertPoint(db *sqlca.Engine) error {
 	price := 243.3
 	id := db.NewID()
 	do := &models.InventoryData{
-		BaseModel: createBaseModel(db.NewID()),
+		Id:        uint64(db.NewID()),
+		BaseModel: createBaseModel(),
 		IsFrozen:  models.FrozenState_Ture,
 		Name:      "齿轮",
 		SerialNo:  "SNO_001",

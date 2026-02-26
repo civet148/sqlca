@@ -87,10 +87,9 @@ func MigrateModel(db *sqlca.Engine) (err error) {
 		&models.InventoryData{}, &models.InventoryIn{}, &models.InventoryOut{})
 }
 
-func createBaseModel(id sqlca.ID) models.BaseModel {
+func createBaseModel() models.BaseModel {
 	now := time.Now()
 	return models.BaseModel{
-		Id:        uint64(id),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -106,7 +105,8 @@ func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 func InsertSingle(db *sqlca.Engine) error {
 	price := float64(12.33)
 	var do = models.InventoryData{
-		BaseModel: createBaseModel(db.NewID()),
+		Id:        db.NewID().Int64(),
+		BaseModel: createBaseModel(),
 		IsFrozen:  models.FrozenState_Ture,
 		Name:      "齿轮",
 		SerialNo:  "SNO_001",

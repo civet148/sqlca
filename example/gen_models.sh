@@ -23,7 +23,7 @@ SPEC_TYPES="inventory_data.product_extra=*ProductExtraData, is_frozen=FrozenStat
 # 导入models路径(仅生成DAO文件使用)
 IMPORT_MODELS="github.com/civet148/sqlca/v3/demo/models"
 # 基础模型声明(指定基础模型类型和字段)
-BASE_MODEL="BaseModel=id,created_at,updated_at"
+BASE_MODEL="BaseModel=created_at,updated_at"
 # 指定生成数据库建表SQL输出文件路径
 DEPLOY_SQL="test.sql"
 

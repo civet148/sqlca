@@ -444,16 +444,48 @@ func (e *Engine) loadForeignKeyAssociation(fieldValue reflect.Value, fieldType r
 
 	// 查找外键字段的值
 	var fkValue interface{}
+	found := false
 	for i := 0; i < mainModelType.NumField(); i++ {
 		field := mainModelType.Field(i)
+		// 检查字段名是否匹配，或者检查结构体标签中是否有匹配
 		if strings.EqualFold(field.Name, foreignKey) || strings.EqualFold(e.getTagValue(field), foreignKey) {
 			fieldVal := mainModelReflectValue.Field(i)
 			fkValue = fieldVal.Interface()
+			found = true
+			break
+		}
+		// 如果没有直接匹配，检查是否有类似名称的字段（如 UserProfile.UserId 或 UserProfile.User_Id）
+		fieldSnakeCase := snakeCase(field.Name)
+		if strings.EqualFold(fieldSnakeCase, foreignKey) {
+			fieldVal := mainModelReflectValue.Field(i)
+			fkValue = fieldVal.Interface()
+			found = true
 			break
 		}
 	}
 
-	if fkValue == nil {
+	if !found {
+		// 再次遍历所有字段，尝试找到可能的外键字段
+		for i := 0; i < mainModelType.NumField(); i++ {
+			field := mainModelType.Field(i)
+			// 检查是否有 gorm 标签包含 foreignkey
+			gormTag := field.Tag.Get("gorm")
+			if gormTag != "" {
+				settings := parseTagSetting(gormTag, ";")
+				// 检查是否在其他字段的 gorm 标签中定义了 foreignKey
+				if fieldForeignKey, ok := settings["FOREIGNKEY"]; ok {
+					if strings.EqualFold(fieldForeignKey, foreignKey) {
+						fieldVal := mainModelReflectValue.Field(i)
+						fkValue = fieldVal.Interface()
+						found = true
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if !found {
 		return fmt.Errorf("foreign key '%s' value not found in main model", foreignKey)
 	}
 
@@ -568,16 +600,48 @@ func (e *Engine) loadReferenceAssociation(fieldValue reflect.Value, fieldType re
 
 	// 查找引用字段的值
 	var refValue interface{}
+	found := false
 	for i := 0; i < mainModelType.NumField(); i++ {
 		field := mainModelType.Field(i)
+		// 检查字段名是否匹配，或者检查结构体标签中是否有匹配
 		if strings.EqualFold(field.Name, references) || strings.EqualFold(e.getTagValue(field), references) {
 			fieldVal := mainModelReflectValue.Field(i)
 			refValue = fieldVal.Interface()
+			found = true
+			break
+		}
+		// 如果没有直接匹配，检查是否有类似名称的字段
+		fieldSnakeCase := snakeCase(field.Name)
+		if strings.EqualFold(fieldSnakeCase, references) {
+			fieldVal := mainModelReflectValue.Field(i)
+			refValue = fieldVal.Interface()
+			found = true
 			break
 		}
 	}
 
-	if refValue == nil {
+	if !found {
+		// 再次遍历所有字段，尝试找到可能的引用字段
+		for i := 0; i < mainModelType.NumField(); i++ {
+			field := mainModelType.Field(i)
+			// 检查是否有 gorm 标签包含 references
+			gormTag := field.Tag.Get("gorm")
+			if gormTag != "" {
+				settings := parseTagSetting(gormTag, ";")
+				// 检查是否在其他字段的 gorm 标签中定义了 references
+				if fieldReferences, ok := settings["REFERENCES"]; ok {
+					if strings.EqualFold(fieldReferences, references) {
+						fieldVal := mainModelReflectValue.Field(i)
+						refValue = fieldVal.Interface()
+						found = true
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if !found {
 		return fmt.Errorf("reference field '%s' value not found in main model", references)
 	}
 

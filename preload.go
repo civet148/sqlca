@@ -140,6 +140,23 @@ func (e *Engine) loadMany2ManyAssociation(fieldValue reflect.Value, fieldType re
 		mainModelReflectValue = mainModelReflectValue.Elem()
 	}
 
+	// 检查是否是切片类型，如果是则取第一个元素
+	if mainModelType.Kind() == reflect.Slice {
+		if mainModelReflectValue.Len() == 0 {
+			return fmt.Errorf("main model slice is empty, cannot get primary key value")
+		}
+		// 取第一个元素
+		firstElement := mainModelReflectValue.Index(0)
+		if firstElement.Kind() == reflect.Ptr {
+			if firstElement.IsNil() {
+				return fmt.Errorf("first element in main model slice is nil")
+			}
+			firstElement = firstElement.Elem()
+		}
+		mainModelType = firstElement.Type()
+		mainModelReflectValue = firstElement
+	}
+
 	// 尝试找到主键字段 (通常名为ID)
 	var mainPKValue interface{}
 	for i := 0; i < mainModelType.NumField(); i++ {
@@ -271,7 +288,16 @@ func (e *Engine) loadMany2ManyAssociation(fieldValue reflect.Value, fieldType re
 		// 添加额外条件
 		argOffset := len(assocIDs) + 1
 		if len(args) > 0 {
-			if len(args)%2 == 0 {
+			// 检查第一个参数是否为字符串（可能是条件表达式）
+			if condition, ok := args[0].(string); ok {
+				// 处理包含占位符的字符串条件
+				// 计算条件字符串中占位符的数量，并调整argOffset
+				placeholderCount := strings.Count(condition, "?")
+				finalQuery += " AND " + strings.ReplaceAll(condition, "?", fmt.Sprintf("$%d", argOffset))
+
+				// 更新argOffset为占位符之后的位置
+				argOffset += placeholderCount
+			} else if len(args)%2 == 0 {
 				for i := 0; i < len(args); i += 2 {
 					finalQuery += " AND "
 

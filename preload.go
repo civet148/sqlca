@@ -91,18 +91,18 @@ func (e *Engine) loadAssociations(modelValue reflect.Value, associationName stri
 
 		// 检查是否为many2many关联
 		if junctionTable, ok := settings["MANY2MANY"]; ok {
-			return e.loadMany2ManyAssociation(fieldValue, field.Type, junctionTable, args...)
+			return e.loadMany2ManyAssociation(modelValue, fieldValue, field.Type, junctionTable, args...)
 		}
 
 		// 检查是否为foreignKey关联
 		if foreignKey, ok := settings["FOREIGNKEY"]; ok {
-			return e.loadForeignKeyAssociation(fieldValue, field.Type, foreignKey, args...)
+			return e.loadForeignKeyAssociation(modelValue, fieldValue, field.Type, foreignKey, args...)
 		}
 
 		// 检查是否有references引用
 		if references, ok := settings["REFERENCES"]; ok {
 			foreignKey, _ := settings["FOREIGNKEY"]
-			return e.loadReferenceAssociation(fieldValue, field.Type, foreignKey, references, args...)
+			return e.loadReferenceAssociation(modelValue, fieldValue, field.Type, foreignKey, references, args...)
 		}
 	}
 
@@ -110,7 +110,7 @@ func (e *Engine) loadAssociations(modelValue reflect.Value, associationName stri
 }
 
 // loadMany2ManyAssociation 加载多对多关联
-func (e *Engine) loadMany2ManyAssociation(fieldValue reflect.Value, fieldType reflect.Type, junctionTable string, args ...any) error {
+func (e *Engine) loadMany2ManyAssociation(mainModelValue reflect.Value, fieldValue reflect.Value, fieldType reflect.Type, junctionTable string, args ...any) error {
 	if fieldValue.Kind() != reflect.Ptr && fieldValue.Kind() != reflect.Slice {
 		return fmt.Errorf("many2many association field must be a pointer to slice")
 	}
@@ -130,33 +130,13 @@ func (e *Engine) loadMany2ManyAssociation(fieldValue reflect.Value, fieldType re
 		return fmt.Errorf("many2many association field must be a pointer to slice")
 	}
 
-	// 获取主模型的主键值
-	mainModelValue := e.model
-	mainModelType := reflect.TypeOf(mainModelValue)
-	mainModelReflectValue := reflect.ValueOf(mainModelValue)
-
-	// 处理指针
-	if mainModelType.Kind() == reflect.Ptr {
-		mainModelType = mainModelType.Elem()
+	// 处理主模型指针
+	mainModelReflectValue := mainModelValue
+	if mainModelReflectValue.Kind() == reflect.Ptr {
 		mainModelReflectValue = mainModelReflectValue.Elem()
 	}
 
-	// 检查是否是切片类型，如果是则取第一个元素
-	if mainModelType.Kind() == reflect.Slice {
-		if mainModelReflectValue.Len() == 0 {
-			return fmt.Errorf("main model slice is empty, cannot get primary key value")
-		}
-		// 取第一个元素
-		firstElement := mainModelReflectValue.Index(0)
-		if firstElement.Kind() == reflect.Ptr {
-			if firstElement.IsNil() {
-				return fmt.Errorf("first element in main model slice is nil")
-			}
-			firstElement = firstElement.Elem()
-		}
-		mainModelType = firstElement.Type()
-		mainModelReflectValue = firstElement
-	}
+	mainModelType := mainModelReflectValue.Type()
 
 	// 尝试找到主键字段 (通常名为ID)
 	var mainPKValue interface{}
@@ -390,7 +370,8 @@ func (e *Engine) loadMany2ManyAssociation(fieldValue reflect.Value, fieldType re
 		}
 
 		// 创建新的元素实例
-		element := reflect.New(elementType).Elem()
+		element := reflect.New(elementType)
+		elementValue := element.Elem()
 
 		// 将扫描的结果映射到结构体字段
 		colMap := make(map[string]interface{})
@@ -400,7 +381,7 @@ func (e *Engine) loadMany2ManyAssociation(fieldValue reflect.Value, fieldType re
 
 		// 使用fetcher将数据映射到结构体
 		fetcher := &Fetcher{mapValues: convertMapInterfaceToMapString(colMap)}
-		if err := e.fetchToStruct(fetcher, elementType, element); err != nil {
+		if err := e.fetchToStruct(fetcher, elementType, elementValue); err != nil {
 			return fmt.Errorf("failed to map fetched data to struct: %v", err)
 		}
 
@@ -414,34 +395,14 @@ func (e *Engine) loadMany2ManyAssociation(fieldValue reflect.Value, fieldType re
 }
 
 // loadForeignKeyAssociation 加载外键关联
-func (e *Engine) loadForeignKeyAssociation(fieldValue reflect.Value, fieldType reflect.Type, foreignKey string, args ...any) error {
-	// 获取外键字段的值
-	mainModelValue := e.model
-	mainModelType := reflect.TypeOf(mainModelValue)
-	mainModelReflectValue := reflect.ValueOf(mainModelValue)
-
-	// 处理指针
-	if mainModelType.Kind() == reflect.Ptr {
-		mainModelType = mainModelType.Elem()
+func (e *Engine) loadForeignKeyAssociation(mainModelValue reflect.Value, fieldValue reflect.Value, fieldType reflect.Type, foreignKey string, args ...any) error {
+	// 处理主模型指针
+	mainModelReflectValue := mainModelValue
+	if mainModelReflectValue.Kind() == reflect.Ptr {
 		mainModelReflectValue = mainModelReflectValue.Elem()
 	}
 
-	// 检查是否是切片类型，如果是则取第一个元素
-	if mainModelType.Kind() == reflect.Slice {
-		if mainModelReflectValue.Len() == 0 {
-			return fmt.Errorf("main model slice is empty, cannot get foreign key value")
-		}
-		// 取第一个元素
-		firstElement := mainModelReflectValue.Index(0)
-		if firstElement.Kind() == reflect.Ptr {
-			if firstElement.IsNil() {
-				return fmt.Errorf("first element in main model slice is nil")
-			}
-			firstElement = firstElement.Elem()
-		}
-		mainModelType = firstElement.Type()
-		mainModelReflectValue = firstElement
-	}
+	mainModelType := mainModelReflectValue.Type()
 
 	// 查找主模型的主键字段值
 	var fkValue interface{}
@@ -556,37 +517,17 @@ func (e *Engine) loadForeignKeyAssociation(fieldValue reflect.Value, fieldType r
 }
 
 // loadReferenceAssociation 加载引用关联
-func (e *Engine) loadReferenceAssociation(fieldValue reflect.Value, fieldType reflect.Type, foreignKey, references string, args ...any) error {
+func (e *Engine) loadReferenceAssociation(mainModelValue reflect.Value, fieldValue reflect.Value, fieldType reflect.Type, foreignKey, references string, args ...any) error {
 	// 引用关联通常是通过 references 指定的字段进行关联
 	// 例如: belongs to 关系，使用 references 指定被引用的字段
 
-	// 获取主模型的引用字段值
-	mainModelValue := e.model
-	mainModelType := reflect.TypeOf(mainModelValue)
-	mainModelReflectValue := reflect.ValueOf(mainModelValue)
-
-	// 处理指针
-	if mainModelType.Kind() == reflect.Ptr {
-		mainModelType = mainModelType.Elem()
+	// 处理主模型指针
+	mainModelReflectValue := mainModelValue
+	if mainModelReflectValue.Kind() == reflect.Ptr {
 		mainModelReflectValue = mainModelReflectValue.Elem()
 	}
 
-	// 检查是否是切片类型，如果是则取第一个元素
-	if mainModelType.Kind() == reflect.Slice {
-		if mainModelReflectValue.Len() == 0 {
-			return fmt.Errorf("main model slice is empty, cannot get reference value")
-		}
-		// 取第一个元素
-		firstElement := mainModelReflectValue.Index(0)
-		if firstElement.Kind() == reflect.Ptr {
-			if firstElement.IsNil() {
-				return fmt.Errorf("first element in main model slice is nil")
-			}
-			firstElement = firstElement.Elem()
-		}
-		mainModelType = firstElement.Type()
-		mainModelReflectValue = firstElement
-	}
+	mainModelType := mainModelReflectValue.Type()
 
 	// 查找引用字段的值
 	var refValue interface{}

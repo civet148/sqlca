@@ -98,6 +98,106 @@ func createBaseModel() models.BaseModel {
 
 func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 	log.Infof("AutoMigrateCallback...")
+
+	// 插入测试角色数据
+	role1 := &models.Role{
+		Id:        1,
+		BaseModel: createBaseModel(),
+		Name:      "admin",
+	}
+	_, _, err := db.Model(role1).Insert()
+	if err != nil {
+		log.Warnf("插入角色数据失败: %s", err)
+	}
+
+	role2 := &models.Role{
+		Id:        2,
+		BaseModel: createBaseModel(),
+		Name:      "user",
+	}
+	_, _, err = db.Model(role2).Insert()
+	if err != nil {
+		log.Warnf("插入角色数据失败: %s", err)
+	}
+
+	// 插入测试用户数据
+	user1 := &models.User{
+		Id:        1,
+		BaseModel: createBaseModel(),
+		UserName:  "lory",
+		Email:     "lory@hotmail.com",
+	}
+	_, _, err = db.Model(user1).Insert()
+	if err != nil {
+		log.Warnf("插入用户数据失败: %s", err)
+	}
+
+	user2 := &models.User{
+		Id:        2,
+		BaseModel: createBaseModel(),
+		UserName:  "civet148",
+		Email:     "civet148@126.com",
+	}
+	_, _, err = db.Model(user2).Insert()
+	if err != nil {
+		log.Warnf("插入用户数据失败: %s", err)
+	}
+
+	// 插入测试用户资料数据
+	profile1 := &models.UserProfile{
+		Id:        1,
+		BaseModel: createBaseModel(),
+		UserId:    1,
+		Avatar:    "https://www.hello.com/lory.jpg",
+		Address:   "中国北京市朝阳区A座",
+	}
+	_, _, err = db.Model(profile1).Insert()
+	if err != nil {
+		log.Warnf("插入用户资料数据失败: %s", err)
+	}
+
+	profile2 := &models.UserProfile{
+		Id:        2,
+		BaseModel: createBaseModel(),
+		UserId:    2,
+		Avatar:    "https://www.hello.com/civet148.jpg",
+		Address:   "中国上海市浦东新区B座",
+	}
+	_, _, err = db.Model(profile2).Insert()
+	if err != nil {
+		log.Warnf("插入用户资料数据失败: %s", err)
+	}
+
+	// 插入测试用户角色关联数据
+	userRole1 := &models.UserRole{
+		BaseModel: createBaseModel(),
+		UserId:    1,
+		RoleId:    1,
+	}
+	_, _, err = db.Model(userRole1).Insert()
+	if err != nil {
+		log.Warnf("插入用户角色关联数据失败: %s", err)
+	}
+
+	userRole2 := &models.UserRole{
+		BaseModel: createBaseModel(),
+		UserId:    1,
+		RoleId:    2,
+	}
+	_, _, err = db.Model(userRole2).Insert()
+	if err != nil {
+		log.Warnf("插入用户角色关联数据失败: %s", err)
+	}
+
+	userRole3 := &models.UserRole{
+		BaseModel: createBaseModel(),
+		UserId:    2,
+		RoleId:    2,
+	}
+	_, _, err = db.Model(userRole3).Insert()
+	if err != nil {
+		log.Warnf("插入用户角色关联数据失败: %s", err)
+	}
 }
 
 /*

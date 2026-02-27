@@ -67,7 +67,7 @@ func main() {
 	//requireNoError(UpsertPoint(db))
 	//requireNoError(UpdatePointByExpress(db))
 	//requireNoError(DistributionLock(db))
-	requireNoError(Preload(db))
+	//requireNoError(Preload(db))
 }
 
 func requireNoError(err error) {
@@ -105,7 +105,7 @@ func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 		BaseModel: createBaseModel(),
 		Name:      "admin",
 	}
-	_, _, err := db.Model(role1).Insert()
+	_, err := db.Model(role1).Upsert()
 	if err != nil {
 		log.Warnf("插入角色数据失败: %s", err)
 	}
@@ -115,7 +115,7 @@ func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 		BaseModel: createBaseModel(),
 		Name:      "user",
 	}
-	_, _, err = db.Model(role2).Insert()
+	_, err = db.Model(role2).Upsert()
 	if err != nil {
 		log.Warnf("插入角色数据失败: %s", err)
 	}
@@ -127,7 +127,7 @@ func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 		UserName:  "lory",
 		Email:     "lory@hotmail.com",
 	}
-	_, _, err = db.Model(user1).Insert()
+	_, err = db.Model(user1).Upsert()
 	if err != nil {
 		log.Warnf("插入用户数据失败: %s", err)
 	}
@@ -138,7 +138,7 @@ func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 		UserName:  "civet148",
 		Email:     "civet148@126.com",
 	}
-	_, _, err = db.Model(user2).Insert()
+	_, err = db.Model(user2).Upsert()
 	if err != nil {
 		log.Warnf("插入用户数据失败: %s", err)
 	}
@@ -151,7 +151,7 @@ func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 		Avatar:    "https://www.hello.com/lory.jpg",
 		Address:   "中国北京市朝阳区A座",
 	}
-	_, _, err = db.Model(profile1).Insert()
+	_, err = db.Model(profile1).Upsert()
 	if err != nil {
 		log.Warnf("插入用户资料数据失败: %s", err)
 	}
@@ -163,38 +163,35 @@ func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
 		Avatar:    "https://www.hello.com/civet148.jpg",
 		Address:   "中国上海市浦东新区B座",
 	}
-	_, _, err = db.Model(profile2).Insert()
+	_, err = db.Model(profile2).Upsert()
 	if err != nil {
 		log.Warnf("插入用户资料数据失败: %s", err)
 	}
 
 	// 插入测试用户角色关联数据
 	userRole1 := &models.UserRole{
-		BaseModel: createBaseModel(),
-		UserId:    1,
-		RoleId:    1,
+		UserId: 1,
+		RoleId: 1,
 	}
-	_, _, err = db.Model(userRole1).Insert()
+	_, err = db.Model(userRole1).Upsert()
 	if err != nil {
 		log.Warnf("插入用户角色关联数据失败: %s", err)
 	}
 
 	userRole2 := &models.UserRole{
-		BaseModel: createBaseModel(),
-		UserId:    1,
-		RoleId:    2,
+		UserId: 1,
+		RoleId: 2,
 	}
-	_, _, err = db.Model(userRole2).Insert()
+	_, err = db.Model(userRole2).Upsert()
 	if err != nil {
 		log.Warnf("插入用户角色关联数据失败: %s", err)
 	}
 
 	userRole3 := &models.UserRole{
-		BaseModel: createBaseModel(),
-		UserId:    2,
-		RoleId:    2,
+		UserId: 2,
+		RoleId: 2,
 	}
-	_, _, err = db.Model(userRole3).Insert()
+	_, err = db.Model(userRole3).Upsert()
 	if err != nil {
 		log.Warnf("插入用户角色关联数据失败: %s", err)
 	}

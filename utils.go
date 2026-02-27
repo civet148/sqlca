@@ -4,13 +4,15 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v3/types"
-	"github.com/jmoiron/sqlx"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/civet148/log"
+	"github.com/civet148/sqlca/v3/types"
+	"github.com/jmoiron/sqlx"
 )
 
 type queryInterfaceType int
@@ -191,9 +193,13 @@ func indirectValue(v any, isClauses ...bool) any {
 				return result
 			}
 		} else {
-			data, err := json.Marshal(value.Interface())
-			if err == nil {
-				return string(data)
+			if t, ok := value.Interface().(time.Time); !ok { //if struct is not time.Time type then convert to JSON string
+				data, err := json.Marshal(value.Interface())
+				if err == nil {
+					return string(data)
+				}
+			} else {
+				return t.Format(time.RFC3339)
 			}
 		}
 	case reflect.Slice, reflect.Array:
@@ -216,8 +222,6 @@ func indirectValue(v any, isClauses ...bool) any {
 		if err == nil {
 			return string(data)
 		}
-	default:
-		return fmt.Sprintf("%v", v)
 	}
 	return v
 }

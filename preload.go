@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/civet148/sqlca/v3/types"
@@ -442,21 +443,15 @@ func (e *Engine) loadForeignKeyAssociation(fieldValue reflect.Value, fieldType r
 		mainModelReflectValue = firstElement
 	}
 
-	// 查找外键字段的值
+	// 查找主模型的主键字段值
 	var fkValue interface{}
 	found := false
 	for i := 0; i < mainModelType.NumField(); i++ {
 		field := mainModelType.Field(i)
-		// 检查字段名是否匹配，或者检查结构体标签中是否有匹配
-		if strings.EqualFold(field.Name, foreignKey) || strings.EqualFold(e.getTagValue(field), foreignKey) {
-			fieldVal := mainModelReflectValue.Field(i)
-			fkValue = fieldVal.Interface()
-			found = true
-			break
-		}
-		// 如果没有直接匹配，检查是否有类似名称的字段（如 UserProfile.UserId 或 UserProfile.User_Id）
-		fieldSnakeCase := snakeCase(field.Name)
-		if strings.EqualFold(fieldSnakeCase, foreignKey) {
+		gormTag := field.Tag.Get("gorm")
+		settings := parseTagSetting(gormTag, ";")
+		_, isPK := settings["PRIMARYKEY"]
+		if isPK || strings.EqualFold(field.Name, "Id") || strings.EqualFold(field.Name, "ID") {
 			fieldVal := mainModelReflectValue.Field(i)
 			fkValue = fieldVal.Interface()
 			found = true
@@ -465,28 +460,20 @@ func (e *Engine) loadForeignKeyAssociation(fieldValue reflect.Value, fieldType r
 	}
 
 	if !found {
-		// 再次遍历所有字段，尝试找到可能的外键字段
+		// 如果没找到明确的主键，尝试获取第一个整数类型的字段作为主键
 		for i := 0; i < mainModelType.NumField(); i++ {
 			field := mainModelType.Field(i)
-			// 检查是否有 gorm 标签包含 foreignkey
-			gormTag := field.Tag.Get("gorm")
-			if gormTag != "" {
-				settings := parseTagSetting(gormTag, ";")
-				// 检查是否在其他字段的 gorm 标签中定义了 foreignKey
-				if fieldForeignKey, ok := settings["FOREIGNKEY"]; ok {
-					if strings.EqualFold(fieldForeignKey, foreignKey) {
-						fieldVal := mainModelReflectValue.Field(i)
-						fkValue = fieldVal.Interface()
-						found = true
-						break
-					}
-				}
+			fieldVal := mainModelReflectValue.Field(i)
+			if strings.EqualFold(field.Name, "Id") || strings.EqualFold(field.Name, "ID") {
+				fkValue = fieldVal.Interface()
+				found = true
+				break
 			}
 		}
 	}
 
 	if !found {
-		return fmt.Errorf("foreign key '%s' value not found in main model", foreignKey)
+		return fmt.Errorf("could not find primary key value for main model")
 	}
 
 	// 准备关联模型
@@ -515,12 +502,15 @@ func (e *Engine) loadForeignKeyAssociation(fieldValue reflect.Value, fieldType r
 	columns := getStructFields(elementType, e)
 	selectFields := strings.Join(columns, ", ")
 
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE id = ?", selectFields, tableName)
+	// 将 foreignKey 转换为蛇形命名法，以匹配数据库中的列名
+	foreignKeySnake := snakeCase(foreignKey)
+
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?", selectFields, tableName, foreignKeySnake)
 
 	// 处理不同数据库的占位符
 	switch e.adapterType {
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
-		query = fmt.Sprintf("SELECT %s FROM %s WHERE id = $1", selectFields, tableName)
+		query = fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", selectFields, tableName, foreignKeySnake)
 	}
 
 	rows, err := e.db.Query(query, fkValue)
@@ -776,6 +766,14 @@ func getStructFields(structType reflect.Type, e *Engine) []string {
 
 		// 跳过非导出字段
 		if field.PkgPath != "" {
+			continue
+		}
+
+		// 检查是否是嵌套结构体
+		if field.Type.Kind() == reflect.Struct && field.Type != reflect.TypeOf(time.Time{}) {
+			// 递归处理嵌套结构体的字段
+			nestedColumns := getStructFields(field.Type, e)
+			columns = append(columns, nestedColumns...)
 			continue
 		}
 

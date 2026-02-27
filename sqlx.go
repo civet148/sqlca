@@ -34,7 +34,6 @@ func (e *Engine) getDB() (db *sqlx.DB) {
 }
 
 func (e *Engine) setModel(models ...any) *Engine {
-	var strCamelTableName string
 	for _, v := range models {
 
 		if v == nil {
@@ -65,8 +64,7 @@ func (e *Engine) setModel(models ...any) *Engine {
 		if isStructPtrPtr {
 			e.model = val.Interface()
 			e.setModelType(types.ModelType_Struct)
-			typSt := typ.Elem()
-			strCamelTableName = typSt.Name()
+			e.setStructTableName(typ.Elem())
 		} else {
 			switch typ.Kind() {
 			case reflect.Struct: // struct
@@ -85,37 +83,16 @@ func (e *Engine) setModel(models ...any) *Engine {
 					elemTyp := modelVal.Type().Elem()
 					elemVal := reflect.New(elemTyp).Elem()
 					typSt := elemVal.Type().Elem()
-					if typSt.Kind() == reflect.Ptr {
-						typSt = typSt.Elem()
-					}
-					valSt := reflect.New(typSt)
-					if tabler, ok := valSt.Interface().(types.Tabler); ok {
-						e.setTableName(tabler.TableName())
-					} else {
-						strCamelTableName = typSt.Name()
-					}
+					e.setStructTableName(typSt)
 					if val.IsNil() {
 						val.Set(reflect.MakeSlice(elemVal.Type(), 0, 0))
 					}
 				} else {
-					var typSt = typ
-					if typ.Kind() == reflect.Ptr {
-						typSt = typ.Elem()
-					}
-					valSt := reflect.New(typSt)
-					if tabler, ok := valSt.Interface().(types.Tabler); ok {
-						e.setTableName(tabler.TableName())
-					} else {
-						strCamelTableName = typSt.Name()
-					}
+					e.setStructTableName(typ)
 				}
 			} else {
 				e.model = models //built-in types
 			}
-		}
-		if strCamelTableName != "" {
-			name := convertCamelToSnake(strCamelTableName)
-			e.setTableName(strings.ToLower(name))
 		}
 		var selectColumns []string
 		ref := newReflector(e, e.model)
@@ -130,6 +107,18 @@ func (e *Engine) setModel(models ...any) *Engine {
 		break //only check first argument
 	}
 	return e.setHooks()
+}
+
+func (e *Engine) setStructTableName(typSt reflect.Type) {
+	if typSt.Kind() == reflect.Ptr {
+		typSt = typSt.Elem()
+	}
+	valSt := reflect.New(typSt)
+	if tabler, ok := valSt.Interface().(types.Tabler); ok {
+		e.setTableName(tabler.TableName())
+	} else {
+		e.setTableName(strings.ToLower(convertCamelToSnake(typSt.Name())))
+	}
 }
 
 // clone engine
@@ -431,6 +420,7 @@ func (e *Engine) getTableName() string {
 }
 
 func (e *Engine) setTableName(strNames ...string) {
+	log.Errorf("table name set to %v", strNames)
 	e.strTableName = strings.Join(strNames, ",")
 }
 

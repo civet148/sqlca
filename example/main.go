@@ -859,7 +859,13 @@ func Preload(db *sqlca.Engine) error {
 	if err != nil {
 		return log.Errorf(err.Error())
 	}
-	log.Infof("rows affected: %d", rows)
 	log.Json("users with preloads", users)
+	log.Infof("result rows %v", rows)
+	var user *models.User
+	rows, err = db.Model(&user).Preload("Roles", "id > ?", 0).Preload("Profile").Id(1).Query()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Json("user with preloads", user)
 	return nil
 }

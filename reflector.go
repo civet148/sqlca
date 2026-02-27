@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v3/types"
@@ -509,7 +510,12 @@ func (e *Engine) fetchToStructField(fetcher *Fetcher, typ reflect.Type, field re
 	switch typ.Kind() {
 	case reflect.Struct:
 		{
-			e.fetchToStructAny(fetcher, field, val, ptr...)
+			// 特殊处理 time.Time 类型
+			if typ == reflect.TypeOf(time.Time{}) {
+				_ = e.setValueByField(fetcher, field, val, ptr...)
+			} else {
+				e.fetchToStructAny(fetcher, field, val, ptr...)
+			}
 		}
 	case reflect.Slice:
 		if e.getTagValue(field) != "" {
@@ -685,13 +691,27 @@ func (e *Engine) setValue(typ reflect.Type, val reflect.Value, v string) bool {
 	}
 	switch typ.Kind() {
 	case reflect.Struct:
-		s, ok := val.Addr().Interface().(sql.Scanner)
-		if !ok {
-			log.Warnf("struct type %s not implement sql.Scanner interface", typ.Name())
-			return false
-		}
-		if err := s.Scan(v); err != nil {
-			panic(fmt.Sprintf("scan value %s to sql.Scanner implement object error [%s]", v, err))
+		// 特殊处理 time.Time 类型
+		if typ == reflect.TypeOf(time.Time{}) {
+			t, err := time.Parse(time.RFC3339, v)
+			if err != nil {
+				// 尝试其他时间格式
+				t, err = time.Parse("2006-01-02 15:04:05", v)
+				if err != nil {
+					log.Errorf("parse time value %s error [%s]", v, err)
+					return false
+				}
+			}
+			val.Set(reflect.ValueOf(t))
+		} else {
+			s, ok := val.Addr().Interface().(sql.Scanner)
+			if !ok {
+				log.Warnf("struct type %s not implement sql.Scanner interface", typ.Name())
+				return false
+			}
+			if err := s.Scan(v); err != nil {
+				panic(fmt.Sprintf("scan value %s to sql.Scanner implement object error [%s]", v, err))
+			}
 		}
 	case reflect.String:
 		val.SetString(v)

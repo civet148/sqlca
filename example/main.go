@@ -83,7 +83,7 @@ func requireError(err error) {
 }
 
 func MigrateModel(db *sqlca.Engine) (err error) {
-	return db.AutoMigrate(context.Background(), AutoMigrateCallback,
+	return db.AutoMigrate(context.Background(), nil, /*AutoMigrateCallback*/
 		&models.User{}, &models.UserProfile{}, &models.Role{},
 		&models.InventoryData{}, &models.InventoryIn{}, &models.InventoryOut{})
 }
@@ -855,6 +855,7 @@ func DistributionLock(db *sqlca.Engine) error {
 func Preload(db *sqlca.Engine) error {
 	var users []*models.User
 	rows, err := db.Model(&users).Preload("Roles", "id > ?", 0).Preload("Profile").Query()
+	//rows, err := db.Model(&users).Query()
 	if err != nil {
 		return log.Errorf(err.Error())
 	}

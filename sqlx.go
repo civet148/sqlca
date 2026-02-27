@@ -420,7 +420,6 @@ func (e *Engine) getTableName() string {
 }
 
 func (e *Engine) setTableName(strNames ...string) {
-	log.Errorf("table name set to %v", strNames)
 	e.strTableName = strings.Join(strNames, ",")
 }
 

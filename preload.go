@@ -425,6 +425,23 @@ func (e *Engine) loadForeignKeyAssociation(fieldValue reflect.Value, fieldType r
 		mainModelReflectValue = mainModelReflectValue.Elem()
 	}
 
+	// 检查是否是切片类型，如果是则取第一个元素
+	if mainModelType.Kind() == reflect.Slice {
+		if mainModelReflectValue.Len() == 0 {
+			return fmt.Errorf("main model slice is empty, cannot get foreign key value")
+		}
+		// 取第一个元素
+		firstElement := mainModelReflectValue.Index(0)
+		if firstElement.Kind() == reflect.Ptr {
+			if firstElement.IsNil() {
+				return fmt.Errorf("first element in main model slice is nil")
+			}
+			firstElement = firstElement.Elem()
+		}
+		mainModelType = firstElement.Type()
+		mainModelReflectValue = firstElement
+	}
+
 	// 查找外键字段的值
 	var fkValue interface{}
 	for i := 0; i < mainModelType.NumField(); i++ {
@@ -530,6 +547,23 @@ func (e *Engine) loadReferenceAssociation(fieldValue reflect.Value, fieldType re
 	if mainModelType.Kind() == reflect.Ptr {
 		mainModelType = mainModelType.Elem()
 		mainModelReflectValue = mainModelReflectValue.Elem()
+	}
+
+	// 检查是否是切片类型，如果是则取第一个元素
+	if mainModelType.Kind() == reflect.Slice {
+		if mainModelReflectValue.Len() == 0 {
+			return fmt.Errorf("main model slice is empty, cannot get reference value")
+		}
+		// 取第一个元素
+		firstElement := mainModelReflectValue.Index(0)
+		if firstElement.Kind() == reflect.Ptr {
+			if firstElement.IsNil() {
+				return fmt.Errorf("first element in main model slice is nil")
+			}
+			firstElement = firstElement.Elem()
+		}
+		mainModelType = firstElement.Type()
+		mainModelReflectValue = firstElement
 	}
 
 	// 查找引用字段的值

@@ -341,55 +341,34 @@ func (e *Engine) loadMany2ManyAssociation(mainModelValue reflect.Value, fieldVal
 
 	}
 
-	// 查询关联数据
-	resultSlice := reflect.New(reflect.SliceOf(reflect.PtrTo(elementType)))
+	// 创建关联模型切片
+	sliceType := reflect.SliceOf(reflect.PtrTo(elementType))
+	resultSlice := reflect.New(sliceType).Elem()
 
+	// 临时设置模型为关联模型切片
+	originalModel := e.model
+	e.model = resultSlice.Addr().Interface()
+
+	// 查询关联数据
 	rows, err = e.db.Query(finalQuery, queryArgs...)
 	if err != nil {
+		e.model = originalModel
 		return fmt.Errorf("failed to query associated data: %v", err)
 	}
 	defer rows.Close()
 
-	// 使用反射将结果填充到切片
-	resultSliceVal := resultSlice.Elem()
-	for rows.Next() {
-		// 获取列信息
-		cols, err := rows.Columns()
-		if err != nil {
-			return fmt.Errorf("failed to get columns: %v", err)
-		}
-
-		// 为每一列创建一个接口值来接收数据
-		values := make([]interface{}, len(cols))
-		for i := range values {
-			values[i] = new(interface{})
-		}
-
-		if err := rows.Scan(values...); err != nil {
-			return fmt.Errorf("failed to scan associated row: %v", err)
-		}
-
-		// 创建新的元素实例
-		element := reflect.New(elementType)
-		elementValue := element.Elem()
-
-		// 将扫描的结果映射到结构体字段
-		colMap := make(map[string]interface{})
-		for i, col := range cols {
-			colMap[col] = *(values[i].(*interface{}))
-		}
-
-		// 使用fetcher将数据映射到结构体
-		fetcher := &Fetcher{mapValues: convertMapInterfaceToMapString(colMap)}
-		if err := e.fetchToStruct(fetcher, elementType, elementValue); err != nil {
-			return fmt.Errorf("failed to map fetched data to struct: %v", err)
-		}
-
-		resultSliceVal = reflect.Append(resultSliceVal, element)
+	// 使用fetchRows填充数据
+	_, err = e.fetchRows(rows)
+	if err != nil {
+		e.model = originalModel
+		return fmt.Errorf("failed to fetch associated data: %v", err)
 	}
 
+	// 恢复原始模型
+	e.model = originalModel
+
 	// 设置关联字段值
-	fieldValue.Set(resultSliceVal)
+	fieldValue.Set(resultSlice)
 
 	return nil
 }
@@ -438,17 +417,19 @@ func (e *Engine) loadForeignKeyAssociation(mainModelValue reflect.Value, fieldVa
 	}
 
 	// 准备关联模型
-	var assocModelValue reflect.Value
+	var assocModel interface{}
 	if fieldType.Kind() == reflect.Ptr {
 		if fieldValue.IsNil() {
-			assocModelValue = reflect.New(fieldType.Elem()).Elem()
-			fieldValue.Set(reflect.New(fieldType.Elem()))
-			fieldValue = fieldValue.Elem()
+			// 创建新的指针实例
+			newPtr := reflect.New(fieldType.Elem())
+			fieldValue.Set(newPtr)
+			assocModel = newPtr.Interface()
 		} else {
-			assocModelValue = fieldValue.Elem()
+			assocModel = fieldValue.Interface()
 		}
 	} else {
-		assocModelValue = fieldValue
+		// 对于非指针类型，需要创建一个指针指向它
+		assocModel = fieldValue.Addr().Interface()
 	}
 
 	// 构建查询：SELECT {fields} FROM assoc_table WHERE id = fk_value
@@ -474,44 +455,27 @@ func (e *Engine) loadForeignKeyAssociation(mainModelValue reflect.Value, fieldVa
 		query = fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", selectFields, tableName, foreignKeySnake)
 	}
 
+	// 临时设置模型为关联模型
+	originalModel := e.model
+	e.model = assocModel
+
+	// 查询关联数据
 	rows, err := e.db.Query(query, fkValue)
 	if err != nil {
+		e.model = originalModel
 		return fmt.Errorf("failed to query foreign key association: %v", err)
 	}
 	defer rows.Close()
 
-	if rows.Next() {
-		// 填充关联模型数据
-		cols, err := rows.Columns()
-		if err != nil {
-			return fmt.Errorf("failed to get columns: %v", err)
-		}
-		vals := make([]interface{}, len(cols))
-		for i := range vals {
-			vals[i] = new(interface{})
-		}
-
-		if err := rows.Scan(vals...); err != nil {
-			return fmt.Errorf("failed to scan associated row: %v", err)
-		}
-
-		// 将扫描结果映射到结构体字段
-		colMap := make(map[string]interface{})
-		for i, col := range cols {
-			colMap[col] = *(vals[i].(*interface{}))
-		}
-
-		// 使用fetcher将数据映射到结构体
-		fetcher := &Fetcher{mapValues: convertMapInterfaceToMapString(colMap)}
-		if err := e.fetchToStruct(fetcher, elementType, assocModelValue); err != nil {
-			return fmt.Errorf("failed to map fetched data to struct: %v", err)
-		}
-
-		// 如果原始字段是指针，确保已正确设置
-		if fieldType.Kind() == reflect.Ptr && fieldValue.Kind() == reflect.Struct {
-			fieldValue.Set(assocModelValue)
-		}
+	// 使用fetchRows填充数据
+	_, err = e.fetchRows(rows)
+	if err != nil {
+		e.model = originalModel
+		return fmt.Errorf("failed to fetch foreign key association: %v", err)
 	}
+
+	// 恢复原始模型
+	e.model = originalModel
 
 	return nil
 }
@@ -577,17 +541,19 @@ func (e *Engine) loadReferenceAssociation(mainModelValue reflect.Value, fieldVal
 	}
 
 	// 准备关联模型
-	var assocModelValue reflect.Value
+	var assocModel interface{}
 	if fieldType.Kind() == reflect.Ptr {
 		if fieldValue.IsNil() {
-			assocModelValue = reflect.New(fieldType.Elem()).Elem()
-			fieldValue.Set(reflect.New(fieldType.Elem()))
-			fieldValue = fieldValue.Elem()
+			// 创建新的指针实例
+			newPtr := reflect.New(fieldType.Elem())
+			fieldValue.Set(newPtr)
+			assocModel = newPtr.Interface()
 		} else {
-			assocModelValue = fieldValue.Elem()
+			assocModel = fieldValue.Interface()
 		}
 	} else {
-		assocModelValue = fieldValue
+		// 对于非指针类型，需要创建一个指针指向它
+		assocModel = fieldValue.Addr().Interface()
 	}
 
 	// 构建查询：SELECT {fields} FROM assoc_table WHERE foreign_key_field = ref_value
@@ -610,44 +576,27 @@ func (e *Engine) loadReferenceAssociation(mainModelValue reflect.Value, fieldVal
 		query = fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", selectFields, tableName, foreignKey)
 	}
 
+	// 临时设置模型为关联模型
+	originalModel := e.model
+	e.model = assocModel
+
+	// 查询关联数据
 	rows, err := e.db.Query(query, refValue)
 	if err != nil {
+		e.model = originalModel
 		return fmt.Errorf("failed to query reference association: %v", err)
 	}
 	defer rows.Close()
 
-	if rows.Next() {
-		// 填充关联模型数据
-		cols, err := rows.Columns()
-		if err != nil {
-			return fmt.Errorf("failed to get columns: %v", err)
-		}
-		vals := make([]interface{}, len(cols))
-		for i := range vals {
-			vals[i] = new(interface{})
-		}
-
-		if err := rows.Scan(vals...); err != nil {
-			return fmt.Errorf("failed to scan associated row: %v", err)
-		}
-
-		// 将扫描结果映射到结构体字段
-		colMap := make(map[string]interface{})
-		for i, col := range cols {
-			colMap[col] = *(vals[i].(*interface{}))
-		}
-
-		// 使用fetcher将数据映射到结构体
-		fetcher := &Fetcher{mapValues: convertMapInterfaceToMapString(colMap)}
-		if err := e.fetchToStruct(fetcher, elementType, assocModelValue); err != nil {
-			return fmt.Errorf("failed to map fetched data to struct: %v", err)
-		}
-
-		// 如果原始字段是指针，确保已正确设置
-		if fieldType.Kind() == reflect.Ptr && fieldValue.Kind() == reflect.Struct {
-			fieldValue.Set(assocModelValue)
-		}
+	// 使用fetchRows填充数据
+	_, err = e.fetchRows(rows)
+	if err != nil {
+		e.model = originalModel
+		return fmt.Errorf("failed to fetch reference association: %v", err)
 	}
+
+	// 恢复原始模型
+	e.model = originalModel
 
 	return nil
 }

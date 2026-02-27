@@ -67,7 +67,7 @@ func main() {
 	//requireNoError(UpsertPoint(db))
 	//requireNoError(UpdatePointByExpress(db))
 	//requireNoError(DistributionLock(db))
-	//requireNoError(Preload(db))
+	requireNoError(Preload(db))
 }
 
 func requireNoError(err error) {

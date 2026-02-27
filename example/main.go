@@ -67,6 +67,7 @@ func main() {
 	//requireNoError(UpsertPoint(db))
 	//requireNoError(UpdatePointByExpress(db))
 	//requireNoError(DistributionLock(db))
+	requireNoError(Preload(db))
 }
 
 func requireNoError(err error) {
@@ -751,5 +752,16 @@ func DistributionLock(db *sqlca.Engine) error {
 		return log.Errorf(err.Error())
 	}
 	log.Infof("rows affected: %d", rows)
+	return nil
+}
+
+func Preload(db *sqlca.Engine) error {
+	var users []*models.User
+	rows, err := db.Model(&users).Preload("Roles", "id > ?", 0).Preload("Profile").Query()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("rows affected: %d", rows)
+	log.Json("users with preloads", users)
 	return nil
 }

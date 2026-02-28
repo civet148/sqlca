@@ -81,7 +81,7 @@ func (e *Engine) loadAssociations(modelValue reflect.Value, associationName stri
 		}
 
 		// 获取GORM标签
-		gormTag := field.Tag.Get("gorm")
+		gormTag := recursiveTags(field, types.TAG_NAME_GORM, types.TAG_NAME_SQLCA)
 		if gormTag == "" {
 			continue
 		}
@@ -142,7 +142,7 @@ func (e *Engine) loadMany2ManyAssociation(mainModelValue reflect.Value, fieldVal
 	var mainPKValue interface{}
 	for i := 0; i < mainModelType.NumField(); i++ {
 		field := mainModelType.Field(i)
-		gormTag := field.Tag.Get("gorm")
+		gormTag := recursiveTags(field, types.TAG_NAME_GORM, types.TAG_NAME_SQLCA)
 		settings := parseTagSetting(gormTag, ";")
 		if _, isPK := settings["PRIMARYKEY"]; isPK || strings.EqualFold(field.Name, "Id") || strings.EqualFold(field.Name, "ID") {
 			fieldVal := mainModelReflectValue.Field(i)
@@ -388,7 +388,7 @@ func (e *Engine) loadForeignKeyAssociation(mainModelValue reflect.Value, fieldVa
 	found := false
 	for i := 0; i < mainModelType.NumField(); i++ {
 		field := mainModelType.Field(i)
-		gormTag := field.Tag.Get("gorm")
+		gormTag := recursiveTags(field, types.TAG_NAME_GORM, types.TAG_NAME_SQLCA)
 		settings := parseTagSetting(gormTag, ";")
 		_, isPK := settings["PRIMARYKEY"]
 		if isPK || strings.EqualFold(field.Name, "Id") || strings.EqualFold(field.Name, "ID") {
@@ -440,19 +440,15 @@ func (e *Engine) loadForeignKeyAssociation(mainModelValue reflect.Value, fieldVa
 
 	tableName := getTableNameFromType(elementType)
 
-	// 动态构建选择字段列表，而不是使用 *
-	columns := getStructFields(elementType, e)
-	selectFields := strings.Join(columns, ", ")
-
 	// 将 foreignKey 转换为蛇形命名法，以匹配数据库中的列名
 	foreignKeySnake := snakeCase(foreignKey)
 
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?", selectFields, tableName, foreignKeySnake)
+	query := fmt.Sprintf("SELECT * FROM %s WHERE %s = ?", tableName, foreignKeySnake)
 
 	// 处理不同数据库的占位符
 	switch e.adapterType {
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
-		query = fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", selectFields, tableName, foreignKeySnake)
+		query = fmt.Sprintf("SELECT * FROM %s WHERE %s = $1", tableName, foreignKeySnake)
 	}
 
 	// 临时设置模型为关联模型
@@ -520,7 +516,7 @@ func (e *Engine) loadReferenceAssociation(mainModelValue reflect.Value, fieldVal
 		for i := 0; i < mainModelType.NumField(); i++ {
 			field := mainModelType.Field(i)
 			// 检查是否有 gorm 标签包含 references
-			gormTag := field.Tag.Get("gorm")
+			gormTag := recursiveTags(field, types.TAG_NAME_GORM, types.TAG_NAME_SQLCA)
 			if gormTag != "" {
 				settings := parseTagSetting(gormTag, ";")
 				// 检查是否在其他字段的 gorm 标签中定义了 references
@@ -564,16 +560,12 @@ func (e *Engine) loadReferenceAssociation(mainModelValue reflect.Value, fieldVal
 
 	tableName := getTableNameFromType(elementType)
 
-	// 动态构建选择字段列表，而不是使用 *
-	columns := getStructFields(elementType, e)
-	selectFields := strings.Join(columns, ", ")
-
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?", selectFields, tableName, foreignKey)
+	query := fmt.Sprintf("SELECT * FROM %s WHERE %s = ?", tableName, foreignKey)
 
 	// 处理不同数据库的占位符
 	switch e.adapterType {
 	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
-		query = fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", selectFields, tableName, foreignKey)
+		query = fmt.Sprintf("SELECT * FROM %s WHERE %s = $1", tableName, foreignKey)
 	}
 
 	// 临时设置模型为关联模型

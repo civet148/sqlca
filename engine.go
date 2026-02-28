@@ -495,7 +495,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 		return 0, log.Errorf("caller [%v] SQL [%s] error: %s", e.getCaller(2), strRawSql, err.Error())
 	}
 	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strRawSql)
-	if err = e.execAfterQueryHooks(); err != nil {
+	if err = e.execAfterQueryHooks(rowsAffected); err != nil {
 		return 0, err
 	}
 	if err = e.handlePreloads(); err != nil {
@@ -529,7 +529,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 		return 0, 0, err
 	}
 	e.verbose("caller [%v] rows [%v] query [%s]", e.getCaller(2), rowsAffected, strSql)
-	if err = e.execAfterQueryHooks(); err != nil {
+	if err = e.execAfterQueryHooks(rowsAffected); err != nil {
 		return 0, 0, err
 	}
 	if err = e.handlePreloads(); err != nil {
@@ -771,7 +771,7 @@ func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err er
 		*e.model.(*[]map[string]string) = append(*e.model.(*[]map[string]string), fetcher.mapValues)
 	}
 	e.verbose("caller [%v] rows [%v] SQL [%s]", e.getCaller(2), rowsAffected, strSql)
-	if err = e.execAfterQueryHooks(); err != nil {
+	if err = e.execAfterQueryHooks(rowsAffected); err != nil {
 		return 0, err
 	}
 	return rowsAffected, nil

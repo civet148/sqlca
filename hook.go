@@ -11,7 +11,7 @@ type BeforeQueryInterface interface {
 }
 
 type AfterQueryInterface interface {
-	AfterQueryData(db *Engine) error
+	AfterQueryData(db *Engine, ok bool) error
 }
 
 type BeforeCreateInterface interface {
@@ -191,7 +191,7 @@ func (e *Engine) execBeforeDeleteHooks() (err error) {
 	return nil
 }
 
-func (e *Engine) execAfterQueryHooks() (err error) {
+func (e *Engine) execAfterQueryHooks(rows int64) (err error) {
 	if len(e.hookMethods.afterQueries) == 0 {
 		e.setHooks()
 	}
@@ -200,7 +200,7 @@ func (e *Engine) execAfterQueryHooks() (err error) {
 			if hook == nil {
 				continue
 			}
-			if err = hook.AfterQueryData(e.clone()); err != nil {
+			if err = hook.AfterQueryData(e.clone(), rows > 0); err != nil {
 				return log.Errorf(err.Error())
 			}
 		}

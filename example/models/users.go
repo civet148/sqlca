@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/civet148/log"
+	"github.com/civet148/sqlca/v3"
+)
 
 const TableNameUsers = "users" //
 
@@ -36,3 +41,9 @@ func (do *User) SetUserName(v string)     { do.UserName = v }
 func (do *User) SetEmail(v string)        { do.Email = v }
 
 ////////////////////// ----- 自定义代码请写在下面 ----- //////////////////////
+
+func (do *User) AfterQueryData(db *sqlca.Engine, ok bool) error {
+	log.Infof("query ok [%v]", ok)
+	do.isExist = true
+	return nil
+}

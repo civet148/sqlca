@@ -119,6 +119,16 @@ func (s *ModelReflector) getTag(sf reflect.StructField, tagNames ...string) (str
 
 	return strValue, false
 }
+func recursiveTags(sf reflect.StructField, tags ...string) (strValue string) {
+	for _, tagName := range tags {
+		strValue = strings.TrimSpace(sf.Tag.Get(tagName))
+		if strValue == types.SQLCA_TAG_VALUE_IGNORE || strValue == "" {
+			continue
+		}
+		break
+	}
+	return strValue
+}
 
 // parse struct fields
 func (s *ModelReflector) parseStructFields(typ reflect.Type, val reflect.Value, tagNames ...string) {

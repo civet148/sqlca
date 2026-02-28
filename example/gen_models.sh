@@ -19,7 +19,7 @@ DSN_URL="mysql://root:123456@127.0.0.1:3306/test?charset=utf8"
 # JSON属性
 JSON_PROPERTIES="omitempty"
 # 指定某表的某字段为指定类型,多个表字段以英文逗号分隔（例如：user.create_time=time.Time表示指定user表create_time字段为time.Time类型; 如果不指定表名则所有表的create_time字段均为time.Time类型；支持第三方包类型，例如：user.weight=github.com/shopspring/decimal.Decimal）
-SPEC_TYPES="inventory_data.product_extra=*ProductExtraData, is_frozen=FrozenState, price=*float64, quantity=float64"
+SPEC_TYPES="inventory_data.product_extra=*ProductExtraData, is_frozen=FrozenState, price=*float64, quantity=float64, delete_time=*time.Time"
 # 导入models路径(仅生成DAO文件使用)
 IMPORT_MODELS="github.com/civet148/sqlca/v3/demo/models"
 # 基础模型声明(指定基础模型类型和字段)

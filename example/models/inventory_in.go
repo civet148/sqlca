@@ -18,6 +18,10 @@ const (
 	INVENTORY_IN_COLUMN_QUANTITY    = "quantity"
 	INVENTORY_IN_COLUMN_WEIGHT      = "weight"
 	INVENTORY_IN_COLUMN_REMARK      = "remark"
+	INVENTORY_IN_COLUMN_CREATE_ID   = "create_id"
+	INVENTORY_IN_COLUMN_CREATE_NAME = "create_name"
+	INVENTORY_IN_COLUMN_UPDATE_ID   = "update_id"
+	INVENTORY_IN_COLUMN_UPDATE_NAME = "update_name"
 )
 
 type InventoryIn struct {
@@ -52,6 +56,10 @@ func (do InventoryIn) GetUserName() string       { return do.UserName }
 func (do InventoryIn) GetQuantity() float64      { return do.Quantity }
 func (do InventoryIn) GetWeight() sqlca.Decimal  { return do.Weight }
 func (do InventoryIn) GetRemark() string         { return do.Remark }
+func (do InventoryIn) GetCreateId() uint64       { return do.CreateId }
+func (do InventoryIn) GetCreateName() string     { return do.CreateName }
+func (do InventoryIn) GetUpdateId() uint64       { return do.UpdateId }
+func (do InventoryIn) GetUpdateName() string     { return do.UpdateName }
 
 func (do *InventoryIn) SetId(v uint64)             { do.Id = v }
 func (do *InventoryIn) SetCreatedAt(v time.Time)   { do.CreatedAt = v }
@@ -65,5 +73,9 @@ func (do *InventoryIn) SetUserName(v string)       { do.UserName = v }
 func (do *InventoryIn) SetQuantity(v float64)      { do.Quantity = v }
 func (do *InventoryIn) SetWeight(v sqlca.Decimal)  { do.Weight = v }
 func (do *InventoryIn) SetRemark(v string)         { do.Remark = v }
+func (do *InventoryIn) SetCreateId(v uint64)       { do.CreateId = v }
+func (do *InventoryIn) SetCreateName(v string)     { do.CreateName = v }
+func (do *InventoryIn) SetUpdateId(v uint64)       { do.UpdateId = v }
+func (do *InventoryIn) SetUpdateName(v string)     { do.UpdateName = v }
 
 ////////////////////// ----- 自定义代码请写在下面 ----- //////////////////////

@@ -16,6 +16,10 @@ const (
 	INVENTORY_DATA_COLUMN_PRICE         = "price"
 	INVENTORY_DATA_COLUMN_LOCATION      = "location"
 	INVENTORY_DATA_COLUMN_PRODUCT_EXTRA = "product_extra"
+	INVENTORY_DATA_COLUMN_CREATE_ID     = "create_id"
+	INVENTORY_DATA_COLUMN_CREATE_NAME   = "create_name"
+	INVENTORY_DATA_COLUMN_UPDATE_ID     = "update_id"
+	INVENTORY_DATA_COLUMN_UPDATE_NAME   = "update_name"
 )
 
 type InventoryData struct {
@@ -46,6 +50,10 @@ func (do InventoryData) GetQuantity() float64               { return do.Quantity
 func (do InventoryData) GetPrice() *float64                 { return do.Price }
 func (do InventoryData) GetLocation() sqlca.Point           { return do.Location }
 func (do InventoryData) GetProductExtra() *ProductExtraData { return do.ProductExtra }
+func (do InventoryData) GetCreateId() uint64                { return do.CreateId }
+func (do InventoryData) GetCreateName() string              { return do.CreateName }
+func (do InventoryData) GetUpdateId() uint64                { return do.UpdateId }
+func (do InventoryData) GetUpdateName() string              { return do.UpdateName }
 
 func (do *InventoryData) SetId(v uint64)                      { do.Id = v }
 func (do *InventoryData) SetCreatedAt(v time.Time)            { do.CreatedAt = v }
@@ -57,5 +65,9 @@ func (do *InventoryData) SetQuantity(v float64)               { do.Quantity = v 
 func (do *InventoryData) SetPrice(v *float64)                 { do.Price = v }
 func (do *InventoryData) SetLocation(v sqlca.Point)           { do.Location = v }
 func (do *InventoryData) SetProductExtra(v *ProductExtraData) { do.ProductExtra = v }
+func (do *InventoryData) SetCreateId(v uint64)                { do.CreateId = v }
+func (do *InventoryData) SetCreateName(v string)              { do.CreateName = v }
+func (do *InventoryData) SetUpdateId(v uint64)                { do.UpdateId = v }
+func (do *InventoryData) SetUpdateName(v string)              { do.UpdateName = v }
 
 ////////////////////// ----- 自定义代码请写在下面 ----- //////////////////////

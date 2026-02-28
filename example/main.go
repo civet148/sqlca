@@ -43,30 +43,29 @@ func main() {
 		return
 	}
 	requireNoError(MigrateModel(db))
-	//requireNoError(AutoMigrate(db))
-	//requireNoError(InsertSingle(db))
-	//requireNoError(InsertBatch(db))
-	//requireNoError(UpsertSingle(db))
-	//requireNoError(QueryLimit(db))
-	//requireError(QueryErrNotFound(db))
-	//requireNoError(QueryByPage(db))
-	//requireNoError(QueryByCondition(db))
-	//requireNoError(QueryByGroup(db))
-	//requireNoError(QueryCountRows(db))
-	//requireNoError(QueryJoins(db))
-	//requireNoError(QueryOr(db))
-	//requireNoError(QueryRawSQL(db))
-	//requireNoError(QueryByNormalVars(db))
-	//requireNoError(QueryWithJsonColumn(db))
-	//requireNoError(UpdateByModel(db))
-	//requireNoError(UpdateByMap(db))
-	//requireNoError(DeleteById(db))
-	//requireNoError(Transaction(db))
-	//requireNoError(TransactionWrapper(db))
-	//requireNoError(ExecRawSQL(db))
-	//requireNoError(UpsertPoint(db))
-	//requireNoError(UpdatePointByExpress(db))
-	//requireNoError(DistributionLock(db))
+	requireNoError(InsertSingle(db))
+	requireNoError(InsertBatch(db))
+	requireNoError(UpsertSingle(db))
+	requireNoError(QueryLimit(db))
+	requireError(QueryErrNotFound(db))
+	requireNoError(QueryByPage(db))
+	requireNoError(QueryByCondition(db))
+	requireNoError(QueryByGroup(db))
+	requireNoError(QueryCountRows(db))
+	requireNoError(QueryJoins(db))
+	requireNoError(QueryOr(db))
+	requireNoError(QueryRawSQL(db))
+	requireNoError(QueryByNormalVars(db))
+	requireNoError(QueryWithJsonColumn(db))
+	requireNoError(UpdateByModel(db))
+	requireNoError(UpdateByMap(db))
+	requireNoError(DeleteById(db))
+	requireNoError(Transaction(db))
+	requireNoError(TransactionWrapper(db))
+	requireNoError(ExecRawSQL(db))
+	requireNoError(UpsertPoint(db))
+	requireNoError(UpdatePointByExpress(db))
+	requireNoError(DistributionLock(db))
 	requireNoError(Preload(db))
 }
 
@@ -218,7 +217,7 @@ func InsertSingle(db *sqlca.Engine) error {
 
 	var err error
 	/*
-		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
+		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`created_at`,`update_id`,`update_name`,`updated_at`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
 		VALUES ('1859078192380252161','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','轮胎','SNO_002','2000','210','{}')
 	*/
 	var rowsAffected int64
@@ -263,7 +262,7 @@ func InsertBatch(db *sqlca.Engine) error {
 	var err error
 	/*
 		INSERT IGNORE INTO inventory_data
-			(`id`,`create_id`,`create_name`,`create_time`,`update_id`,`update_name`,`update_time`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
+			(`id`,`create_id`,`create_name`,`created_at`,`update_id`,`update_name`,`updated_at`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
 		VALUES
 			('1867379968636358656','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','齿轮','SNO_001','1000','10.5','{\"avg_price\":\".8\",\"specs_value\":\"齿数：32\"}'),
 			('1867379968636358657','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','轮胎','SNO_002','2000','210','{\"avg_price\":\"450.5\",\"specs_value\":\"17英寸\"}')
@@ -313,11 +312,11 @@ func QueryLimit(db *sqlca.Engine) error {
 	ctx, closer := context.WithTimeout(context.Background(), 5*time.Second)
 	defer closer()
 
-	//SELECT * FROM inventory_data ORDER BY create_time DESC LIMIT 2
+	//SELECT * FROM inventory_data ORDER BY created_at DESC LIMIT 2
 	count, err = db.Model(ctx, &dos).
 		Select("id, name, serial_no, quantity, product_extra").
 		Limit(5).
-		Desc("create_time").
+		Desc("created_at").
 		Query()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
@@ -371,10 +370,10 @@ func QueryByPage(db *sqlca.Engine) error {
 	ctx, closer := context.WithTimeout(context.Background(), 30*time.Second)
 	defer closer()
 
-	//SELECT  * FROM inventory_data WHERE 1=1 ORDER BY create_time DESC LIMIT 0,20
+	//SELECT  * FROM inventory_data WHERE 1=1 ORDER BY created_at DESC LIMIT 0,20
 	count, total, err = db.Model(ctx, &dos).
 		Page(1, 20).
-		Desc("create_time").
+		Desc("created_at").
 		QueryEx()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
@@ -391,13 +390,13 @@ func QueryByCondition(db *sqlca.Engine) error {
 	var err error
 	var count int64
 	var dos []*models.InventoryData
-	//SELECT * FROM inventory_data WHERE `quantity` > 0 and is_frozen IN (0,1) AND create_time >= '2024-10-01 11:35:14' ORDER BY create_time DESC
+	//SELECT * FROM inventory_data WHERE `quantity` > 0 and is_frozen IN (0,1) AND created_at >= '2024-10-01 11:35:14' ORDER BY created_at DESC
 	count, err = db.Model(&dos).
 		Where("is_frozen in (?)", []int{models.FrozenState_False, models.FrozenState_Ture}).
 		//In("is_frozen", []int{0, 1}).
 		Gt("quantity", 0).
-		Gte("create_time", "2024-10-01 11:35:14").
-		Desc("create_time").
+		Gte("created_at", "2024-10-01 11:35:14").
+		Desc("created_at").
 		Query()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
@@ -414,12 +413,12 @@ func QueryOr(db *sqlca.Engine) error {
 	var count int64
 	var dos []*models.InventoryData
 
-	//SELECT * FROM inventory_data WHERE create_id=1 AND name = '配件' OR serial_no = 'SNO_001' ORDER BY create_time DESC
+	//SELECT * FROM inventory_data WHERE create_id=1 AND name = '配件' OR serial_no = 'SNO_001' ORDER BY created_at DESC
 	count, err = db.Model(&dos).
 		And("create_id = ?", 1).
 		Or("name = ?", "配件").
 		Or("serial_no = ?", "SNO_001").
-		Desc("create_time").
+		Desc("created_at").
 		Limit(5).
 		Query()
 	if err != nil {
@@ -428,7 +427,7 @@ func QueryOr(db *sqlca.Engine) error {
 	log.Infof("查询结果数据条数: %d", count)
 	//log.Json("查询结果(JSON)", dos)
 
-	//SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND quantity > 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY create_time DESC
+	//SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND quantity > 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY created_at DESC
 	var andConditions = make(map[string]interface{})
 	var orConditions = make(map[string]interface{})
 
@@ -442,7 +441,7 @@ func QueryOr(db *sqlca.Engine) error {
 	count, err = db.Model(&dos).
 		And(andConditions).
 		Or(orConditions).
-		Desc("create_time").
+		Desc("created_at").
 		Limit(5).
 		Query()
 	if err != nil {
@@ -462,14 +461,14 @@ func QueryByGroup(db *sqlca.Engine) error {
 	/*
 		SELECT  create_id, SUM(quantity) AS quantity
 		FROM inventory_data
-		WHERE 1=1 AND quantity>'0' AND is_frozen='0' AND create_time>='2024-10-01 11:35:14'
+		WHERE 1=1 AND quantity>'0' AND is_frozen='0' AND created_at>='2024-10-01 11:35:14'
 		GROUP BY create_id
 	*/
 	count, total, err = db.Model(&dos).
 		Select("create_id", "SUM(quantity) AS quantity").
 		Gt("quantity", 0).
 		Eq("is_frozen", 0).
-		Gte("create_time", "2024-10-01 11:35:14").
+		Gte("created_at", "2024-10-01 11:35:14").
 		GroupBy("create_id", "create_name").
 		QueryEx()
 	if err != nil {
@@ -490,7 +489,7 @@ func QueryCountRows(db *sqlca.Engine) error {
 
 	count, err = db.Model(&models.InventoryData{}).
 		GroupBy("create_id").
-		Where("create_time > ? AND is_frozen = ?", "2025-06-01 00:00:00", models.FrozenState_False).
+		Where("created_at > ? AND is_frozen = ?", "2025-06-01 00:00:00", models.FrozenState_False).
 		CountRows()
 	log.Infof("group by 统计总行数：%d", count)
 	return nil
@@ -505,7 +504,7 @@ func QueryJoins(db *sqlca.Engine) error {
 		FROM inventory_data a
 		LEFT JOIN inventory_in b
 		ON a.id=b.product_id
-		WHERE a.quantity > 0 AND a.is_frozen=0 AND a.create_time>='2024-10-01 11:35:14'
+		WHERE a.quantity > 0 AND a.is_frozen=0 AND a.created_at>='2024-10-01 11:35:14'
 	*/
 	var do struct{}
 	count, err := db.Model(&do).
@@ -515,7 +514,7 @@ func QueryJoins(db *sqlca.Engine) error {
 		On("a.id=b.product_id").
 		Gt("a.quantity", 0).
 		Eq("a.is_frozen", 0).
-		Gte("a.create_time", "2024-10-01 11:35:14").
+		Gte("a.created_at", "2024-10-01 11:35:14").
 		Query()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
@@ -674,7 +673,7 @@ func Transaction(db *sqlca.Engine) error {
 	/*
 		-- TRANSACTION BEGIN
 
-			INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1906626367382884352','1861614736295071744','admin','1','2024-11-27 1114','202407090000001')
+			INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`created_at`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`updated_at`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1906626367382884352','1861614736295071744','admin','1','2024-11-27 1114','202407090000001')
 			SELECT * FROM inventory_data  WHERE `id`='1906626367382884352'
 			UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1906626367382884352'
 
@@ -731,7 +730,7 @@ func TransactionWrapper(db *sqlca.Engine) error {
 	/*
 	   -- TRANSACTION BEGIN
 
-	   	INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`create_time`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`update_time`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1906626367382884352','1861614736295071744','admin','1','2024-11-27 1114','202407090000002')
+	   	INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`created_at`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`updated_at`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1906626367382884352','1861614736295071744','admin','1','2024-11-27 1114','202407090000002')
 	   	SELECT * FROM inventory_data  WHERE `id`='1906626367382884352'
 	   	UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1906626367382884352'
 

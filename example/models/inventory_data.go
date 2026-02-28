@@ -28,6 +28,10 @@ type InventoryData struct {
 	Price        *float64          `json:"price,omitempty" db:"price" gorm:"column:price;type:decimal(16,2);default:0.00;" sqlca:"isnull"`                              //
 	Location     sqlca.Point       `json:"location,omitempty" db:"location" gorm:"column:location;type:point;" sqlca:"isnull"`                                          //
 	ProductExtra *ProductExtraData `json:"product_extra,omitempty" db:"product_extra" gorm:"column:product_extra;type:json;" sqlca:"isnull"`                            //
+	CreateId     uint64            `json:"create_id,omitempty" db:"create_id" gorm:"column:create_id;type:bigint unsigned;default:0;" sqlca:"isnull"`                   //
+	CreateName   string            `json:"create_name,omitempty" db:"create_name" gorm:"column:create_name;type:varchar(64);" sqlca:"isnull"`                           //
+	UpdateId     uint64            `json:"update_id,omitempty" db:"update_id" gorm:"column:update_id;type:bigint unsigned;default:0;" sqlca:"isnull"`                   //
+	UpdateName   string            `json:"update_name,omitempty" db:"update_name" gorm:"column:update_name;type:varchar(64);" sqlca:"isnull"`                           //
 }
 
 func (do InventoryData) TableName() string { return "inventory_data" }

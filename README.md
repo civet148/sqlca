@@ -1000,6 +1000,39 @@ func TransactionWrapper(db *sqlca.Engine) error {
     return nil
 }
 ```
+
+## 预加载
+
+```go
+type User struct {
+	BaseModel
+	Id       uint64      `json:"id,omitempty" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`                                                             //
+	UserName string      `json:"user_name,omitempty" db:"user_name" gorm:"column:user_name;type:varchar(32);uniqueIndex:idx_users_user_name;" sqlca:"isnull"` //
+	Email    string      `json:"email,omitempty" db:"email" gorm:"column:email;type:varchar(64);uniqueIndex:idx_users_email;" sqlca:"isnull"`                 //
+	Roles    []*Role     `json:"roles,omitempty" db:"-" gorm:"many2many:user_roles;"`                                                                         // 用户角色列表
+	Profile  UserProfile `json:"profile,omitempty" db:"-" gorm:"foreignKey:UserId;"`                                                                          // 用户资料明细
+}
+
+
+func Preload(db *sqlca.Engine) error {
+    var users []*models.User
+    rows, err := db.Model(&users).Preload("Roles", "id > ?", 0).Preload("Profile").Query()
+    //rows, err := db.Model(&users).Query()
+    if err != nil {
+        return log.Errorf(err.Error())
+    }
+    log.Json("users with preloads", users)
+    log.Infof("result rows %v", rows)
+    var user *models.User
+    rows, err = db.Model(&user).Preload("Roles", "id > ?", 0).Preload("Profile").Id(1).Query()
+    if err != nil {
+        return log.Errorf(err.Error())
+    }
+    log.Json("user with preloads", user)
+    return nil
+}
+```
+
 ## 其他方法说明
 
 ### Table方法

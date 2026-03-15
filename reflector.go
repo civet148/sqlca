@@ -108,7 +108,7 @@ func (s *ModelReflector) convertMapString(ms map[string]string) (mi map[string]a
 // get struct field's tag value
 func (s *ModelReflector) getTag(sf reflect.StructField, tagNames ...string) (strValue string, ignore bool) {
 	for _, tagName := range tagNames {
-		strValue = handleTagValue(tagName, sf.Tag.Get(tagName))
+		strValue = handleTagValue(sf, tagName, sf.Tag.Get(tagName))
 		if strValue == types.SQLCA_TAG_VALUE_IGNORE {
 			return "", true
 		}
@@ -194,7 +194,7 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 
 		strTagValue, ignore := s.getTag(field, v)
 		//parse db、json、protobuf tag
-		tagVal = handleTagValue(v, strTagValue)
+		tagVal = handleTagValue(field, v, strTagValue)
 		if ignore {
 			break
 		}
@@ -627,15 +627,23 @@ func (e *Engine) fetchToBaseType(fetcher *Fetcher, typ reflect.Type, val reflect
 	return
 }
 
-func handleTagValue(strTagName, strTagValue string) string {
+func handleTagValue(field reflect.StructField, strTagName, strTagValue string) string {
 
 	if strTagValue == "" {
 		return ""
 	}
-
-	if strTagName == types.TAG_NAME_JSON {
-		vs := strings.Split(strTagValue, ",")
-		strTagValue = vs[0]
+	if strTagName == types.TAG_NAME_GORM {
+		vs := strings.Split(strTagValue, ";")
+		var col string
+		for _, col = range vs {
+			if strings.Contains(col, "column") {
+				vs = strings.Split(col, ":")
+				col = vs[1]
+			} else {
+				col = convertCamelToSnake(field.Name)
+			}
+		}
+		strTagValue = col
 	} else if strTagName == types.TAG_NAME_PROTOBUF {
 		//parse protobuf tag value
 		vs := strings.Split(strTagValue, ",")
@@ -650,16 +658,9 @@ func handleTagValue(strTagName, strTagValue string) string {
 				}
 			}
 		}
-	} else {
-		vs := strings.Split(strTagValue, ";")
-		var col string
-		for _, col = range vs {
-			if strings.Contains(col, "column") {
-				vs = strings.Split(col, ":")
-				col = vs[1]
-			}
-		}
-		strTagValue = col
+	} else if strTagName == types.TAG_NAME_JSON {
+		vs := strings.Split(strTagValue, ",")
+		strTagValue = vs[0]
 	}
 	return strTagValue
 }
@@ -667,7 +668,7 @@ func handleTagValue(strTagName, strTagValue string) string {
 func (e *Engine) getTagValue(sf reflect.StructField) (strValue string) {
 
 	for _, v := range e.dbTags { //support multiple tag
-		strValue = handleTagValue(v, sf.Tag.Get(v))
+		strValue = handleTagValue(sf, v, sf.Tag.Get(v))
 		if strValue != "" {
 			return
 		}

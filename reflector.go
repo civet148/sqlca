@@ -658,7 +658,7 @@ func handleTagValue(field reflect.StructField, strTagName, strTagValue string) s
 				}
 			}
 		}
-	} else if strTagName == types.TAG_NAME_JSON {
+	} else {
 		vs := strings.Split(strTagValue, ",")
 		strTagValue = vs[0]
 	}

@@ -11,7 +11,6 @@ const (
 )
 const (
 	TAG_NAME_DB       = "db"
-	TAG_NAME_JSON     = "json"
 	TAG_NAME_PROTOBUF = "protobuf"
 	TAG_NAME_SQLCA    = "sqlca"
 	TAG_NAME_GORM     = "gorm"

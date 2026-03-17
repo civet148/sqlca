@@ -125,7 +125,7 @@ func NewEngine(strUrl string, opts ...Option) (*Engine, error) {
 		adapterType:   types.AdapterSqlx_MySQL,
 		preloads:      make(map[string][]any),
 	}
-	e.dbTags = append(e.dbTags, types.TAG_NAME_DB, types.TAG_NAME_SQLCA, types.TAG_NAME_GORM, types.TAG_NAME_XORM, types.TAG_NAME_PROTOBUF, types.TAG_NAME_JSON)
+	e.dbTags = append(e.dbTags, types.TAG_NAME_DB, types.TAG_NAME_SQLCA, types.TAG_NAME_GORM, types.TAG_NAME_XORM, types.TAG_NAME_PROTOBUF)
 	return e.open(strUrl, opts...)
 }
 

@@ -217,6 +217,9 @@ func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 		return nil, err
 	}
 
+	if dialOptions.Max < dialOptions.Idle {
+		return nil, fmt.Errorf("dial max connections can't less than idle connections")
+	}
 	param.SetMax(dialOptions.Max)
 	param.SetIdle(dialOptions.Idle)
 	if param.Max != 0 {

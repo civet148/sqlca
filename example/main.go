@@ -2,17 +2,13 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/civet148/log"
 	"github.com/civet148/sqlca/v3"
 	"github.com/civet148/sqlca/v3/example/models"
-)
-
-const (
-	productId = 1939612151790440448
 )
 
 func main() {
@@ -42,31 +38,84 @@ func main() {
 		log.Errorf("connect database error: %s", err)
 		return
 	}
-	requireNoError(MigrateModel(db))
-	requireNoError(InsertSingle(db))
-	requireNoError(InsertBatch(db))
-	requireNoError(UpsertSingle(db))
-	requireNoError(QueryLimit(db))
-	requireError(QueryErrNotFound(db))
-	requireNoError(QueryByPage(db))
-	requireNoError(QueryByCondition(db))
-	requireNoError(QueryByGroup(db))
-	requireNoError(QueryCountRows(db))
-	requireNoError(QueryJoins(db))
-	requireNoError(QueryOr(db))
-	requireNoError(QueryRawSQL(db))
-	requireNoError(QueryByNormalVars(db))
-	requireNoError(QueryWithJsonColumn(db))
-	requireNoError(UpdateByModel(db))
-	requireNoError(UpdateByMap(db))
-	requireNoError(DeleteById(db))
-	requireNoError(Transaction(db))
-	requireNoError(TransactionWrapper(db))
-	requireNoError(ExecRawSQL(db))
-	requireNoError(UpsertPoint(db))
-	requireNoError(UpdatePointByExpress(db))
-	requireNoError(DistributionLock(db))
-	requireNoError(Preload(db))
+
+	// 1. 自动迁移模型
+	requireNoError(MigrateAllModels(db))
+
+	// 2. 清理所有数据，确保数据库为空
+	requireNoError(CleanAllData(db))
+
+	// 3. 插入测试数据
+	requireNoError(InsertTestData(db))
+
+	// 4. 验证数据插入
+	requireNoError(VerifyTestData(db))
+
+	// 5. 测试关联查询
+	requireNoError(TestPreload(db))
+
+	// 6. 测试更新功能
+	requireNoError(TestUpdate(db))
+
+	// 7. 测试删除功能
+	requireNoError(TestDelete(db))
+
+	// 8. 测试事务处理
+	requireNoError(TestTransaction(db))
+
+	// 9. 测试批量插入
+	requireNoError(TestInsertBatch(db))
+
+	// 10. 测试查询限制
+	requireNoError(TestQueryLimit(db))
+
+	// 11. 测试查询无结果
+	requireError(TestQueryErrNotFound(db))
+
+	// 12. 测试分页查询
+	requireNoError(TestQueryByPage(db))
+
+	// 13. 测试条件查询
+	requireNoError(TestQueryByCondition(db))
+
+	// 14. 测试分组查询
+	requireNoError(TestQueryByGroup(db))
+
+	// 15. 测试统计行数
+	requireNoError(TestQueryCountRows(db))
+
+	// 16. 测试联表查询
+	requireNoError(TestQueryJoins(db))
+
+	// 17. 测试 OR 条件查询
+	requireNoError(TestQueryOr(db))
+
+	// 18. 测试原始 SQL 查询
+	requireNoError(TestQueryRawSQL(db))
+
+	// 19. 测试普通变量查询
+	requireNoError(TestQueryByNormalVars(db))
+
+	// 20. 测试 JSON 字段查询
+	requireNoError(TestQueryWithJsonColumn(db))
+
+	// 21. 测试通过 Map 更新
+	requireNoError(TestUpdateByMap(db))
+
+	// 22. 测试事务封装
+	requireNoError(TestTransactionWrapper(db))
+
+	// 23. 测试执行原始 SQL
+	requireNoError(TestExecRawSQL(db))
+
+	// 24. 测试地理位置坐标操作
+	requireNoError(TestUpsertPoint(db))
+	requireNoError(TestUpdatePointByExpress(db))
+
+	// 25. 测试分布式锁
+	requireNoError(TestDistributionLock(db))
+
+	log.Infof("所有测试验证通过！")
 }
 
 func requireNoError(err error) {
@@ -81,177 +130,450 @@ func requireError(err error) {
 	}
 }
 
-func MigrateModel(db *sqlca.Engine) (err error) {
-	return db.AutoMigrate(context.Background(), nil, /*AutoMigrateCallback*/
-		&models.User{}, &models.UserProfile{}, &models.Role{},
+func MigrateAllModels(db *sqlca.Engine) (err error) {
+	return db.AutoMigrate(context.Background(), nil,
+		&models.User{}, &models.UserProfile{}, &models.Role{}, &models.UserRole{},
 		&models.InventoryData{}, &models.InventoryIn{}, &models.InventoryOut{})
 }
 
-func createBaseModel() models.BaseModel {
-	now := time.Now()
-	return models.BaseModel{
-		CreatedAt: now,
-		UpdatedAt: now,
+func CleanAllData(db *sqlca.Engine) (err error) {
+	// 按依赖关系顺序删除数据
+	tables := []string{"user_roles", "user_profiles", "roles", "users", "inventory_in", "inventory_out", "inventory_data"}
+	for _, table := range tables {
+		_, _, err = db.Model(nil).ExecRaw(fmt.Sprintf("DELETE FROM %s", table))
+		if err != nil {
+			return log.Errorf("清理表 %s 数据失败: %s", table, err)
+		}
 	}
+	log.Infof("所有表数据清理完成")
+	return nil
 }
 
-func AutoMigrateCallback(ctx context.Context, db *sqlca.Engine) {
-	log.Infof("AutoMigrateCallback...")
-
-	// 插入测试角色数据
-	role1 := &models.Role{
-		Id:        1,
-		BaseModel: createBaseModel(),
-		Name:      "admin",
-	}
-	_, err := db.Model(role1).Upsert()
-	if err != nil {
-		log.Warnf("插入角色数据失败: %s", err)
-	}
-
-	role2 := &models.Role{
-		Id:        2,
-		BaseModel: createBaseModel(),
-		Name:      "user",
-	}
-	_, err = db.Model(role2).Upsert()
-	if err != nil {
-		log.Warnf("插入角色数据失败: %s", err)
+func InsertTestData(db *sqlca.Engine) (err error) {
+	// 1. 插入角色数据
+	roles := []*models.Role{
+		{
+			Id: 1,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			Name: "admin",
+		},
+		{
+			Id: 2,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			Name: "user",
+		},
 	}
 
-	// 插入测试用户数据
-	user1 := &models.User{
-		Id:        1,
-		BaseModel: createBaseModel(),
-		UserName:  "lory",
-		Email:     "lory@hotmail.com",
-	}
-	_, err = db.Model(user1).Upsert()
-	if err != nil {
-		log.Warnf("插入用户数据失败: %s", err)
+	for _, role := range roles {
+		_, err = db.Model(role).Upsert()
+		if err != nil {
+			return log.Errorf("插入角色数据失败: %s", err)
+		}
 	}
 
-	user2 := &models.User{
-		Id:        2,
-		BaseModel: createBaseModel(),
-		UserName:  "civet148",
-		Email:     "civet148@126.com",
-	}
-	_, err = db.Model(user2).Upsert()
-	if err != nil {
-		log.Warnf("插入用户数据失败: %s", err)
-	}
-
-	// 插入测试用户资料数据
-	profile1 := &models.UserProfile{
-		Id:        1,
-		BaseModel: createBaseModel(),
-		UserId:    1,
-		Avatar:    "https://www.hello.com/lory.jpg",
-		Address:   "中国北京市朝阳区A座",
-	}
-	_, err = db.Model(profile1).Upsert()
-	if err != nil {
-		log.Warnf("插入用户资料数据失败: %s", err)
+	// 2. 插入用户数据
+	users := []*models.User{
+		{
+			Id: 1,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserName: "lory",
+			Email:    "lory@hotmail.com",
+		},
+		{
+			Id: 2,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserName: "civet148",
+			Email:    "civet148@126.com",
+		},
 	}
 
-	profile2 := &models.UserProfile{
-		Id:        2,
-		BaseModel: createBaseModel(),
-		UserId:    2,
-		Avatar:    "https://www.hello.com/civet148.jpg",
-		Address:   "中国上海市浦东新区B座",
-	}
-	_, err = db.Model(profile2).Upsert()
-	if err != nil {
-		log.Warnf("插入用户资料数据失败: %s", err)
+	for _, user := range users {
+		_, err = db.Model(user).Upsert()
+		if err != nil {
+			return log.Errorf("插入用户数据失败: %s", err)
+		}
 	}
 
-	// 插入测试用户角色关联数据
-	userRole1 := &models.UserRole{
-		UserId: 1,
-		RoleId: 1,
-	}
-	_, err = db.Model(userRole1).Upsert()
-	if err != nil {
-		log.Warnf("插入用户角色关联数据失败: %s", err)
+	// 3. 插入用户资料数据
+	profiles := []*models.UserProfile{
+		{
+			Id: 1,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserId:  1,
+			Avatar:  "https://www.hello.com/lory.jpg",
+			Address: "中国北京市朝阳区A座",
+		},
+		{
+			Id: 2,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserId:  2,
+			Avatar:  "https://www.hello.com/civet148.jpg",
+			Address: "中国上海市浦东新区B座",
+		},
 	}
 
-	userRole2 := &models.UserRole{
-		UserId: 1,
-		RoleId: 2,
-	}
-	_, err = db.Model(userRole2).Upsert()
-	if err != nil {
-		log.Warnf("插入用户角色关联数据失败: %s", err)
+	for _, profile := range profiles {
+		_, err = db.Model(profile).Upsert()
+		if err != nil {
+			return log.Errorf("插入用户资料数据失败: %s", err)
+		}
 	}
 
-	userRole3 := &models.UserRole{
-		UserId: 2,
-		RoleId: 2,
+	// 4. 插入用户角色关联数据
+	userRoles := []*models.UserRole{
+		{
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserId: 1,
+			RoleId: 1,
+		},
+		{
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserId: 1,
+			RoleId: 2,
+		},
+		{
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserId: 2,
+			RoleId: 2,
+		},
 	}
-	_, err = db.Model(userRole3).Upsert()
-	if err != nil {
-		log.Warnf("插入用户角色关联数据失败: %s", err)
-	}
-}
 
-/*
-[单条插入]
-*/
-func InsertSingle(db *sqlca.Engine) error {
+	for _, userRole := range userRoles {
+		_, err = db.Model(userRole).Upsert()
+		if err != nil {
+			return log.Errorf("插入用户角色关联数据失败: %s", err)
+		}
+	}
+
+	// 5. 插入库存数据
 	price := float64(12.33)
-	var do = models.InventoryData{
-		Id:        uint64(db.NewID()),
-		BaseModel: createBaseModel(),
-		IsFrozen:  models.FrozenState_Ture,
-		Name:      "齿轮",
-		SerialNo:  "SNO_001",
-		Quantity:  1000,
-		Price:     &price,
+	inventoryData := &models.InventoryData{
+		Id: uint64(db.NewID()),
+		BaseModel: models.BaseModel{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+		IsFrozen: models.FrozenState_False,
+		Name:     "齿轮",
+		SerialNo: "SNO_001",
+		Quantity: 1000,
+		Price:    &price,
 		ProductExtra: &models.ProductExtraData{
 			SpecsValue: "齿数：30",
 			AvgPrice:   sqlca.NewDecimal(30.8),
 		},
 	}
 
-	var err error
-	/*
-		INSERT INTO inventory_data (`id`,`create_id`,`create_name`,`created_at`,`update_id`,`update_name`,`updated_at`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
-		VALUES ('1859078192380252161','1','admin','2024-11-20 11:35:55','1','admin','2024-11-20 11:35:55','0','轮胎','SNO_002','2000','210','{}')
-	*/
-	var rowsAffected int64
-	_, rowsAffected, err = db.Model(&do).Insert()
+	_, _, err = db.Model(inventoryData).Insert()
 	if err != nil {
-		return log.Errorf("数据插入错误: %s", err)
+		return log.Errorf("插入库存数据失败: %s", err)
 	}
-	log.Infof("插入数据数量：%v", rowsAffected)
+
+	log.Infof("测试数据插入完成")
 	return nil
 }
 
-/*
-[批量插入]
-*/
-func InsertBatch(db *sqlca.Engine) error {
+func VerifyTestData(db *sqlca.Engine) (err error) {
+	// 1. 验证角色数据
+	var roles []*models.Role
+	count, err := db.Model(&roles).Query()
+	if err != nil {
+		return log.Errorf("查询角色数据失败: %s", err)
+	}
+	if count != 2 {
+		return log.Errorf("角色数据数量不正确，期望 2，实际 %d", count)
+	}
+	log.Infof("角色数据验证通过，共 %d 条", count)
+
+	// 2. 验证用户数据
+	var users []*models.User
+	count, err = db.Model(&users).Query()
+	if err != nil {
+		return log.Errorf("查询用户数据失败: %s", err)
+	}
+	if count != 2 {
+		return log.Errorf("用户数据数量不正确，期望 2，实际 %d", count)
+	}
+	log.Infof("用户数据验证通过，共 %d 条", count)
+
+	// 3. 验证用户资料数据
+	var profiles []*models.UserProfile
+	count, err = db.Model(&profiles).Query()
+	if err != nil {
+		return log.Errorf("查询用户资料数据失败: %s", err)
+	}
+	if count != 2 {
+		return log.Errorf("用户资料数据数量不正确，期望 2，实际 %d", count)
+	}
+	log.Infof("用户资料数据验证通过，共 %d 条", count)
+
+	// 4. 验证库存数据
+	var inventoryData []*models.InventoryData
+	count, err = db.Model(&inventoryData).Query()
+	if err != nil {
+		return log.Errorf("查询库存数据失败: %s", err)
+	}
+	if count != 1 {
+		return log.Errorf("库存数据数量不正确，期望 1，实际 %d", count)
+	}
+	log.Infof("库存数据验证通过，共 %d 条", count)
+
+	return nil
+}
+
+func TestPreload(db *sqlca.Engine) (err error) {
+	// 测试关联查询
+	var users []*models.User
+	rows, err := db.Model(&users).Preload("Roles", "id > ?", 0).Preload("Profile").Query()
+	if err != nil {
+		return log.Errorf("关联查询失败: %s", err)
+	}
+
+	if len(users) != 2 {
+		return log.Errorf("关联查询用户数量不正确，期望 2，实际 %d", len(users))
+	}
+
+	// 验证第一个用户的关联数据
+	user1 := users[0]
+	if len(user1.Roles) != 2 {
+		return log.Errorf("用户 %s 的角色数量不正确，期望 2，实际 %d", user1.UserName, len(user1.Roles))
+	}
+	if user1.Profile.UserId != user1.Id {
+		return log.Errorf("用户 %s 的资料关联不正确", user1.UserName)
+	}
+
+	// 验证第二个用户的关联数据
+	user2 := users[1]
+	if len(user2.Roles) != 1 {
+		return log.Errorf("用户 %s 的角色数量不正确，期望 1，实际 %d", user2.UserName, len(user2.Roles))
+	}
+	if user2.Profile.UserId != user2.Id {
+		return log.Errorf("用户 %s 的资料关联不正确", user2.UserName)
+	}
+
+	log.Infof("关联查询测试通过，共 %d 条记录", rows)
+	return nil
+}
+
+func TestUpdate(db *sqlca.Engine) (err error) {
+	// 1. 更新用户信息
+	var user *models.User
+	_, err = db.Model(&user).Id(1).MustFind()
+	if err != nil {
+		return log.Errorf("查询用户失败: %s", err)
+	}
+
+	oldEmail := user.Email
+	user.Email = "lory_updated@hotmail.com"
+	_, err = db.Model(&user).Select("email").Update()
+	if err != nil {
+		return log.Errorf("更新用户失败: %s", err)
+	}
+
+	// 验证更新结果
+	var updatedUser *models.User
+	_, err = db.Model(&updatedUser).Id(1).MustFind()
+	if err != nil {
+		return log.Errorf("查询更新后的用户失败: %s", err)
+	}
+
+	if updatedUser.Email == oldEmail {
+		return log.Errorf("用户邮箱未更新")
+	}
+
+	// 2. 更新库存信息
+	var inventory *models.InventoryData
+	_, err = db.Model(&inventory).Query()
+	if err != nil {
+		return log.Errorf("查询库存失败: %s", err)
+	}
+
+	oldQuantity := inventory.Quantity
+	inventory.Quantity = 1500
+	_, err = db.Model(&inventory).Select("quantity").Update()
+	if err != nil {
+		return log.Errorf("更新库存失败: %s", err)
+	}
+
+	// 验证更新结果
+	var updatedInventory *models.InventoryData
+	_, err = db.Model(&updatedInventory).Id(inventory.Id).MustFind()
+	if err != nil {
+		return log.Errorf("查询更新后的库存失败: %s", err)
+	}
+
+	if updatedInventory.Quantity == oldQuantity {
+		return log.Errorf("库存数量未更新")
+	}
+
+	log.Infof("更新功能测试通过")
+	return nil
+}
+
+func TestDelete(db *sqlca.Engine) (err error) {
+	// 1. 删除用户角色关联
+	_, err = db.Model(&models.UserRole{}).Where("user_id = ? AND role_id = ?", 1, 1).Delete()
+	if err != nil {
+		return log.Errorf("删除用户角色关联失败: %s", err)
+	}
+
+	// 验证删除结果
+	var userRoles []*models.UserRole
+	count, err := db.Model(&userRoles).Where("user_id = ?", 1).Query()
+	if err != nil {
+		return log.Errorf("查询用户角色关联失败: %s", err)
+	}
+
+	if count != 1 {
+		return log.Errorf("用户角色关联删除失败，期望 1，实际 %d", count)
+	}
+
+	// 2. 删除库存数据
+	var inventory *models.InventoryData
+	_, err = db.Model(&inventory).Query()
+	if err != nil {
+		return log.Errorf("查询库存失败: %s", err)
+	}
+
+	inventoryId := inventory.Id
+	_, err = db.Model(&models.InventoryData{}).Id(inventoryId).Delete()
+	if err != nil {
+		return log.Errorf("删除库存失败: %s", err)
+	}
+
+	// 验证删除结果
+	var deletedInventory *models.InventoryData
+	_, err = db.Model(&deletedInventory).Id(inventoryId).MustFind()
+	if err == nil {
+		return log.Errorf("库存数据未删除")
+	}
+	// 确认错误是因为记录未找到
+	if !strings.Contains(err.Error(), "record not found") {
+		return log.Errorf("查询删除后的库存失败: %s", err)
+	}
+
+	log.Infof("删除功能测试通过")
+	return nil
+}
+
+func TestTransaction(db *sqlca.Engine) (err error) {
+	// 测试事务处理
+	tx, err := db.TxBegin()
+	if err != nil {
+		return log.Errorf("开启事务失败: %s", err)
+	}
+	defer tx.TxRollback()
+
+	// 1. 在事务中插入新用户
+	newUser := &models.User{
+		Id: 3,
+		BaseModel: models.BaseModel{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+		UserName: "testuser",
+		Email:    "test@example.com",
+	}
+
+	_, err = tx.Model(newUser).Upsert()
+	if err != nil {
+		return log.Errorf("事务中插入用户失败: %s", err)
+	}
+
+	// 2. 在事务中插入用户资料
+	newProfile := &models.UserProfile{
+		Id: 3,
+		BaseModel: models.BaseModel{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+		UserId:  3,
+		Avatar:  "https://www.hello.com/test.jpg",
+		Address: "中国广州市天河区C座",
+	}
+
+	_, err = tx.Model(newProfile).Upsert()
+	if err != nil {
+		return log.Errorf("事务中插入用户资料失败: %s", err)
+	}
+
+	// 3. 提交事务
+	err = tx.TxCommit()
+	if err != nil {
+		return log.Errorf("提交事务失败: %s", err)
+	}
+
+	// 验证事务结果
+	var user *models.User
+	_, err = db.Model(&user).Id(3).Preload("Profile").Query()
+	if err != nil {
+		return log.Errorf("查询事务中创建的用户失败: %s", err)
+	}
+
+	if user == nil {
+		return log.Errorf("事务中创建的用户未找到")
+	}
+
+	if user.Profile.UserId != user.Id {
+		return log.Errorf("事务中创建的用户资料关联不正确")
+	}
+
+	log.Infof("事务处理测试通过")
+	return nil
+}
+
+func TestInsertBatch(db *sqlca.Engine) (err error) {
+	// 批量插入测试
 	var dos = []models.InventoryData{
 		{
-			Id:        uint64(db.NewID()),
-			BaseModel: createBaseModel(),
-			IsFrozen:  0,
-			Name:      "齿轮",
-			SerialNo:  "SNO_001",
-			Quantity:  1000,
-			//Price:      10.5,
+			Id: uint64(db.NewID()),
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			IsFrozen:     models.FrozenState_False,
+			Name:         "齿轮",
+			SerialNo:     "SNO_002",
+			Quantity:     1000,
 			ProductExtra: nil,
 		},
 		{
-			Id:        uint64(db.NewID()),
-			BaseModel: createBaseModel(),
-			IsFrozen:  0,
-			Name:      "轮胎",
-			SerialNo:  "SNO_002",
-			Quantity:  2000,
-			//Price:      210,
+			Id: uint64(db.NewID()),
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			IsFrozen: models.FrozenState_False,
+			Name:     "轮胎",
+			SerialNo: "SNO_003",
+			Quantity: 2000,
 			ProductExtra: &models.ProductExtraData{
 				SpecsValue: "17英寸",
 				AvgPrice:   sqlca.NewDecimal(450.5),
@@ -259,61 +581,18 @@ func InsertBatch(db *sqlca.Engine) error {
 		},
 	}
 
-	var err error
-	/*
-		INSERT IGNORE INTO inventory_data
-			(`id`,`create_id`,`create_name`,`created_at`,`update_id`,`update_name`,`updated_at`,`is_frozen`,`name`,`serial_no`,`quantity`,`price`,`product_extra`)
-		VALUES
-			('1867379968636358656','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','齿轮','SNO_001','1000','10.5','{\"avg_price\":\".8\",\"specs_value\":\"齿数：32\"}'),
-			('1867379968636358657','1','admin','2024-12-13 09:24:13','1','admin','2024-12-13 09:24:13','0','轮胎','SNO_002','2000','210','{\"avg_price\":\"450.5\",\"specs_value\":\"17英寸\"}')
-	*/
-	var rowsAffected int64
-	_, rowsAffected, err = db.Model(&dos).Ignore().Insert()
+	_, rowsAffected, err := db.Model(&dos).Ignore().Insert()
 	if err != nil {
-		return log.Errorf("数据插入错误: %s", err)
+		return log.Errorf("批量数据插入错误: %s", err)
 	}
 	log.Infof("批量数据插入数量：%v", rowsAffected)
 	return nil
 }
 
-func UpsertSingle(db *sqlca.Engine) error {
-	price := float64(12.33)
-	var do = models.InventoryData{
-		Id:        uint64(productId),
-		BaseModel: createBaseModel(),
-		IsFrozen:  models.FrozenState_Ture,
-		Name:      "齿轮",
-		SerialNo:  "SNO_001",
-		Quantity:  1000,
-		Price:     &price,
-		ProductExtra: &models.ProductExtraData{
-			SpecsValue: "齿数：20",
-			AvgPrice:   sqlca.NewDecimal(20.8),
-		},
-	}
-
-	var err error
-	var rowsAffected int64
-	rowsAffected, err = db.Model(&do).Upsert()
-	if err != nil {
-		return log.Errorf("数据插入错误: %s", err)
-	}
-	log.Infof("插入数据数量：%v", rowsAffected)
-	return nil
-}
-
-/*
-[普通查询带LIMIT限制]
-*/
-func QueryLimit(db *sqlca.Engine) error {
-	var err error
-	var count int64
+func TestQueryLimit(db *sqlca.Engine) (err error) {
+	// 测试查询限制
 	var dos []*models.InventoryData
-	ctx, closer := context.WithTimeout(context.Background(), 5*time.Second)
-	defer closer()
-
-	//SELECT * FROM inventory_data ORDER BY created_at DESC LIMIT 2
-	count, err = db.Model(ctx, &dos).
+	count, err := db.Model(&dos).
 		Select("id, name, serial_no, quantity, product_extra").
 		Limit(5).
 		Desc("created_at").
@@ -322,56 +601,24 @@ func QueryLimit(db *sqlca.Engine) error {
 		return log.Errorf("数据查询错误：%s", err)
 	}
 	log.Infof("查询结果数据条数: %d", count)
-	log.Json("查询结果(JSON)", dos)
 	return nil
 }
 
-/*
-[查询无数据则报错]
-*/
-func QueryErrNotFound(db *sqlca.Engine) error {
-	var err error
-	var count int64
+func TestQueryErrNotFound(db *sqlca.Engine) (err error) {
+	// 测试查询无结果
 	var do *models.InventoryData
-	ctx, closer := context.WithTimeout(context.Background(), 30*time.Second)
-	defer closer()
-
-	count, err = db.Model(ctx, &do).Id(productId).MustFind()
-	if err != nil {
-		if errors.Is(err, sqlca.ErrRecordNotFound) {
-			log.Infof("根据ID查询数据库记录无结果：%s", err)
-			return nil
-		}
-		return log.Errorf("数据库错误：%s", err)
+	_, err = db.Model(&do).Id(uint64(9999999999999999999)).MustFind()
+	if err == nil {
+		return log.Errorf("应该返回错误，但没有返回")
 	}
-	log.Infof("查询结果条数: %d 数据: %+v", count, do)
-
-	//SELECT * FROM inventory_data WHERE id=1899078192380252160
-	count, err = db.Model(ctx, &do).Id(1899078192380252160).MustFind()
-	if err != nil {
-		if errors.Is(err, sqlca.ErrRecordNotFound) {
-			log.Infof("根据ID查询数据库记录无结果：%s (正常)", err)
-			return err
-		}
-		return log.Errorf("数据库错误：%s", err)
-	}
-	log.Infof("查询结果条数: %d", count)
-	//log.Json("查询结果(JSON)", dos)
-	return nil
+	log.Infof("查询无结果测试通过: %s", err)
+	return err
 }
 
-/*
-[分页查询]
-*/
-func QueryByPage(db *sqlca.Engine) error {
-	var err error
-	var count, total int64
+func TestQueryByPage(db *sqlca.Engine) (err error) {
+	// 测试分页查询
 	var dos []*models.InventoryData
-	ctx, closer := context.WithTimeout(context.Background(), 30*time.Second)
-	defer closer()
-
-	//SELECT  * FROM inventory_data WHERE 1=1 ORDER BY created_at DESC LIMIT 0,20
-	count, total, err = db.Model(ctx, &dos).
+	count, total, err := db.Model(&dos).
 		Page(1, 20).
 		Desc("created_at").
 		QueryEx()
@@ -379,23 +626,16 @@ func QueryByPage(db *sqlca.Engine) error {
 		return log.Errorf("数据查询错误：%s", err)
 	}
 	log.Infof("查询结果条数: %d 数据库总数：%v", count, total)
-	//log.Json("查询结果(JSON)", dos)
 	return nil
 }
 
-/*
-[复杂查询]
-*/
-func QueryByCondition(db *sqlca.Engine) error {
-	var err error
-	var count int64
+func TestQueryByCondition(db *sqlca.Engine) (err error) {
+	// 测试条件查询
 	var dos []*models.InventoryData
-	//SELECT * FROM inventory_data WHERE `quantity` > 0 and is_frozen IN (0,1) AND created_at >= '2024-10-01 11:35:14' ORDER BY created_at DESC
-	count, err = db.Model(&dos).
+	count, err := db.Model(&dos).
 		Where("is_frozen in (?)", []int{models.FrozenState_False, models.FrozenState_Ture}).
-		//In("is_frozen", []int{0, 1}).
 		Gt("quantity", 0).
-		Gte("created_at", "2024-10-01 11:35:14").
+		Gte("created_at", "2026-01-01 00:00:00").
 		Desc("created_at").
 		Query()
 	if err != nil {
@@ -405,18 +645,66 @@ func QueryByCondition(db *sqlca.Engine) error {
 	return nil
 }
 
-/*
-[查询带多个OR条件]
-*/
-func QueryOr(db *sqlca.Engine) error {
-	var err error
-	var count int64
+func TestQueryByGroup(db *sqlca.Engine) (err error) {
+	// 测试分组查询
+	var dos []*models.InventoryData
+	count, total, err := db.Model(&dos).
+		Select("is_frozen", "SUM(quantity) AS quantity").
+		Gt("quantity", 0).
+		GroupBy("is_frozen").
+		QueryEx()
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("查询返回数据条数: %d 总数：%d", count, total)
+	return nil
+}
+
+func TestQueryCountRows(db *sqlca.Engine) (err error) {
+	// 测试统计行数
+	count, err := db.Model(&models.InventoryData{}).Where("is_frozen", models.FrozenState_False).CountRows()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("select 统计总行数：%d", count)
+
+	count, err = db.Model(&models.InventoryData{}).
+		GroupBy("is_frozen").
+		Where("created_at > ? AND is_frozen = ?", "2026-01-01 00:00:00", models.FrozenState_False).
+		CountRows()
+	if err != nil {
+		return log.Errorf(err.Error())
+	}
+	log.Infof("group by 统计总行数：%d", count)
+	return nil
+}
+
+func TestQueryJoins(db *sqlca.Engine) (err error) {
+	// 测试联表查询
+	var do struct{}
+	count, err := db.Model(&do).
+		Select("a.id as product_id", "a.name AS product_name", "b.quantity", "b.weight").
+		Table("inventory_data a").
+		LeftJoin("inventory_in b").
+		On("a.id=b.product_id").
+		Gt("a.quantity", 0).
+		Eq("a.is_frozen", 0).
+		Gte("a.created_at", "2026-01-01 00:00:00").
+		Query()
+	if err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("查询结果数据条数: %d", count)
+	return nil
+}
+
+func TestQueryOr(db *sqlca.Engine) (err error) {
+	// 测试 OR 条件查询
 	var dos []*models.InventoryData
 
-	//SELECT * FROM inventory_data WHERE create_id=1 AND name = '配件' OR serial_no = 'SNO_001' ORDER BY created_at DESC
-	count, err = db.Model(&dos).
-		And("create_id = ?", 1).
-		Or("name = ?", "配件").
+	count, err := db.Model(&dos).
+		And("create_id = ?", 0).
+		Or("name = ?", "齿轮").
 		Or("serial_no = ?", "SNO_001").
 		Desc("created_at").
 		Limit(5).
@@ -425,17 +713,16 @@ func QueryOr(db *sqlca.Engine) error {
 		return log.Errorf("数据查询错误：%s", err)
 	}
 	log.Infof("查询结果数据条数: %d", count)
-	//log.Json("查询结果(JSON)", dos)
 
-	//SELECT * FROM inventory_data WHERE create_id=1 AND is_frozen = 0 AND quantity > 0 AND (name = '配件' OR serial_no = 'SNO_001') ORDER BY created_at DESC
+	// 测试 AND 和 OR 组合条件
 	var andConditions = make(map[string]interface{})
 	var orConditions = make(map[string]interface{})
 
-	andConditions["create_id"] = 1    //create_id = 1
+	andConditions["create_id"] = 0    //create_id = 0
 	andConditions["is_frozen"] = 0    //is_frozen = 0
 	andConditions["quantity > ?"] = 0 //quantity > 0
 
-	orConditions["name = ?"] = "配件"
+	orConditions["name = ?"] = "齿轮"
 	orConditions["serial_no = ?"] = "SNO_001"
 
 	count, err = db.Model(&dos).
@@ -447,157 +734,133 @@ func QueryOr(db *sqlca.Engine) error {
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
-	log.Infof("查询结果数据条数: %d", count)
+	log.Infof("组合条件查询结果数据条数: %d", count)
 	return nil
 }
 
-/*
-[分组查询]
-*/
-func QueryByGroup(db *sqlca.Engine) error {
-	var err error
-	var count, total int64
-	var dos []*models.InventoryData
-	/*
-		SELECT  create_id, SUM(quantity) AS quantity
-		FROM inventory_data
-		WHERE 1=1 AND quantity>'0' AND is_frozen='0' AND created_at>='2024-10-01 11:35:14'
-		GROUP BY create_id
-	*/
-	count, total, err = db.Model(&dos).
-		Select("create_id", "SUM(quantity) AS quantity").
-		Gt("quantity", 0).
-		Eq("is_frozen", 0).
-		Gte("created_at", "2024-10-01 11:35:14").
-		GroupBy("create_id", "create_name").
-		QueryEx()
+func TestQueryRawSQL(db *sqlca.Engine) (err error) {
+	// 测试原始 SQL 查询
+	var rows []*models.InventoryData
+
+	_, err = db.Model(&rows).QueryRaw("SELECT * FROM inventory_data WHERE is_frozen in (?) AND quantity > ?", []models.FrozenState{0, 1}, 10)
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
-	log.Infof("查询返回数据条数: %d 总数：%d", count, total)
+	log.Infof("原始 SQL 查询成功，返回 %d 条记录", len(rows))
 	return nil
 }
 
-// 获取查询结果行数
-func QueryCountRows(db *sqlca.Engine) error {
-	// SELECT COUNT(*) FROM inventory_data WHERE is_frozen = true
-	count, err := db.Model(&models.InventoryData{}).Where("is_frozen", models.FrozenState_Ture).CountRows()
-	if err != nil {
-		return log.Errorf(err.Error())
-	}
-	log.Infof("select 统计总行数：%d", count)
-
-	count, err = db.Model(&models.InventoryData{}).
-		GroupBy("create_id").
-		Where("created_at > ? AND is_frozen = ?", "2025-06-01 00:00:00", models.FrozenState_False).
-		CountRows()
-	log.Infof("group by 统计总行数：%d", count)
-	return nil
-}
-
-/*
-[联表查询]
-*/
-func QueryJoins(db *sqlca.Engine) error {
-	/*
-		SELECT a.id as product_id, a.name AS product_name, b.quantity, b.weight
-		FROM inventory_data a
-		LEFT JOIN inventory_in b
-		ON a.id=b.product_id
-		WHERE a.quantity > 0 AND a.is_frozen=0 AND a.created_at>='2024-10-01 11:35:14'
-	*/
-	var do struct{}
-	count, err := db.Model(&do).
-		Select("a.id as product_id", "a.name AS product_name", "b.quantity", "b.weight").
-		Table("inventory_data a").
-		LeftJoin("inventory_in b").
-		On("a.id=b.product_id").
-		Gt("a.quantity", 0).
-		Eq("a.is_frozen", 0).
-		Gte("a.created_at", "2024-10-01 11:35:14").
-		Query()
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-	log.Infof("查询结果数据条数: %d", count)
-	return nil
-}
-
-/*
-[普通变量取值查询]
-*/
-
-func QueryByNormalVars(db *sqlca.Engine) error {
-	var err error
+func TestQueryByNormalVars(db *sqlca.Engine) (err error) {
+	// 测试普通变量查询
 	var name, serialNo string
-	var id = uint64(productId)
-	//SELECT name, serial_no FROM inventory_data WHERE id=1906626367382884352
+	var inventory *models.InventoryData
+	_, err = db.Model(&inventory).Query()
+	if err != nil {
+		return log.Errorf("查询库存失败: %s", err)
+	}
+
 	_, err = db.Model(&name, &serialNo).
 		Table("inventory_data").
 		Select("name, serial_no").
-		Id(id).
+		Id(inventory.Id).
 		MustFind()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
-	log.Infof("数据ID: %v name=%s serial_no=%s", id, name, serialNo)
+	log.Infof("数据ID: %v name=%s serial_no=%s", inventory.Id, name, serialNo)
 	return nil
 }
 
-/*
-[查询保存JSON内容的字段到结构体]
-models.InventoryData对象的ProductExtra是一个跟数据库JSON内容对应的结构体
-*/
-func QueryWithJsonColumn(db *sqlca.Engine) error {
-	var err error
+func TestQueryWithJsonColumn(db *sqlca.Engine) (err error) {
+	// 测试 JSON 字段查询
+	var inventory *models.InventoryData
+	_, err = db.Model(&inventory).Query()
+	if err != nil {
+		return log.Errorf("查询库存失败: %s", err)
+	}
+
 	var do models.InventoryData
-	var id = uint64(productId)
-
-	/*
-		SELECT * FROM inventory_data WHERE id=1906626367382884352
-
-		+-----------------------+-----------------------+-----------------------+------------------------------------------------+
-		| id	                | name	| serial_no	    | quantity	| price	    |                 product_extra                  |
-		+-----------------------+-------+---------------+-----------+-----------+------------------------------------------------+
-		| 1906626367382884352	| 轮胎  	| SNO_002		| 2000.000 	| 210.00	| {"avg_price": "450.5", "specs_value": "17英寸"} |
-		+------------------------------------------------------------------------------------------------------------------------+
-	*/
 	_, err = db.Model(&do).
 		Table("inventory_data").
 		Select("id", "name", "serial_no", "quantity", "price", "product_extra").
-		Id(id).
+		Id(inventory.Id).
 		MustFind()
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
 	log.Json(do)
-	/*
-		2024-12-18 15:15:03.560732 PID:64764 [INFO] {goroutine 1} <main.go:373 QueryWithJsonColumn()> ID: 1906626367382884352 数据：{Id:1906626367382884352 Name:轮胎 SerialNo:SNO_002 Quantity:2000 Price:210 ProductExtra:{AvgPrice:450.5 SpecsValue:17英寸}}
-	*/
 	return nil
 }
 
-/*
-[常规SQL查询]
-*/
-func QueryRawSQL(db *sqlca.Engine) error {
-	var rows []*models.InventoryData
-
-	//SELECT * FROM inventory_data  WHERE is_frozen IN (1) AND quantity > '10'
-	_, err := db.Model(&rows).QueryRaw("SELECT * FROM inventory_data WHERE is_frozen in (?) AND quantity > ?", []models.FrozenState{0, 1}, 10)
+func TestUpdateByMap(db *sqlca.Engine) (err error) {
+	// 测试通过 Map 更新
+	var inventory *models.InventoryData
+	_, err = db.Model(&inventory).Query()
 	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
+		return log.Errorf("查询库存失败: %s", err)
 	}
+
+	var updates = map[string]interface{}{
+		"quantity":      2100, //更改库存
+		"price":         300,  //更改价格
+		"product_extra": nil,  //设置产品扩展数据为NULL
+	}
+
+	_, err = db.Model(updates).Table("inventory_data").Id(inventory.Id).Update()
+	if err != nil {
+		return log.Errorf("更新错误：%s", err)
+	}
+	log.Infof("通过 Map 更新成功")
 	return nil
 }
 
-func ExecRawSQL(db *sqlca.Engine) error {
-	var sb = sqlca.NewStringBuilder()
+func TestTransactionWrapper(db *sqlca.Engine) (err error) {
+	// 测试事务封装
+	strOrderNo := time.Now().Format("20060102150405.000000000")
+	err = db.TxFunc(func(tx *sqlca.Engine) error {
+		var err error
+		// 执行事务操作
+		quantity := float64(20)
+		weight := float64(200.3)
+		_, _, err = tx.Model(&models.InventoryIn{
+			Id: uint64(db.NewID()),
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			ProductId: 1,
+			OrderNo:   strOrderNo,
+			UserId:    3,
+			UserName:  "testuser",
+			Quantity:  quantity,
+			Weight:    sqlca.NewDecimal(weight),
+			Remark:    "产品入库",
+		}).Insert()
+		if err != nil {
+			return log.Errorf("数据插入错误: %s", err)
+		}
+		return nil
+	})
 
-	//UPDATE inventory_data SET quantity = '10' WHERE id=1867379968636358657
+	if err != nil {
+		return log.Errorf("事务失败：%s", err)
+	}
+	log.Infof("事务封装测试通过")
+	return nil
+}
+
+func TestExecRawSQL(db *sqlca.Engine) (err error) {
+	// 测试执行原始 SQL
+	var inventory *models.InventoryData
+	_, err = db.Model(&inventory).Query()
+	if err != nil {
+		return log.Errorf("查询库存失败: %s", err)
+	}
+
+	var sb = sqlca.NewStringBuilder()
 	sb.Append("UPDATE inventory_data")
 	sb.Append("SET quantity = ?", 10)
-	sb.Append("WHERE id = ?", productId)
+	sb.Append("WHERE id = ?", inventory.Id)
 
 	strQuery := sb.String()
 	affectedRows, lastInsertId, err := db.Model(nil).ExecRaw(strQuery)
@@ -608,192 +871,26 @@ func ExecRawSQL(db *sqlca.Engine) error {
 	return nil
 }
 
-/*
-[数据更新]
-
-SELECT * FROM inventory_data  WHERE `id`='1906626367382884352'
-UPDATE inventory_data SET `quantity`='2300' WHERE `id`='1906626367382884352'
-*/
-func UpdateByModel(db *sqlca.Engine) error {
-	var err error
-	var do *models.InventoryData
-	var id = uint64(productId)
-	_, err = db.Model(&do).Id(id).MustFind() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-
-	do.Quantity = 2300 //更改库存
-	_, err = db.Model(&do).Select("quantity").Update()
-	if err != nil {
-		return log.Errorf("更新错误：%s", err)
-	}
-	return nil
-}
-
-/*
-[通过map进行数据更新]
-*/
-func UpdateByMap(db *sqlca.Engine) error {
-	var err error
-	var id = uint64(productId)
-	var updates = map[string]interface{}{
-		"quantity":      2100, //更改库存
-		"price":         300,  //更改价格
-		"product_extra": nil,  //设置产品扩展数据为NULL
-	}
-	//UPDATE inventory_data SET `quantity`='2100',`price`=300, is_frozen = NULL WHERE `id`='1906626367382884352'
-	_, err = db.Model(updates).Table("inventory_data").Id(id).Update()
-	if err != nil {
-		return log.Errorf("更新错误：%s", err)
-	}
-	return nil
-}
-
-/*
-[删除数据]
-*/
-func DeleteById(db *sqlca.Engine) error {
-	var err error
-	var id = uint64(1859078192380252160)
-	//DELETE inventory_data WHERE `id`='1859078192380252160'
-	_, err = db.Model(models.InventoryData{}).Id(id).Delete()
-	if err != nil {
-		return log.Errorf("更新错误：%s", err)
-	}
-	log.Infof("删除ID%v数据成功", id)
-	return nil
-}
-
-/*
-[事务处理]
-*/
-func Transaction(db *sqlca.Engine) error {
-
-	/*
-		-- TRANSACTION BEGIN
-
-			INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`created_at`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`updated_at`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1906626367382884352','1861614736295071744','admin','1','2024-11-27 1114','202407090000001')
-			SELECT * FROM inventory_data  WHERE `id`='1906626367382884352'
-			UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1906626367382884352'
-
-		-- TRANSACTION END
-	*/
-
-	tx, err := db.TxBegin()
-	if err != nil {
-		return log.Errorf("开启事务失败：%s", err)
-	}
-	defer tx.TxRollback()
-
-	productId := uint64(productId)
-	strOrderNo := time.Now().Format("20060102150405.000000000")
-	//***************** 执行事务操作 *****************
-	quantity := float64(20)
-	weight := float64(200.3)
-	_, _, err = tx.Model(&models.InventoryIn{
-		Id:        uint64(db.NewID()),
-		BaseModel: createBaseModel(),
-		ProductId: productId,
-		OrderNo:   strOrderNo,
-		UserId:    3,
-		UserName:  "lazy",
-		Quantity:  quantity,
-		Weight:    sqlca.NewDecimal(weight),
-		Remark:    "产品入库",
-	}).Insert()
-	if err != nil {
-		return log.Errorf("数据插入错误: %s", err)
-	}
-	var inventoryData = &models.InventoryData{}
-	_, err = tx.Model(&inventoryData).Id(productId).MustFind() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
-	if err != nil {
-		return log.Errorf("数据查询错误：%s", err)
-	}
-	inventoryData.Quantity += quantity
-	_, err = tx.Model(&inventoryData).Id(productId).Select("quantity").Update()
-	if err != nil {
-		return log.Errorf("更新错误：%s", err)
-	}
-	//***************** 提交事务 *****************
-	err = tx.TxCommit()
-	if err != nil {
-		return log.Errorf("提交事务失败：%s", err)
-	}
-	return nil
-}
-
-/*
-[事务处理封装]
-*/
-func TransactionWrapper(db *sqlca.Engine) error {
-	/*
-	   -- TRANSACTION BEGIN
-
-	   	INSERT INTO inventory_in (`user_id`,`quantity`,`remark`,`create_id`,`user_name`,`weight`,`created_at`,`update_name`,`is_deleted`,`product_id`,`id`,`create_name`,`update_id`,`updated_at`,`order_no`) VALUES ('3','20','产品入库','1','lazy','200.3','2024-11-27 11:35:14','admin','0','1906626367382884352','1861614736295071744','admin','1','2024-11-27 1114','202407090000002')
-	   	SELECT * FROM inventory_data  WHERE `id`='1906626367382884352'
-	   	UPDATE inventory_data SET `quantity`='2320' WHERE `id`='1906626367382884352'
-
-	   -- TRANSACTION END
-	*/
-	strOrderNo := time.Now().Format("20060102150405.000000000")
-	err := db.TxFunc(func(tx *sqlca.Engine) error {
-		var err error
-		//***************** 执行事务操作 *****************
-		quantity := float64(20)
-		weight := float64(200.3)
-		_, _, err = tx.Model(&models.InventoryIn{
-			Id:        uint64(db.NewID()),
-			BaseModel: createBaseModel(),
-			ProductId: productId,
-			OrderNo:   strOrderNo,
-			UserId:    3,
-			UserName:  "lazy",
-			Quantity:  quantity,
-			Weight:    sqlca.NewDecimal(weight),
-			Remark:    "产品入库",
-		}).Insert()
-		if err != nil {
-			return log.Errorf("数据插入错误: %s", err)
-		}
-		var inventoryData = &models.InventoryData{}
-		_, err = tx.Model(&inventoryData).Id(productId).MustFind() //Find方法如果是单条记录没找到则提示ErrNotFound错误（Query方法不会报错）
-		if err != nil {
-			return log.Errorf("数据查询错误：%s", err)
-		}
-		inventoryData.Quantity += quantity
-		_, err = tx.Model(&inventoryData).Id(productId).Select("quantity").Update()
-		if err != nil {
-			return log.Errorf("更新错误：%s", err)
-		}
-		return nil
-	})
-
-	//***************** 事务处理结果 *****************
-	if err != nil {
-		return log.Errorf("事务失败：%s", err)
-	}
-	return nil
-}
-
-// 地理位置坐标插入/更新
-func UpsertPoint(db *sqlca.Engine) error {
+func TestUpsertPoint(db *sqlca.Engine) (err error) {
+	// 测试地理位置坐标插入/更新
 	price := 243.3
-	id := db.NewID()
 	do := &models.InventoryData{
-		Id:        uint64(db.NewID()),
-		BaseModel: createBaseModel(),
-		IsFrozen:  models.FrozenState_Ture,
-		Name:      "齿轮",
-		SerialNo:  "SNO_001",
-		Quantity:  1000,
-		Price:     &price,
+		Id: uint64(db.NewID()),
+		BaseModel: models.BaseModel{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+		IsFrozen: models.FrozenState_Ture,
+		Name:     "测试坐标",
+		SerialNo: "SNO_004",
+		Quantity: 1000,
+		Price:    &price,
 		Location: sqlca.Point{
 			X: 112.34232,
 			Y: -20.32432,
 		},
 	}
-	_, _, err := db.Model(&do).Insert()
+	_, _, err = db.Model(&do).Insert()
 	if err != nil {
 		return log.Errorf(err.Error())
 	}
@@ -803,37 +900,32 @@ func UpsertPoint(db *sqlca.Engine) error {
 	if err != nil {
 		return log.Errorf(err.Error())
 	}
-	var updates = map[string]any{
-		"location": sqlca.Point{X: 110.234, Y: -10.23},
-	}
-	_, err = db.Model(updates).Table("inventory_data").Id(id).Update()
-	if err != nil {
-		return log.Errorf(err.Error())
-	}
-
-	var do2 *models.InventoryData
-	_, err = db.Model(&do2).Id(id).Query()
-	if err != nil {
-		return log.Errorf(err.Error())
-	}
-	log.Infof("do2 %+v", do2)
+	log.Infof("地理位置坐标操作测试通过")
 	return nil
 }
 
-func UpdatePointByExpress(db *sqlca.Engine) error {
+func TestUpdatePointByExpress(db *sqlca.Engine) (err error) {
+	// 测试通过表达式更新地理位置坐标
+	var inventory *models.InventoryData
+	_, err = db.Model(&inventory).Query()
+	if err != nil {
+		return log.Errorf("查询库存失败: %s", err)
+	}
+
 	var upmap = map[string]any{
 		"location": sqlca.NewExpr("POINT(?, ?)", 113.234, 22.39236),
 	}
-	rows, err := db.Model(upmap).Table("inventory_data").Id(productId).Update()
+	rows, err := db.Model(upmap).Table("inventory_data").Id(inventory.Id).Update()
 	if err != nil {
 		return log.Errorf(err.Error())
 	}
-	log.Infof("rows affected: %d", rows)
+	log.Infof("通过表达式更新地理位置坐标，受影响的行数：%d", rows)
 	return nil
 }
 
-func DistributionLock(db *sqlca.Engine) error {
-	key := fmt.Sprintf("test:inventory_data:product_id:%v", productId)
+func TestDistributionLock(db *sqlca.Engine) (err error) {
+	// 测试分布式锁
+	key := fmt.Sprintf("test:inventory_data:product_id:%v", 1)
 	unlock, err := db.Lock(key, 10*time.Second)
 	if err != nil {
 		return log.Errorf(err.Error())
@@ -843,28 +935,10 @@ func DistributionLock(db *sqlca.Engine) error {
 	var upmap = map[string]any{
 		"location": sqlca.NewExpr("POINT(?, ?)", 116.2, 22.1),
 	}
-	rows, err := db.Model(upmap).Table("inventory_data").Id(productId).Update()
+	rows, err := db.Model(upmap).Table("inventory_data").Id(1).Update()
 	if err != nil {
 		return log.Errorf(err.Error())
 	}
-	log.Infof("rows affected: %d", rows)
-	return nil
-}
-
-func Preload(db *sqlca.Engine) error {
-	var users []*models.User
-	rows, err := db.Model(&users).Preload("Roles", "id > ?", 0).Preload("Profile").Query()
-	//rows, err := db.Model(&users).Query()
-	if err != nil {
-		return log.Errorf(err.Error())
-	}
-	log.Json("users with preloads", users)
-	log.Infof("result rows %v", rows)
-	var user *models.User
-	rows, err = db.Model(&user).Preload("Roles", "id > ?", 0).Preload("Profile").Id(1).Query()
-	if err != nil {
-		return log.Errorf(err.Error())
-	}
-	log.Json("user with preloads", user)
+	log.Infof("分布式锁测试通过，受影响的行数：%d", rows)
 	return nil
 }

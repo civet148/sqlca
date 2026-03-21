@@ -300,10 +300,10 @@ func (e *Engine) mysqlQueryUpsert(strSQL string) (lastInsertId int64, err error)
 }
 
 func (e *Engine) postgresQueryUpsert(strSQL string) (lastInsertId int64, err error) {
-	var rows *sql.Rows
+	var rows *sqlx.Rows
 	log.Debugf("[%v]", strSQL)
 	db := e.getDB()
-	if rows, err = db.Query(strSQL); err != nil {
+	if rows, err = db.Queryx(strSQL); err != nil {
 		log.Errorf("tx.Query error [%v]", err.Error())
 		return
 	}

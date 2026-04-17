@@ -98,13 +98,13 @@ type Engine struct {
 	strCaseWhen      string                 // case..when...then...else...end
 	nearby           *nearby                // nearby
 	joins            []*Join                // inner/left/right/full-outer join(s)
-	selected         bool                   // column(s) selected
 	noVerbose        bool                   // no more verbose
 	idgen            *snowflake.Node        // snowflake id generator
 	hookMethods      *hookMethods           // hook methods
 	insertIgnore     bool                   // insert ignore when conflict
 	optfns           []Option               // option functions
 	redisClient      *redigo.Redigo         // redis-go client
+	reuseCondition   bool                   // reuse where condition atfer query or exec
 }
 
 func init() {
@@ -314,9 +314,7 @@ func (e *Engine) Id(value any) *Engine {
 
 // Select orm select/update columns
 func (e *Engine) Select(columns ...string) *Engine {
-	if e.setSelectColumns(columns...) {
-		e.selected = true
-	}
+	e.setSelectColumns(columns...)
 	return e
 }
 
@@ -1372,3 +1370,9 @@ func (e *Engine) PrepareExec(query string, exec func(stmt *sqlx.Stmt) error) (er
 func (e *Engine) Preload(query string, args ...any) *Engine {
 	return e.addPreload(query, args...)
 }
+
+//
+//func (e *Engine) ReuseCondition() *Engine {
+//	e.reuseCondition = true
+//	return e
+//}

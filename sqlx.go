@@ -492,11 +492,7 @@ func (e *Engine) setSelectColumns(strColumns ...string) (ok bool) {
 	if len(strColumns) == 0 {
 		return false
 	}
-	if e.selected {
-		e.selectColumns = e.appendStrings(e.selectColumns, strColumns...)
-	} else {
-		e.selectColumns = strColumns
-	}
+	e.selectColumns = strColumns
 	return true
 }
 

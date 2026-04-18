@@ -129,30 +129,35 @@ func (e *Engine) clone(models ...any) *Engine {
 	if len(models) > 0 {
 		ctx, hasCtx = models[0].(context.Context)
 	}
-	engine := &Engine{
-		ctx:             ctx,
-		strDSN:          e.strDSN,
-		dsn:             e.dsn,
-		db:              e.db,
-		adapterType:     e.adapterType,
-		adapterCache:    e.adapterCache,
-		strPkName:       e.strPkName,
-		expireTime:      e.expireTime,
-		strDatabaseName: e.strDatabaseName,
-		dbTags:          e.dbTags,
-		bForce:          e.bForce,
-		noVerbose:       e.noVerbose,
-		bAutoRollback:   e.bAutoRollback,
-		slowQueryOn:     e.slowQueryOn,
-		slowQueryTime:   e.slowQueryTime,
-		tx:              e.tx,
-		operType:        e.operType,
-		idgen:           e.idgen,
-		options:         e.options,
-		optfns:          e.optfns,
-		insertIgnore:    e.insertIgnore,
-		redisClient:     e.redisClient,
-		preloads:        make(map[string][]any),
+	var engine *Engine
+	if e.withReuse {
+		engine = e
+	} else {
+		engine = &Engine{
+			ctx:             ctx,
+			strDSN:          e.strDSN,
+			dsn:             e.dsn,
+			db:              e.db,
+			adapterType:     e.adapterType,
+			adapterCache:    e.adapterCache,
+			strPkName:       e.strPkName,
+			expireTime:      e.expireTime,
+			strDatabaseName: e.strDatabaseName,
+			dbTags:          e.dbTags,
+			bForce:          e.bForce,
+			noVerbose:       e.noVerbose,
+			bAutoRollback:   e.bAutoRollback,
+			slowQueryOn:     e.slowQueryOn,
+			slowQueryTime:   e.slowQueryTime,
+			tx:              e.tx,
+			operType:        e.operType,
+			idgen:           e.idgen,
+			options:         e.options,
+			optfns:          e.optfns,
+			insertIgnore:    e.insertIgnore,
+			redisClient:     e.redisClient,
+			preloads:        make(map[string][]any),
+		}
 	}
 	if hasCtx {
 		engine.setModel(models[1:]...)

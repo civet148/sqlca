@@ -104,7 +104,7 @@ type Engine struct {
 	insertIgnore     bool                   // insert ignore when conflict
 	optfns           []Option               // option functions
 	redisClient      *redigo.Redigo         // redis-go client
-	reuseCondition   bool                   // reuse where condition atfer query or exec
+	withReuse        bool                   // reuse where condition atfer query or exec
 }
 
 func init() {
@@ -278,7 +278,6 @@ func (e *Engine) Debug(ok bool) {
 // use to get result set, support single struct object or slice [pointer type]
 // notice: will clone a new engine object for orm operations(query/update/insert/upsert)
 func (e *Engine) Model(args ...interface{}) *Engine {
-	//assert(args, "model is nil")
 	return e.clone(args...)
 }
 
@@ -1371,8 +1370,8 @@ func (e *Engine) Preload(query string, args ...any) *Engine {
 	return e.addPreload(query, args...)
 }
 
-//
-//func (e *Engine) ReuseCondition() *Engine {
-//	e.reuseCondition = true
-//	return e
-//}
+// 复用查询条件
+func (e *Engine) WithReuse() *Engine {
+	e.withReuse = true
+	return e
+}

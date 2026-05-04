@@ -26,7 +26,7 @@ func main() {
 		//}),
 		//redis distribution lock config
 		sqlca.WithRedisConfig(&sqlca.RedisConfig{
-			Address: "192.168.0.20:6379",
+			Address: "127.0.0.1:6379",
 		}),
 		sqlca.WithSnowFlake(&sqlca.SnowFlake{
 			NodeId: 1,

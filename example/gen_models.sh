@@ -6,7 +6,7 @@ OUT_DIR=.
 PACK_NAME="models"
 # 只读字段(不更新)
 READ_ONLY="create_time, update_time"
-# 指定表名(不指定则整个数据库全部导出)
+# 指定表名(不指定则整个数据库全部导出,排除某个表则在前面加-符号)
 TABLE_NAME="-users"
 # 忽略字段名(逗号分隔)
 WITH_OUT=""

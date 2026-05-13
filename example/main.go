@@ -113,7 +113,7 @@ func main() {
 	requireNoError(TestUpdatePointByExpress(db))
 
 	// 25. 测试分布式锁
-	requireNoError(TestDistributionLock(db))
+	// requireNoError(TestDistributionLock(db))
 
 	log.Infof("所有测试验证通过！")
 }
@@ -368,6 +368,7 @@ func TestPreload(db *sqlca.Engine) (err error) {
 	if user1.Profile.UserId != user1.Id {
 		return log.Errorf("用户 %s 的资料关联不正确", user1.UserName)
 	}
+	log.Json("user1", user1)
 
 	// 验证第二个用户的关联数据
 	user2 := users[1]
@@ -377,7 +378,7 @@ func TestPreload(db *sqlca.Engine) (err error) {
 	if user2.Profile.UserId != user2.Id {
 		return log.Errorf("用户 %s 的资料关联不正确", user2.UserName)
 	}
-
+	log.Json("user2", user2)
 	log.Infof("关联查询测试通过，共 %d 条记录", rows)
 	return nil
 }

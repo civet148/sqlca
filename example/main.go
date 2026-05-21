@@ -601,7 +601,7 @@ func TestQueryLimit(db *sqlca.Engine) (err error) {
 	if err != nil {
 		return log.Errorf("数据查询错误：%s", err)
 	}
-	log.Infof("查询结果数据条数: %d", count)
+	log.Infof("1.查询结果数据条数: %d", count)
 	return nil
 }
 

@@ -2,13 +2,14 @@ package sqlca
 
 import (
 	"fmt"
-	"github.com/civet148/log"
 	"reflect"
 	"runtime"
 	"strings"
+
+	"github.com/civet148/log"
 )
 
-//assert bool and string/struct/slice/map nil, call panic
+// assert bool and string/struct/slice/map nil, call panic
 func assert(v interface{}, strMsg string, args ...interface{}) {
 	if isNilOrFalse(v) {
 		log.Errorf(strMsg, args...)
@@ -71,14 +72,6 @@ func fmtParentCaller(strFmt string) string {
 	strFunc, strFile, nLine := getCaller(1)
 	strFmt = fmt.Sprintf("<%v:%v %v()> ", strFile, nLine, strFunc) + strFmt
 	return strFmt
-}
-
-func (e *Engine) setDebug(ok bool) {
-	if ok {
-		log.SetLevel(log.LEVEL_DEBUG)
-	} else {
-		log.SetLevel(log.LEVEL_INFO)
-	}
 }
 
 func (e *Engine) panic(strFmt string, args ...interface{}) {

@@ -55,56 +55,57 @@ type nearby struct {
 }
 
 type Engine struct {
-	ctx              context.Context
-	strDSN           string                 // database source name
-	dsn              dsnParameter           // driver name and parameters
-	options          *dialOption            // database options
-	db               *sqlx.DB               // DB instance masters
-	tx               *sqlx.Tx               // sql tx instance
-	adapterType      types.AdapterType      // what's adapter
-	adapterCache     types.AdapterType      // what's adapter of cache
-	modelType        types.ModelType        // model type
-	operType         types.OperType         // operation type
-	expireTime       int                    // cache expire time of seconds
-	bForce           bool                   // force update/insert read only column(s)
-	bAutoRollback    bool                   // auto rollback when tx error occurred
-	model            interface{}            // data model [struct object or struct slice]
-	dict             map[string]interface{} // data model db dictionary
-	strDatabaseName  string                 // database name
-	strTableName     string                 // table name
-	strPkName        string                 // primary key of table, default 'id'
-	strPkValue       string                 // primary key's value
-	strLimit         string                 // limit
-	strOffset        string                 // offset (only for postgres)
-	strDistinct      string                 // distinct
-	strForUpdate     string                 // tx query for update
-	strLockShareMode string                 // tx query lock share mode
-	nullableColumns  []string               // nullable columns for update/insert
-	excludeColumns   []string               // exclude columns for query: select xxx not contain exclude some columns
-	selectColumns    []string               // columns to query: select
-	conflictColumns  []string               // conflict key on duplicate set (just for postgresql)
-	orderByColumns   []string               // order by columns
-	groupByColumns   []string               // group by columns
-	preloads         map[string][]any       // addPreload query and args
-	havingCondition  string                 // having condition
-	inConditions     []types.Expr           // in condition
-	notConditions    []types.Expr           // not in condition
-	andConditions    []types.Expr           // and condition
-	orConditions     []types.Expr           // or condition
-	dbTags           []string               // custom db tag names
-	readOnly         []string               // read only column names
-	slowQueryTime    int                    // slow query alert time (milliseconds)
-	slowQueryOn      bool                   // enable slow query alert (default off)
-	strCaseWhen      string                 // case..when...then...else...end
-	nearby           *nearby                // nearby
-	joins            []*Join                // inner/left/right/full-outer join(s)
-	noVerbose        bool                   // no more verbose
-	idgen            *snowflake.Node        // snowflake id generator
-	hookMethods      *hookMethods           // hook methods
-	insertIgnore     bool                   // insert ignore when conflict
-	optfns           []Option               // option functions
-	redisClient      *redigo.Redigo         // redis-go client
-	withReuse        bool                   // reuse where condition atfer query or exec
+	ctx                 context.Context
+	strDSN              string                 // database source name
+	dsn                 dsnParameter           // driver name and parameters
+	options             *dialOption            // database options
+	db                  *sqlx.DB               // DB instance masters
+	tx                  *sqlx.Tx               // sql tx instance
+	adapterType         types.AdapterType      // what's adapter
+	adapterCache        types.AdapterType      // what's adapter of cache
+	modelType           types.ModelType        // model type
+	operType            types.OperType         // operation type
+	expireTime          int                    // cache expire time of seconds
+	bForce              bool                   // force update/insert read only column(s)
+	bAutoRollback       bool                   // auto rollback when tx error occurred
+	model               interface{}            // data model [struct object or struct slice]
+	dict                map[string]interface{} // data model db dictionary
+	strDatabaseName     string                 // database name
+	strTableName        string                 // table name
+	strPkName           string                 // primary key of table, default 'id'
+	strPkValue          string                 // primary key's value
+	strLimit            string                 // limit
+	strOffset           string                 // offset (only for postgres)
+	strDistinct         string                 // distinct
+	strForUpdate        string                 // tx query for update
+	strLockShareMode    string                 // tx query lock share mode
+	nullableColumns     []string               // nullable columns for update/insert
+	excludeColumns      []string               // exclude columns for query: select xxx not contain exclude some columns
+	selectColumns       []string               // columns to query: select
+	conflictColumns     []string               // conflict key on duplicate set (just for postgresql)
+	orderByColumns      []string               // order by columns
+	groupByColumns      []string               // group by columns
+	preloads            map[string][]any       // addPreload query and args
+	havingCondition     string                 // having condition
+	inConditions        []types.Expr           // in condition
+	notConditions       []types.Expr           // not in condition
+	andConditions       []types.Expr           // and condition
+	orConditions        []types.Expr           // or condition
+	dbTags              []string               // custom db tag names
+	readOnly            []string               // read only column names
+	slowQueryTime       int                    // slow query alert time (milliseconds)
+	slowQueryOn         bool                   // enable slow query alert (default off)
+	strCaseWhen         string                 // case..when...then...else...end
+	nearby              *nearby                // nearby
+	joins               []*Join                // inner/left/right/full-outer join(s)
+	noVerbose           bool                   // no more verbose
+	idgen               *snowflake.Node        // snowflake id generator
+	hookMethods         *hookMethods           // hook methods
+	insertIgnore        bool                   // insert ignore when conflict
+	optfns              []Option               // option functions
+	redisClient         *redigo.Redigo         // redis-go client
+	withReuse           bool                   // reuse where condition atfer query or exec
+	withOverwriteSelect bool                   // overwrite select columns
 }
 
 func init() {
@@ -179,7 +180,7 @@ func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 	var db *sqlx.DB
 	dialOptions := parseDialOption(opts...)
 	if dialOptions.Debug {
-		e.Debug(true)
+		log.SetLevel(log.LEVEL_DEBUG)
 	}
 	if dialOptions.SSH != nil { //SSH tunnel enable
 		param = dialOptions.SSH.openSSHTunnel(param)
@@ -270,8 +271,9 @@ func (e *Engine) SetLogFile(strPath string) {
 }
 
 // Debug log debug mode on or off
-func (e *Engine) Debug(ok bool) {
-	e.setDebug(ok)
+func (e *Engine) Debug(args ...any) *Engine {
+	e.noVerbose = true
+	return e
 }
 
 // Model orm model
@@ -1365,13 +1367,7 @@ func (e *Engine) PrepareExec(query string, exec func(stmt *sqlx.Stmt) error) (er
 //
 // 调用内部 addPreload 方法，实现预加载功能
 //
-//	db.Preload("Orders", "state NOT IN (?)", "cancelled").Query(&users)
+//	db.Preload("Orders", "state=?", 1).Query(&users)
 func (e *Engine) Preload(query string, args ...any) *Engine {
 	return e.addPreload(query, args...)
-}
-
-// 复用查询条件
-func (e *Engine) WithReuse() *Engine {
-	e.withReuse = true
-	return e
 }

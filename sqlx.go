@@ -145,7 +145,7 @@ func (e *Engine) clone(models ...any) *Engine {
 			strDatabaseName: e.strDatabaseName,
 			dbTags:          e.dbTags,
 			bForce:          e.bForce,
-			noVerbose:       e.noVerbose,
+			verbose:         e.verbose,
 			bAutoRollback:   e.bAutoRollback,
 			slowQueryOn:     e.slowQueryOn,
 			slowQueryTime:   e.slowQueryTime,
@@ -244,7 +244,7 @@ func (e *Engine) txQuery(dest interface{}, strSql string, args ...any) (count in
 
 	rows, err = e.tx.Query(strSql)
 	if err != nil {
-		if !e.noVerbose {
+		if e.verbose {
 			log.Errorf("query tx sql [%v] args %v query error [%v] auto rollback [%v]", strSql, args, err.Error(), e.bAutoRollback)
 		}
 		e.autoRollback()
@@ -254,7 +254,7 @@ func (e *Engine) txQuery(dest interface{}, strSql string, args ...any) (count in
 
 	defer rows.Close()
 	if count, err = e.fetchRows(rows); err != nil {
-		if !e.noVerbose {
+		if e.verbose {
 			log.Errorf("query tx sql [%v] args %v fetch row error [%v] auto rollback [%v]", strSql, args, err.Error(), e.bAutoRollback)
 		}
 		e.autoRollback()
@@ -288,14 +288,14 @@ func (e *Engine) mysqlQueryUpsert(strSQL string) (lastInsertId int64, err error)
 		db := e.getDB()
 		r, err = db.Exec(strSQL)
 		if err != nil {
-			if !e.noVerbose {
+			if e.verbose {
 				log.Errorf("error %v model %+v", err, e.model)
 			}
 			return
 		}
 		lastInsertId, err = r.LastInsertId()
 		if err != nil {
-			if !e.noVerbose {
+			if e.verbose {
 				log.Errorf("get last insert id error %v model %+v", err, e.model)
 			}
 			return
@@ -1414,14 +1414,14 @@ func (e *Engine) setNormalCondition(query any, args ...any) *Engine {
 	return e
 }
 
-func (e *Engine) verbose(msg string, args ...any) {
+func (e *Engine) printVerbose(msg string, args ...any) {
 	var isError bool
 	for _, arg := range args {
 		if _, ok := arg.(error); ok {
 			isError = true
 		}
 	}
-	if !e.noVerbose {
+	if e.verbose {
 		msg = strings.TrimSpace(msg)
 		if isError {
 			log.Errorf(msg, args...)

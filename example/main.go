@@ -11,24 +11,23 @@ import (
 	"github.com/civet148/sqlca/v3/example/models"
 )
 
-func main() {
+var db *sqlca.Engine
+
+func init() {
 	var err error
-	var db *sqlca.Engine
 	var opts = []sqlca.Option{
 		sqlca.WithDebug(),
 		sqlca.WithMaxConn(100),
 		sqlca.WithIdleConn(5),
-		//SSH tunnel config
-		//sqlca.WithSSH(&sqlca.SSH{
+		//sqlca.WithSSH(&sqlca.SSH{ //SSH tunnel config
 		//	User:     "root",
 		//	Password: "123456",
-		//	Host:     "192.168.2.19:22",
+		//	Host:     "192.168.0.19:22",
 		//}),
-		//redis distribution lock config
-		sqlca.WithRedisConfig(&sqlca.RedisConfig{
+		sqlca.WithRedisConfig(&sqlca.RedisConfig{ //redis distribution lock config
 			Address: "127.0.0.1:6379",
 		}),
-		sqlca.WithSnowFlake(&sqlca.SnowFlake{
+		sqlca.WithSnowFlake(&sqlca.SnowFlake{ // snowflake algorithm config
 			NodeId: 1,
 		}),
 		sqlca.WithAutoMigrate(),
@@ -38,7 +37,6 @@ func main() {
 		log.Errorf("connect database error: %s", err)
 		return
 	}
-
 	// 1. 自动迁移模型
 	requireNoError(MigrateAllModels(db))
 
@@ -50,69 +48,71 @@ func main() {
 
 	// 4. 验证数据插入
 	requireNoError(VerifyTestData(db))
+}
 
-	// 5. 测试关联查询
-	requireNoError(TestPreload(db))
-
-	// 6. 测试更新功能
-	requireNoError(TestUpdate(db))
-
-	// 7. 测试删除功能
-	requireNoError(TestDelete(db))
-
-	// 8. 测试事务处理
-	requireNoError(TestTransaction(db))
-
-	// 9. 测试批量插入
-	requireNoError(TestInsertBatch(db))
-
-	// 10. 测试查询限制
-	requireNoError(TestQueryLimit(db))
-
-	// 11. 测试查询无结果
-	requireError(TestQueryErrNotFound(db))
-
-	// 12. 测试分页查询
-	requireNoError(TestQueryByPage(db))
-
-	// 13. 测试条件查询
-	requireNoError(TestQueryByCondition(db))
-
-	// 14. 测试分组查询
-	requireNoError(TestQueryByGroup(db))
-
-	// 15. 测试统计行数
-	requireNoError(TestQueryCountRows(db))
-
-	// 16. 测试联表查询
-	requireNoError(TestQueryJoins(db))
-
-	// 17. 测试 OR 条件查询
-	requireNoError(TestQueryOr(db))
-
-	// 18. 测试原始 SQL 查询
-	requireNoError(TestQueryRawSQL(db))
-
-	// 19. 测试普通变量查询
+func main() {
+	// 测试普通变量查询
 	requireNoError(TestQueryByNormalVars(db))
 
-	// 20. 测试 JSON 字段查询
+	// 测试关联查询
+	requireNoError(TestPreload(db))
+
+	// 测试更新功能
+	requireNoError(TestUpdate(db))
+
+	// 测试删除功能
+	requireNoError(TestDelete(db))
+
+	// 测试事务处理
+	requireNoError(TestTransaction(db))
+
+	// 测试批量插入
+	requireNoError(TestInsertBatch(db))
+
+	// 测试查询限制
+	requireNoError(TestQueryLimit(db))
+
+	// 测试查询无结果
+	requireError(TestQueryErrNotFound(db))
+
+	// 测试分页查询
+	requireNoError(TestQueryByPage(db))
+
+	// 测试条件查询
+	requireNoError(TestQueryByCondition(db))
+
+	// 测试分组查询
+	requireNoError(TestQueryByGroup(db))
+
+	// 测试统计行数
+	requireNoError(TestQueryCountRows(db))
+
+	// 测试联表查询
+	requireNoError(TestQueryJoins(db))
+
+	// 测试 OR 条件查询
+	requireNoError(TestQueryOr(db))
+
+	// 测试原始 SQL 查询
+	requireNoError(TestQueryRawSQL(db))
+
+	// 测试 JSON 字段查询
 	requireNoError(TestQueryWithJsonColumn(db))
 
-	// 21. 测试通过 Map 更新
+	// 测试通过 Map 更新
 	requireNoError(TestUpdateByMap(db))
 
-	// 22. 测试事务封装
+	// 测试事务封装
 	requireNoError(TestTransactionWrapper(db))
 
-	// 23. 测试执行原始 SQL
+	// 测试执行原始 SQL
 	requireNoError(TestExecRawSQL(db))
 
-	// 24. 测试地理位置坐标操作
+	// 测试地理位置坐标操作
 	requireNoError(TestUpsertPoint(db))
 	requireNoError(TestUpdatePointByExpress(db))
 
-	// 25. 测试分布式锁
+	// 测试分布式锁
 	// requireNoError(TestDistributionLock(db))
 
 	log.Infof("所有测试验证通过！")
@@ -761,6 +761,7 @@ func TestQueryByNormalVars(db *sqlca.Engine) (err error) {
 	}
 
 	_, err = db.Model(&name, &serialNo).
+		Debug().
 		Table("inventory_data").
 		Select("name, serial_no").
 		Id(inventory.Id).

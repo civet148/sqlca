@@ -755,7 +755,7 @@ func (e *Engine) isExcluded(strCol string) bool {
 	return false
 }
 
-func (e *Engine) isEmpty(strCol string) bool {
+func (e *Engine) isNullColumn(strCol string) bool {
 
 	for _, v := range e.nullableColumns {
 		if v == strCol {
@@ -1011,7 +1011,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 		cols2, values = e.getStructSliceKeyValues(true)
 		for i, v := range cols2 {
 
-			if e.isReadOnly(v) || e.isExcluded(v) || e.isEmpty(v) {
+			if e.isReadOnly(v) || e.isExcluded(v) {
 				excludeIndexes = append(excludeIndexes, i) //index of exclude columns slice
 				continue
 			}
@@ -1037,7 +1037,7 @@ func (e *Engine) getInsertColumnsAndValues() (strQuoteColumns, strColonValues st
 		}
 	} else {
 		for k, v := range e.dict {
-			if e.isReadOnly(k) || e.isExcluded(k) || e.isEmpty(k) {
+			if e.isReadOnly(k) || e.isExcluded(k) || e.isNullColumn(k) {
 				continue
 			}
 			v = convertBool2Int(v)

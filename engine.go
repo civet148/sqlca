@@ -1368,3 +1368,7 @@ func (e *Engine) PrepareExec(query string, exec func(stmt *sqlx.Stmt) error) (er
 func (e *Engine) Preload(query string, args ...any) *Engine {
 	return e.addPreload(query, args...)
 }
+
+func (e *Engine) GetRedisClient() *redigo.Redigo {
+	return e.redisClient
+}

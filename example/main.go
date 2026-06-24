@@ -115,6 +115,9 @@ func main() {
 	// 测试分布式锁
 	// requireNoError(TestDistributionLock(db))
 
+	// 测试通过sqlca.Engine对象获取Where条件
+	requireNoError(TestConditionFromSqlcaEngine(db))
+
 	log.Infof("所有测试验证通过！")
 }
 
@@ -942,5 +945,23 @@ func TestDistributionLock(db *sqlca.Engine) (err error) {
 		return log.Errorf(err.Error())
 	}
 	log.Infof("分布式锁测试通过，受影响的行数：%d", rows)
+	return nil
+}
+
+func TestConditionFromSqlcaEngine(db *sqlca.Engine) (err error) {
+	// 测试查询限制
+	var dos []*models.InventoryData
+	db.Model(&models.InventoryData{}).
+		Select("id, name, serial_no, quantity, product_extra").
+		Limit(5).
+		Desc("created_at")
+
+	db2 := db.Model(&dos).Select("*").Where(db).Where("id > ?", 0)
+
+	var count int64
+	if count, err = db2.Query(); err != nil {
+		return log.Errorf("数据查询错误：%s", err)
+	}
+	log.Infof("1.查询结果数据条数: %d", count)
 	return nil
 }

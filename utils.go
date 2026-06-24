@@ -21,6 +21,7 @@ const (
 	queryInterface_Unknown queryInterfaceType = 0
 	queryInterface_String  queryInterfaceType = 1
 	queryInterface_Map     queryInterfaceType = 2
+	queryInterface_Sqlca   queryInterfaceType = 3
 )
 
 func NewSqlClause(fmts string, args ...any) *types.SqlClauseValue {
@@ -112,6 +113,10 @@ func parseQueryInterface(query interface{}) queryInterfaceType {
 		return queryInterface_Map
 	case string:
 		return queryInterface_String
+	default:
+		if _, ok := query.(*Engine); ok {
+			return queryInterface_Sqlca
+		}
 	}
 	return queryInterface_Unknown
 }

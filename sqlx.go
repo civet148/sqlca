@@ -1154,8 +1154,12 @@ func (e *Engine) makeNotCondition(cond types.Expr) (strCondition string, args []
 	return
 }
 
-func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool) (strWhere string, args []any) {
+func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool, noKeywords ...bool) (strWhere string, args []any) {
 
+	var noKeyword bool
+	if len(noKeywords) > 0 {
+		noKeyword = noKeywords[0]
+	}
 	if !e.isPkValueNil() {
 		strWhere += e.getPkWhere()
 	}
@@ -1213,12 +1217,15 @@ func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool) (strWh
 		}
 	}
 
+	if noKeyword {
+		return strWhere, args
+	}
 	if strWhere != "" {
 		strWhere = types.DATABASE_KEY_NAME_WHERE + " " + strWhere
 	} else {
 		strWhere = types.DATABASE_KEY_NAME_WHERE
 	}
-	return
+	return strWhere, args
 }
 
 func (e *Engine) makeSqlxQuery(rawSQL bool) (strSqlx string, args []any) {
@@ -1391,6 +1398,13 @@ func (e *Engine) parseQueryAndMap(query any) {
 	}
 }
 
+func (e *Engine) parseQuerySqlca(query any) {
+	if db, ok := query.(*Engine); ok {
+		querier, args := db.makeWhereCondition(types.OperType_Query, false, true)
+		e.setNormalCondition(querier, args...)
+	}
+}
+
 func (e *Engine) parseQueryOrMap(query any) {
 	var qss []types.Expr
 	where := query.(map[string]any)
@@ -1411,6 +1425,8 @@ func (e *Engine) setNormalCondition(query any, args ...any) *Engine {
 		e.andConditions = append(e.andConditions, expr)
 	case queryInterface_Map:
 		e.parseQueryAndMap(query)
+	case queryInterface_Sqlca:
+		e.parseQuerySqlca(query)
 	}
 	return e
 }

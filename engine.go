@@ -1284,13 +1284,19 @@ func (e *Engine) NewContext(ctx context.Context) context.Context {
 }
 
 func NewContext(ctx context.Context, e *Engine) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	ctx = context.WithValue(ctx, types.SqlcaContextKey, e)
 	return ctx
 }
 
-func FromContext(ctx context.Context) *Engine {
+func FromContext(ctx context.Context) (e *Engine, ok bool) {
 	v := ctx.Value(types.SqlcaContextKey)
-	return v.(*Engine)
+	if v == nil {
+		return nil, false
+	}
+	return v.(*Engine), true
 }
 
 func NewExpr(query string, args ...any) *types.Expr {

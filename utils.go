@@ -291,3 +291,7 @@ func ConvertVal[T any](v *T) (ret T) {
 	}
 	return *v
 }
+
+func SurroundBackticks(s string) string {
+	return fmt.Sprintf("`%s`", s)
+}

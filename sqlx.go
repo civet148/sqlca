@@ -115,9 +115,9 @@ func (e *Engine) setStructTableName(typSt reflect.Type) {
 	}
 	valSt := reflect.New(typSt)
 	if tabler, ok := valSt.Interface().(types.Tabler); ok {
-		e.setTableName(tabler.TableName())
+		e.setTableName(SurroundBackticks(tabler.TableName()))
 	} else {
-		e.setTableName(strings.ToLower(convertCamelToSnake(typSt.Name())))
+		e.setTableName(SurroundBackticks(strings.ToLower(convertCamelToSnake(typSt.Name()))))
 	}
 }
 

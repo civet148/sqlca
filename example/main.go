@@ -838,7 +838,7 @@ func TestTransactionWrapper(db *sqlca.Engine) (err error) {
 			UserId:    3,
 			UserName:  "testuser",
 			Quantity:  quantity,
-			Weight:    sqlca.NewDecimal(weight),
+			Weight:    weight,
 			Remark:    "产品入库",
 		}).Insert()
 		if err != nil {

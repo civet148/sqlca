@@ -5,25 +5,17 @@ OUT_DIR=.
 # 数据模型文件包名
 PACK_NAME="models"
 # 只读字段(不更新)
-READ_ONLY="create_time, update_time"
+READ_ONLY=""
 # 指定表名(不指定则整个数据库全部导出,排除某个表则在前面加-符号)
 TABLE_NAME="-users"
 # 忽略字段名(逗号分隔)
-WITH_OUT=""
+WITH_OUT="created_at,updated_at"
 # 添加标签
 TAGS="gorm"
-# TINYINT转换成bool
-TINYINT_TO_BOOL="deleted,is_admin,disable"
 # 数据库连接源DSN
 DSN_URL="mysql://root:123456@127.0.0.1:3306/test?charset=utf8"
-# JSON属性
-JSON_PROPERTIES="omitempty"
 # 指定某表的某字段为指定类型,多个表字段以英文逗号分隔（例如：user.create_time=time.Time表示指定user表create_time字段为time.Time类型; 如果不指定表名则所有表的create_time字段均为time.Time类型；支持第三方包类型，例如：user.weight=github.com/shopspring/decimal.Decimal）
 SPEC_TYPES="inventory_data.product_extra=*ProductExtraData, is_frozen=FrozenState, price=*float64, quantity=float64, delete_time=*time.Time"
-# 导入models路径(仅生成DAO文件使用)
-IMPORT_MODELS="github.com/civet148/sqlca/v3/demo/models"
-# 基础模型声明(指定基础模型类型和字段)
-BASE_MODEL="BaseModel=created_at,updated_at"
 # 指定生成数据库建表SQL输出文件路径
 DEPLOY_SQL="test.sql"
 
@@ -41,10 +33,8 @@ if ! which db2go >/dev/null 2>&1; then
     fi
 fi
 
-db2go --url "$DSN_URL" --out "$OUT_DIR" --table "$TABLE_NAME" --json-properties "$JSON_PROPERTIES" \
-      --package "$PACK_NAME" --readonly "$READ_ONLY" --enable-decimal  --spec-type "$SPEC_TYPES" \
-      --without "$WITH_OUT" --tinyint-as-bool "$TINYINT_TO_BOOL" --tag "$TAGS" \
-       --base-model "$BASE_MODEL" --export "$DEPLOY_SQL" # --dao dao --import-models "$IMPORT_MODELS"
+db2go go --url "$DSN_URL" --out "$OUT_DIR" --table "$TABLE_NAME" --package "$PACK_NAME" --readonly "$READ_ONLY" \
+      --spec-type "$SPEC_TYPES" --without "$WITH_OUT" --tag "$TAGS" --ddl "$DEPLOY_SQL"
 
 echo "generate go file ok, formatting..."
 gofmt -w $OUT_DIR/$PACK_NAME

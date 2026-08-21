@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/civet148/sqlca/v3"
 	"time"
+
+	"github.com/civet148/sqlca/v3"
 )
 
 const TableNameInventoryData = "inventory_data"
@@ -22,37 +23,24 @@ const (
 	InventoryDataColumn_UpdateName   = "update_name"
 )
 
-const (
-	INVENTORY_DATA_COLUMN_ID            = "id"
-	INVENTORY_DATA_COLUMN_CREATED_AT    = "created_at"
-	INVENTORY_DATA_COLUMN_UPDATED_AT    = "updated_at"
-	INVENTORY_DATA_COLUMN_IS_FROZEN     = "is_frozen"
-	INVENTORY_DATA_COLUMN_NAME          = "name"
-	INVENTORY_DATA_COLUMN_SERIAL_NO     = "serial_no"
-	INVENTORY_DATA_COLUMN_QUANTITY      = "quantity"
-	INVENTORY_DATA_COLUMN_PRICE         = "price"
-	INVENTORY_DATA_COLUMN_LOCATION      = "location"
-	INVENTORY_DATA_COLUMN_PRODUCT_EXTRA = "product_extra"
-	INVENTORY_DATA_COLUMN_CREATE_ID     = "create_id"
-	INVENTORY_DATA_COLUMN_CREATE_NAME   = "create_name"
-	INVENTORY_DATA_COLUMN_UPDATE_ID     = "update_id"
-	INVENTORY_DATA_COLUMN_UPDATE_NAME   = "update_name"
-)
-
 type InventoryData struct {
 	Id           uint64            `json:"id" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`
-	IsFrozen     FrozenState       `json:"is_frozen" db:"is_frozen" gorm:"column:is_frozen;type:tinyint(1);default:0;" sqlca:"isnull"`
-	Name         string            `json:"name" db:"name" gorm:"column:name;type:varchar(255);default:null;comment:产品：名称；不能为空;" sqlca:"isnull"`                                       //产品：名称；不能为空
-	SerialNo     string            `json:"serial_no" db:"serial_no" gorm:"column:serial_no;type:varchar(64);index:i_serial_no,priority:1;default:null;comment:产品序列号;" sqlca:"isnull"` //产品序列号
-	Quantity     float64           `json:"quantity" db:"quantity" gorm:"column:quantity;type:decimal(16,3);default:0.000;" sqlca:"isnull"`
-	Price        *float64          `json:"price" db:"price" gorm:"column:price;type:decimal(16,2);default:0.00;" sqlca:"isnull"`
-	Location     sqlca.Point       `json:"location" db:"location" gorm:"column:location;type:point;default:null;" sqlca:"isnull"`
-	ProductExtra *ProductExtraData `json:"product_extra" db:"product_extra" gorm:"column:product_extra;type:json;default:null;" sqlca:"isnull"`
-	CreateId     uint64            `json:"create_id" db:"create_id" gorm:"column:create_id;type:bigint unsigned;default:0;" sqlca:"isnull"`
-	CreateName   string            `json:"create_name" db:"create_name" gorm:"column:create_name;type:varchar(64);default:null;" sqlca:"isnull"`
-	UpdateId     uint64            `json:"update_id" db:"update_id" gorm:"column:update_id;type:bigint unsigned;default:0;" sqlca:"isnull"`
-	UpdateName   string            `json:"update_name" db:"update_name" gorm:"column:update_name;type:varchar(64);default:null;" sqlca:"isnull"`
+	IsFrozen     FrozenState       `json:"is_frozen" db:"is_frozen" gorm:"column:is_frozen;type:tinyint(1);default:0;" sqlca:"nullable"`
+	Name         string            `json:"name" db:"name" gorm:"column:name;type:varchar(255);default:null;comment:产品：名称；不能为空;" sqlca:"nullable"`                                       //产品：名称；不能为空
+	SerialNo     string            `json:"serial_no" db:"serial_no" gorm:"column:serial_no;type:varchar(64);index:i_serial_no,priority:1;default:null;comment:产品序列号;" sqlca:"nullable"` //产品序列号
+	Quantity     float64           `json:"quantity" db:"quantity" gorm:"column:quantity;type:decimal(16,3);default:0.000;" sqlca:"nullable"`
+	Price        *float64          `json:"price" db:"price" gorm:"column:price;type:decimal(16,2);default:0.00;" sqlca:"nullable"`
+	Location     sqlca.Point       `json:"location" db:"location" gorm:"column:location;type:point;default:null;" sqlca:"nullable"`
+	ProductExtra *ProductExtraData `json:"product_extra" db:"product_extra" gorm:"column:product_extra;type:json;default:null;" sqlca:"nullable"`
+	CreateId     uint64            `json:"create_id" db:"create_id" gorm:"column:create_id;type:bigint unsigned;default:0;" sqlca:"nullable"`
+	CreateName   string            `json:"create_name" db:"create_name" gorm:"column:create_name;type:varchar(64);default:null;" sqlca:"nullable"`
+	UpdateId     uint64            `json:"update_id" db:"update_id" gorm:"column:update_id;type:bigint unsigned;default:0;" sqlca:"nullable"`
+	UpdateName   string            `json:"update_name" db:"update_name" gorm:"column:update_name;type:varchar(64);default:null;" sqlca:"nullable"`
 	BaseModel
+}
+
+func (do InventoryData) DatabaseName() string {
+	return "test"
 }
 
 func (do InventoryData) TableName() string {

@@ -154,7 +154,7 @@ func (s *ModelReflector) parseStructFields(typ reflect.Type, val reflect.Value, 
 			var tagSqlca string
 			tagSqlca, ignore = s.getTag(typField, types.TAG_NAME_SQLCA)
 			if !ignore {
-				if tagSqlca == types.SQLCA_TAG_VALUE_IS_NULL {
+				if tagSqlca == types.SQLCA_TAG_VALUE_IS_NULL || tagSqlca == types.SQLCA_TAG_VALUE_NULLABLE {
 					s.engine.setNullableColumns(tagVal)
 				}
 			}

@@ -13,21 +13,16 @@ const (
 	UserProfilesColumn_Address = "address"
 )
 
-const (
-	USER_PROFILES_COLUMN_ID         = "id"
-	USER_PROFILES_COLUMN_CREATED_AT = "created_at"
-	USER_PROFILES_COLUMN_UPDATED_AT = "updated_at"
-	USER_PROFILES_COLUMN_USER_ID    = "user_id"
-	USER_PROFILES_COLUMN_AVATAR     = "avatar"
-	USER_PROFILES_COLUMN_ADDRESS    = "address"
-)
-
 type UserProfile struct {
 	Id      uint64 `json:"id" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`
-	UserId  uint64 `json:"user_id" db:"user_id" gorm:"column:user_id;type:bigint unsigned;uniqueIndex:idx_user_profiles_user_id,priority:1;default:null;" sqlca:"isnull"`
-	Avatar  string `json:"avatar" db:"avatar" gorm:"column:avatar;type:varchar(512);default:null;" sqlca:"isnull"`
-	Address string `json:"address" db:"address" gorm:"column:address;type:varchar(128);default:null;" sqlca:"isnull"`
+	UserId  uint64 `json:"user_id" db:"user_id" gorm:"column:user_id;type:bigint unsigned;uniqueIndex:idx_user_profiles_user_id,priority:1;default:null;" sqlca:"nullable"`
+	Avatar  string `json:"avatar" db:"avatar" gorm:"column:avatar;type:varchar(512);default:null;" sqlca:"nullable"`
+	Address string `json:"address" db:"address" gorm:"column:address;type:varchar(128);default:null;" sqlca:"nullable"`
 	BaseModel
+}
+
+func (do UserProfile) DatabaseName() string {
+	return "test"
 }
 
 func (do UserProfile) TableName() string {

@@ -21,6 +21,7 @@ const (
 	SQLCA_TAG_VALUE_AUTO_INCR       = "autoincr"       //auto increment
 	SQLCA_TAG_VALUE_READ_ONLY       = "readonly"       //read only
 	SQLCA_TAG_VALUE_IS_NULL         = "isnull"         //is nullable
+	SQLCA_TAG_VALUE_NULLABLE        = "nullable"       //is nullable
 	SQLCA_TAG_VALUE_IGNORE          = "-"              //ignore
 	GORM_TAG_VALUE_AUTO_CREATE_TIME = "autoCreateTime" //gorm:"autoCreateTime"
 	GORM_TAG_VALUE_AUTO_UPDATE_TIME = "autoUpdateTime" //gorm:"autoUpdateTime"

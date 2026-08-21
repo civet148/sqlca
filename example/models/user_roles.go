@@ -11,17 +11,14 @@ const (
 	UserRolesColumn_RoleId = "role_id"
 )
 
-const (
-	USER_ROLES_COLUMN_USER_ID    = "user_id"
-	USER_ROLES_COLUMN_ROLE_ID    = "role_id"
-	USER_ROLES_COLUMN_CREATED_AT = "created_at"
-	USER_ROLES_COLUMN_UPDATED_AT = "updated_at"
-)
-
 type UserRole struct {
 	UserId uint64 `json:"user_id" db:"user_id" gorm:"column:user_id;type:bigint unsigned;;default:0;"`
 	RoleId uint64 `json:"role_id" db:"role_id" gorm:"column:role_id;type:bigint unsigned;index:fk_user_roles_role,priority:1;;default:0;"`
 	BaseModel
+}
+
+func (do UserRole) DatabaseName() string {
+	return "test"
 }
 
 func (do UserRole) TableName() string {

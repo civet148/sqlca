@@ -11,17 +11,14 @@ const (
 	RolesColumn_Name = "name"
 )
 
-const (
-	ROLES_COLUMN_ID         = "id"
-	ROLES_COLUMN_CREATED_AT = "created_at"
-	ROLES_COLUMN_UPDATED_AT = "updated_at"
-	ROLES_COLUMN_NAME       = "name"
-)
-
 type Role struct {
 	Id   uint64 `json:"id" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`
-	Name string `json:"name" db:"name" gorm:"column:name;type:varchar(64);uniqueIndex:idx_roles_name,priority:1;default:null;" sqlca:"isnull"`
+	Name string `json:"name" db:"name" gorm:"column:name;type:varchar(64);uniqueIndex:idx_roles_name,priority:1;default:null;" sqlca:"nullable"`
 	BaseModel
+}
+
+func (do Role) DatabaseName() string {
+	return "test"
 }
 
 func (do Role) TableName() string {

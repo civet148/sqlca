@@ -1431,6 +1431,12 @@ func (e *Engine) setNormalCondition(query any, args ...any) *Engine {
 	return e
 }
 
+func (e *Engine) printQuery(query string, args ...any) {
+	if e.verbose {
+		log.Debugf("caller [%v] query [%s] args %v", e.getCaller(2), query, args)
+	}
+}
+
 func (e *Engine) printVerbose(msg string, args ...any) {
 	var isError bool
 	for _, arg := range args {

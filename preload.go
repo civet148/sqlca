@@ -266,6 +266,7 @@ func (e *Engine) loadMany2ManyAssociation(mainModelValue reflect.Value, fieldVal
 
 	var assocIDs []interface{}
 	junctionQuery := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?", junctionPK2, junctionTable, junctionPK1)
+	e.printQuery(junctionQuery, mainPKValue)
 	rows, err := e.db.Query(junctionQuery, mainPKValue)
 	if err != nil {
 		return fmt.Errorf("failed to query junction table: %v", err)
@@ -423,6 +424,7 @@ func (e *Engine) loadMany2ManyAssociation(mainModelValue reflect.Value, fieldVal
 	e.model = resultSlice.Addr().Interface()
 
 	// 查询关联数据
+	e.printQuery(finalQuery, queryArgs...)
 	rows, err = e.db.Query(finalQuery, queryArgs...)
 	if err != nil {
 		e.model = originalModel
@@ -529,6 +531,7 @@ func (e *Engine) loadForeignKeyAssociation(mainModelValue reflect.Value, fieldVa
 	e.model = assocModel
 
 	// 查询关联数据
+	e.printQuery(query, fkValue)
 	rows, err := e.db.Query(query, fkValue)
 	if err != nil {
 		e.model = originalModel
@@ -646,6 +649,7 @@ func (e *Engine) loadReferenceAssociation(mainModelValue reflect.Value, fieldVal
 	e.model = assocModel
 
 	// 查询关联数据
+	e.printQuery(query, refValue)
 	rows, err := e.db.Query(query, refValue)
 	if err != nil {
 		e.model = originalModel
@@ -807,7 +811,7 @@ func (e *Engine) loadForeignKeyAssociationBatch(elements []reflect.Value, pkValu
 	// 临时设置模型为关联模型切片
 	originalModel := e.model
 	e.model = resultSlice.Addr().Interface()
-
+	e.printQuery(query, queryArgs...)
 	rows, err := e.db.Query(query, queryArgs...)
 	if err != nil {
 		e.model = originalModel
@@ -908,7 +912,7 @@ func (e *Engine) loadMany2ManyAssociationBatch(elements []reflect.Value, pkValue
 		inClause = strings.Join(inPlace, ", ")
 		junctionQuery = fmt.Sprintf("SELECT %s, %s FROM %s WHERE %s IN (%s)", junctionPK1, junctionPK2, junctionTable, junctionPK1, inClause)
 	}
-
+	e.printQuery(junctionQuery, junctionArgs...)
 	junctionRows, err := e.db.Query(junctionQuery, junctionArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to batch query junction table: %v", err)
@@ -1012,7 +1016,7 @@ func (e *Engine) loadMany2ManyAssociationBatch(elements []reflect.Value, pkValue
 
 	originalModel := e.model
 	e.model = resultSlice.Addr().Interface()
-
+	e.printQuery(assocQuery, totalArgs...)
 	assocRows, err := e.db.Query(assocQuery, totalArgs...)
 	if err != nil {
 		e.model = originalModel
@@ -1205,7 +1209,7 @@ func (e *Engine) loadReferenceAssociationBatch(elements []reflect.Value, pkValue
 
 	originalModel := e.model
 	e.model = resultSlice.Addr().Interface()
-
+	e.printQuery(query, queryArgs...)
 	rows, err := e.db.Query(query, queryArgs...)
 	if err != nil {
 		e.model = originalModel

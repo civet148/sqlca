@@ -134,9 +134,13 @@ func requireError(err error) {
 }
 
 func MigrateAllModels(db *sqlca.Engine) (err error) {
-	return db.AutoMigrate(context.Background(), nil,
+	return db.AutoMigrate(context.Background(), AfterMigrate,
 		&models.User{}, &models.UserProfile{}, &models.Role{}, &models.UserRole{},
 		&models.InventoryData{}, &models.InventoryIn{}, &models.InventoryOut{})
+}
+
+func AfterMigrate(ctx context.Context, db *sqlca.Engine) {
+	log.Infof("数据表迁移成功...")
 }
 
 func CleanAllData(db *sqlca.Engine) (err error) {

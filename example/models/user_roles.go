@@ -12,18 +12,14 @@ const (
 )
 
 type UserRole struct {
-	UserId uint64 `gorm:"primaryKey;column:user_id;type:bigint unsigned;not null;default:0;index:fk_user_roles_user,priority:1;comment:用户ID" json:"user_id"`
-	RoleId uint64 `gorm:"primaryKey;column:role_id;type:bigint unsigned;not null;default:0;index:fk_user_roles_role,priority:1;comment:角色ID" json:"role_id"`
+	UserId uint64 `json:"user_id" db:"user_id" gorm:"column:user_id;type:bigint unsigned;index:fk_user_roles_user,priority:1;primarykey;default:0;not null;"`
+	RoleId uint64 `json:"role_id" db:"role_id" gorm:"column:role_id;type:bigint unsigned;index:fk_user_roles_role,priority:1;primarykey;default:0;not null;"`
 	BaseModel
 }
 
-func (do UserRole) DatabaseName() string {
-	return "test"
-}
+func (do UserRole) DatabaseName() string { return "test" }
 
-func (do UserRole) TableName() string {
-	return TableNameUserRoles
-}
+func (do UserRole) TableName() string { return TableNameUserRoles }
 
 func (do UserRole) GetUserId() uint64 { return do.UserId }
 

@@ -15,19 +15,15 @@ const (
 
 type UserProfile struct {
 	Id      uint64 `json:"id" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`
-	UserId  uint64 `json:"user_id" db:"user_id" gorm:"column:user_id;type:bigint unsigned;uniqueIndex:idx_user_profiles_user_id,priority:1;default:null;" sqlca:"nullable"`
-	Avatar  string `json:"avatar" db:"avatar" gorm:"column:avatar;type:varchar(512);default:null;" sqlca:"nullable"`
-	Address string `json:"address" db:"address" gorm:"column:address;type:varchar(128);default:null;" sqlca:"nullable"`
+	UserId  uint64 `json:"user_id" db:"user_id" gorm:"column:user_id;type:bigint unsigned;uniqueIndex:idx_user_profiles_user_id,priority:1;null;" sqlca:"nullable"`
+	Avatar  string `json:"avatar" db:"avatar" gorm:"column:avatar;type:varchar(512);null;" sqlca:"nullable"`
+	Address string `json:"address" db:"address" gorm:"column:address;type:varchar(128);null;" sqlca:"nullable"`
 	BaseModel
 }
 
-func (do UserProfile) DatabaseName() string {
-	return "test"
-}
+func (do UserProfile) DatabaseName() string { return "test" }
 
-func (do UserProfile) TableName() string {
-	return TableNameUserProfiles
-}
+func (do UserProfile) TableName() string { return TableNameUserProfiles }
 
 func (do UserProfile) GetId() uint64 { return do.Id }
 

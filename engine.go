@@ -14,7 +14,7 @@ import (
 	"github.com/bwmarrin/snowflake"
 	"github.com/civet148/log"
 	"github.com/civet148/redigo"
-	"github.com/civet148/sqlca/v3/types"
+	types2 "github.com/civet148/sqlca/v3/internal/types"
 	"gorm.io/gorm/logger"
 	//_ "github.com/denisenkom/go-mssqldb" //mssql golang driver
 	"github.com/gansidui/geohash"
@@ -61,10 +61,10 @@ type Engine struct {
 	options          *dialOption            // database options
 	db               *sqlx.DB               // DB instance masters
 	tx               *sqlx.Tx               // sql tx instance
-	adapterType      types.AdapterType      // what's adapter
-	adapterCache     types.AdapterType      // what's adapter of cache
-	modelType        types.ModelType        // model type
-	operType         types.OperType         // operation type
+	adapterType      types2.AdapterType     // what's adapter
+	adapterCache     types2.AdapterType     // what's adapter of cache
+	modelType        types2.ModelType       // model type
+	operType         types2.OperType        // operation type
 	expireTime       int                    // cache expire time of seconds
 	bForce           bool                   // force update/insert read only column(s)
 	bAutoRollback    bool                   // auto rollback when tx error occurred
@@ -87,10 +87,10 @@ type Engine struct {
 	groupByColumns   []string               // group by columns
 	preloads         map[string][]any       // addPreload query and args
 	havingCondition  string                 // having condition
-	inConditions     []types.Expr           // in condition
-	notConditions    []types.Expr           // not in condition
-	andConditions    []types.Expr           // and condition
-	orConditions     []types.Expr           // or condition
+	inConditions     []types2.Expr          // in condition
+	notConditions    []types2.Expr          // not in condition
+	andConditions    []types2.Expr          // and condition
+	orConditions     []types2.Expr          // or condition
 	dbTags           []string               // custom db tag names
 	readOnly         []string               // read only column names
 	slowQueryTime    int                    // slow query alert time (milliseconds)
@@ -118,27 +118,27 @@ func init() {
 */
 func NewEngine(strUrl string, opts ...Option) (*Engine, error) {
 	e := &Engine{
-		strPkName:     types.DEFAULT_PRIMARY_KEY_NAME,
-		expireTime:    types.DEFAULT_CAHCE_EXPIRE_SECONDS,
-		slowQueryTime: types.DEFAULT_SLOW_QUERY_ALERT_TIME,
-		adapterType:   types.AdapterSqlx_MySQL,
+		strPkName:     types2.DEFAULT_PRIMARY_KEY_NAME,
+		expireTime:    types2.DEFAULT_CAHCE_EXPIRE_SECONDS,
+		slowQueryTime: types2.DEFAULT_SLOW_QUERY_ALERT_TIME,
+		adapterType:   types2.AdapterSqlx_MySQL,
 		preloads:      make(map[string][]any),
 	}
-	e.dbTags = append(e.dbTags, types.TAG_NAME_DB, types.TAG_NAME_SQLCA, types.TAG_NAME_GORM, types.TAG_NAME_XORM, types.TAG_NAME_PROTOBUF)
+	e.dbTags = append(e.dbTags, types2.TAG_NAME_DB, types2.TAG_NAME_SQLCA, types2.TAG_NAME_GORM, types2.TAG_NAME_XORM, types2.TAG_NAME_PROTOBUF)
 	return e.open(strUrl, opts...)
 }
 
 // get data base driver name and data source name
-func (e *Engine) getDriverNameAndDSN(adapterType types.AdapterType, strUrl string) (driver dsnParameter) {
+func (e *Engine) getDriverNameAndDSN(adapterType types2.AdapterType, strUrl string) (driver dsnParameter) {
 
 	switch adapterType {
-	case types.AdapterSqlx_MySQL:
+	case types2.AdapterSqlx_MySQL:
 		driver = e.parseMysqlUrl(strUrl)
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		driver = e.parsePostgresUrl(strUrl)
-	case types.AdapterSqlx_Sqlite:
+	case types2.AdapterSqlx_Sqlite:
 		driver = e.parseSqliteUrl(strUrl)
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		driver = e.parseMssqlUrl(strUrl)
 	default:
 		panic(fmt.Sprintf("unknown adapter [%s]", adapterType))
@@ -163,14 +163,14 @@ func (e *Engine) getDriverNameAndDSN(adapterType types.AdapterType, strUrl strin
 func (e *Engine) open(strUrl string, opts ...Option) (*Engine, error) {
 
 	var err error
-	var adapter types.AdapterType
+	var adapter types2.AdapterType
 	//var strDriverName, strDSN string
 	us := strings.Split(strUrl, urlSchemeSep)
 	if len(us) != 2 { //default mysql
-		adapter = types.AdapterSqlx_MySQL
+		adapter = types2.AdapterSqlx_MySQL
 		e.dsn = e.parseMysqlDSN(adapter, strUrl)
 	} else {
-		adapter = types.GetAdapterType(us[0])
+		adapter = types2.GetAdapterType(us[0])
 		e.dsn = e.getDriverNameAndDSN(adapter, strUrl)
 	}
 	var param = &e.dsn
@@ -381,7 +381,7 @@ func (e *Engine) Limit(args ...int) *Engine {
 	}
 
 	switch e.adapterType {
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		{
 			e.setLimit(fmt.Sprintf("TOP %v", args[0]))
 		}
@@ -488,7 +488,7 @@ func (e *Engine) Query() (rowsAffected int64, err error) {
 		e.setLimit(fmt.Sprintf("LIMIT %v", e.options.DefaultLimit))
 	}
 
-	strRawSql, _ := e.makeSQL(types.OperType_Query, true)
+	strRawSql, _ := e.makeSQL(types2.OperType_Query, true)
 	stop := e.SqlCounter()
 	defer stop("SQL [%s]", strRawSql)
 	if err = e.execBeforeQueryHooks(); err != nil {
@@ -519,7 +519,7 @@ func (e *Engine) QueryEx() (rowsAffected, total int64, err error) {
 	if e.options.DefaultLimit > 0 && e.strLimit == "" {
 		e.setLimit(fmt.Sprintf("LIMIT %v", e.options.DefaultLimit))
 	}
-	strSql, _ := e.makeSQL(types.OperType_Query, true)
+	strSql, _ := e.makeSQL(types2.OperType_Query, true)
 	stop := e.SqlCounter()
 	defer stop("SQL [%s]", strSql)
 
@@ -568,22 +568,22 @@ func (e *Engine) Insert() (lastInsertId, rowsAffected int64, err error) {
 		return 0, 0, log.Errorf(err.Error())
 	}
 	var strSql string
-	strSql, _ = e.makeSQL(types.OperType_Insert, true)
+	strSql, _ = e.makeSQL(types2.OperType_Insert, true)
 	stop := e.SqlCounter()
 	defer stop("SQL [%s]", strSql)
 
 	switch e.adapterType {
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		{
 			strSql = e.mssqlQueryInsert(strSql)
 		}
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		{
 			strSql = e.postgresQueryInsert(strSql)
 		}
 	}
 
-	if e.operType == types.OperType_Tx {
+	if e.operType == types2.OperType_Tx {
 		lastInsertId, rowsAffected, err = e.TxExec(strSql)
 	} else {
 		lastInsertId, rowsAffected, err = e.mysqlExec(strSql)
@@ -614,21 +614,21 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 
 	defer e.cleanWhereCondition()
 
-	strSql, _ := e.makeSQL(types.OperType_Upsert, true)
+	strSql, _ := e.makeSQL(types2.OperType_Upsert, true)
 	stop := e.SqlCounter()
 	defer stop("SQL [%s]", strSql)
 
 	switch e.adapterType {
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		{
-			if e.operType == types.OperType_Tx {
+			if e.operType == types2.OperType_Tx {
 				return 0, log.Errorf("MSSQL can not use upsert on tx mode")
 			}
 			lastInsertId, err = e.mssqlUpsert(e.makeSqlxInsert())
 		}
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		{
-			if e.operType == types.OperType_Tx {
+			if e.operType == types2.OperType_Tx {
 				return 0, log.Errorf("Postgres can not use upsert on tx mode")
 			}
 			lastInsertId, err = e.postgresQueryUpsert(strSql)
@@ -659,12 +659,12 @@ func (e *Engine) Update() (rowsAffected int64, err error) {
 		return 0, log.Errorf(err.Error())
 	}
 
-	strSql, _ := e.makeSQL(types.OperType_Update, true)
+	strSql, _ := e.makeSQL(types2.OperType_Update, true)
 	stop := e.SqlCounter()
 	defer stop("SQL [%s]", strSql)
 
 	var r sql.Result
-	query, args := e.makeSQL(types.OperType_Update, false)
+	query, args := e.makeSQL(types2.OperType_Update, false)
 
 	r, err = e.exec(query, args...)
 	if err != nil {
@@ -688,7 +688,7 @@ func (e *Engine) Delete() (rowsAffected int64, err error) {
 		return 0, log.Errorf(err.Error())
 	}
 
-	strSql, args := e.makeSQL(types.OperType_Delete, true)
+	strSql, args := e.makeSQL(types2.OperType_Delete, true)
 	defer e.cleanWhereCondition()
 	stop := e.SqlCounter()
 	defer stop("SQL [%s]", strSql)
@@ -754,7 +754,7 @@ func (e *Engine) QueryMap(query string, args ...any) (rowsAffected int64, err er
 	defer stop("SQL [%s]", strSql)
 
 	var queryer sqlx.Queryer
-	if e.operType == types.OperType_Tx {
+	if e.operType == types2.OperType_Tx {
 		queryer = e.tx
 	} else {
 		queryer = e.getDB()
@@ -881,20 +881,20 @@ func (e *Engine) TxCommit() error {
 }
 
 // make SQL from orm model and operation type
-func (e *Engine) ToSQL(operType types.OperType) (strSql string) {
+func (e *Engine) ToSQL(operType types2.OperType) (strSql string) {
 
 	switch operType {
-	case types.OperType_Query:
+	case types2.OperType_Query:
 		strSql, _ = e.makeSqlxQuery(true)
-	case types.OperType_Update:
+	case types2.OperType_Update:
 		strSql, _ = e.makeSqlxUpdate(true)
-	case types.OperType_Insert:
+	case types2.OperType_Insert:
 		strSql = e.makeSqlxInsert()
-	case types.OperType_Upsert:
+	case types2.OperType_Upsert:
 		strSql = e.makeSqlxUpsert()
-	case types.OperType_Delete:
+	case types2.OperType_Delete:
 		strSql, _ = e.makeSqlxDelete(true)
-	case types.OperType_ForUpdate:
+	case types2.OperType_ForUpdate:
 		strSql, _ = e.makeSqlxForUpdate(true)
 	default:
 		log.Errorf("operation illegal")
@@ -1106,28 +1106,28 @@ func (e *Engine) RightJoin(strTableName string) *Join {
 	}
 }
 
-func (e *Engine) GetAdapter() types.AdapterType {
+func (e *Engine) GetAdapter() types2.AdapterType {
 	return e.adapterType
 }
 
 func (e *Engine) Count(strColumn string, as ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_COUNT, strColumn, as...))
+	return e.Select(e.aggFunc(types2.DATABASE_KEY_NAME_COUNT, strColumn, as...))
 }
 
 func (e *Engine) Sum(strColumn string, as ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_SUM, strColumn, as...))
+	return e.Select(e.aggFunc(types2.DATABASE_KEY_NAME_SUM, strColumn, as...))
 }
 
 func (e *Engine) Avg(strColumn string, as ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_AVG, strColumn, as...))
+	return e.Select(e.aggFunc(types2.DATABASE_KEY_NAME_AVG, strColumn, as...))
 }
 
 func (e *Engine) Min(strColumn string, as ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_MIN, strColumn, as...))
+	return e.Select(e.aggFunc(types2.DATABASE_KEY_NAME_MIN, strColumn, as...))
 }
 
 func (e *Engine) Max(strColumn string, as ...string) *Engine {
-	return e.Select(e.aggFunc(types.DATABASE_KEY_NAME_MAX, strColumn, as...))
+	return e.Select(e.aggFunc(types2.DATABASE_KEY_NAME_MAX, strColumn, as...))
 }
 
 func (e *Engine) Round(strColumn string, round int, as ...string) *Engine {
@@ -1136,7 +1136,7 @@ func (e *Engine) Round(strColumn string, round int, as ...string) *Engine {
 
 func (e *Engine) Like(strColumn, keyword string) *Engine {
 	switch e.adapterType {
-	case types.AdapterSqlx_MySQL:
+	case types2.AdapterSqlx_MySQL:
 		e.And(fmt.Sprintf("LOCATE('%s', %s)", keyword, strColumn))
 	default:
 		e.And(fmt.Sprintf("%s LIKE '%%%s%%'", strColumn, keyword))
@@ -1149,7 +1149,7 @@ func (e *Engine) Likes(kvs map[string]any) *Engine {
 	for k, v := range kvs {
 		likes = append(likes, fmt.Sprintf(" %s LIKE '%%%v%%' ", k, v))
 	}
-	strLikes := strings.Join(likes, types.DATABASE_KEY_NAME_OR)
+	strLikes := strings.Join(likes, types2.DATABASE_KEY_NAME_OR)
 	strLikes = "(" + strLikes + ")"
 	return e.And(strLikes)
 }
@@ -1231,7 +1231,7 @@ func (e *Engine) NotNULL(strColumn string) *Engine {
 
 func (e *Engine) jsonExpr(strColumn, strPath string) string {
 	switch e.adapterType {
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		return fmt.Sprintf("`%s`->>'%s'", strColumn, strPath)
 	}
 	return fmt.Sprintf("`%s`->'$.%s'", strColumn, strPath)
@@ -1265,21 +1265,21 @@ func (e *Engine) NewID() ID {
 }
 
 func (e *Engine) ForUpdate() *Engine {
-	if e.operType != types.OperType_Tx {
+	if e.operType != types2.OperType_Tx {
 		log.Panic("this method is only for transaction")
 	}
 	return e.setForUpdate()
 }
 
 func (e *Engine) LockShareMode() *Engine {
-	if e.operType != types.OperType_Tx {
+	if e.operType != types2.OperType_Tx {
 		log.Panic("this method is only for transaction")
 	}
 	return e.setLockShareMode()
 }
 
 func (e *Engine) NewContext(ctx context.Context) context.Context {
-	ctx = context.WithValue(ctx, types.SqlcaContextKey, e)
+	ctx = context.WithValue(ctx, types2.SqlcaContextKey, e)
 	return ctx
 }
 
@@ -1287,20 +1287,20 @@ func NewContext(ctx context.Context, e *Engine) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ctx = context.WithValue(ctx, types.SqlcaContextKey, e)
+	ctx = context.WithValue(ctx, types2.SqlcaContextKey, e)
 	return ctx
 }
 
 func FromContext(ctx context.Context) (e *Engine, ok bool) {
-	v := ctx.Value(types.SqlcaContextKey)
+	v := ctx.Value(types2.SqlcaContextKey)
 	if v == nil {
 		return nil, false
 	}
 	return v.(*Engine), true
 }
 
-func NewExpr(query string, args ...any) *types.Expr {
-	return &types.Expr{
+func NewExpr(query string, args ...any) *types2.Expr {
+	return &types2.Expr{
 		SQL:  query,
 		Vars: args,
 	}
@@ -1377,4 +1377,24 @@ func (e *Engine) Preload(query string, args ...any) *Engine {
 
 func (e *Engine) GetRedisClient() *redigo.Redigo {
 	return e.redisClient
+}
+
+// 调整左右值树(在新建节点前操作，leftVal和rightVal为新创建的节点的左右值)
+func (e *Engine) ShiftLRV(strTableName string, leftVal, rightVal int64, options ...ShiftOption) (err error) {
+	db := e.clone()
+	var opts = &lrvOptions{
+		LeftColumn:  "left_val",
+		RightColumn: "right_val",
+	}
+	for _, op := range options {
+		op(opts)
+	}
+	// UPDATE table_name SET left_val=if(left_val<?,left_val,left_val+2), right_val=right_val+2 WHERE right_val>=? 示例参数值[left_val=2 right_val=7]
+	strQuery := fmt.Sprintf("UPDATE `%s` SET `%s`=if(`%s`<?,`%s`,`%s`+2), `%s`=`%s`+2 WHERE `%s`>=?",
+		strTableName, opts.LeftColumn, opts.LeftColumn, opts.LeftColumn, opts.LeftColumn, opts.RightColumn, opts.RightColumn, opts.RightColumn)
+	_, _, err = db.ExecRaw(strQuery, strTableName, leftVal, rightVal)
+	if err != nil {
+		return err
+	}
+	return nil
 }

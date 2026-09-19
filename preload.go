@@ -8,7 +8,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/civet148/sqlca/v3/types"
+	"github.com/civet148/sqlca/v3/internal/types"
 )
 
 func (e *Engine) addPreload(query string, args ...any) *Engine {

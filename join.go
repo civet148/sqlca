@@ -1,6 +1,8 @@
 package sqlca
 
-import "github.com/civet148/sqlca/v3/types"
+import (
+	"github.com/civet148/sqlca/v3/internal/types"
+)
 
 type JoinType int
 

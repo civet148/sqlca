@@ -6,8 +6,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/civet148/sqlca/v3/types"
 	"math"
+
+	"github.com/civet148/sqlca/v3/internal/types"
 )
 
 // Point 表示数据库中的point类型

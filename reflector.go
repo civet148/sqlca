@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v3/types"
+	"github.com/civet148/sqlca/v3/internal/types"
 )
 
 type ModelReflector struct {

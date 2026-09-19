@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/civet148/sqlca/v3/types"
+	"github.com/civet148/sqlca/v3/internal/types"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"

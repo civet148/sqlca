@@ -104,3 +104,23 @@ func WithAutoMigrate() Option {
 		opt.AutoMigrate = true
 	}
 }
+
+/*-------------------------------------------------------------------------------*/
+
+type lrvOptions struct {
+	LeftColumn  string
+	RightColumn string
+}
+
+type ShiftOption func(*lrvOptions)
+
+func WithLeftCol(leftColumn string) ShiftOption {
+	return func(opt *lrvOptions) {
+		opt.LeftColumn = leftColumn
+	}
+}
+func WithRightCol(rightColumn string) ShiftOption {
+	return func(opt *lrvOptions) {
+		opt.RightColumn = rightColumn
+	}
+}

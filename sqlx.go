@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v3/types"
+	types2 "github.com/civet148/sqlca/v3/internal/types"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -63,18 +63,18 @@ func (e *Engine) setModel(models ...any) *Engine {
 		}
 		if isStructPtrPtr {
 			e.model = val.Interface()
-			e.setModelType(types.ModelType_Struct)
+			e.setModelType(types2.ModelType_Struct)
 			e.setStructTableName(typ.Elem())
 		} else {
 			switch typ.Kind() {
 			case reflect.Struct: // struct
-				e.setModelType(types.ModelType_Struct)
+				e.setModelType(types2.ModelType_Struct)
 			case reflect.Slice: //  slice
-				e.setModelType(types.ModelType_Slice)
+				e.setModelType(types2.ModelType_Slice)
 			case reflect.Map: // map
-				e.setModelType(types.ModelType_Map)
+				e.setModelType(types2.ModelType_Map)
 			default: //base type
-				e.setModelType(types.ModelType_BaseType)
+				e.setModelType(types2.ModelType_BaseType)
 			}
 			if typ.Kind() == reflect.Struct || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
 				e.model = models[0] //map, struct or slice
@@ -114,7 +114,7 @@ func (e *Engine) setStructTableName(typSt reflect.Type) {
 		typSt = typSt.Elem()
 	}
 	valSt := reflect.New(typSt)
-	if tabler, ok := valSt.Interface().(types.Tabler); ok {
+	if tabler, ok := valSt.Interface().(types2.Tabler); ok {
 		e.setTableName(SurroundBackticks(tabler.TableName()))
 	} else {
 		e.setTableName(SurroundBackticks(strings.ToLower(convertCamelToSnake(typSt.Name()))))
@@ -182,7 +182,7 @@ func (e *Engine) newTx() (txEngine *Engine, err error) {
 		log.Errorf("newTx error [%+v]", err.Error())
 		return nil, err
 	}
-	txEngine.operType = types.OperType_Tx
+	txEngine.operType = types2.OperType_Tx
 	return
 }
 
@@ -279,7 +279,7 @@ func (e *Engine) postgresQueryInsert(strSQL string) string {
 
 func (e *Engine) mysqlQueryUpsert(strSQL string) (lastInsertId int64, err error) {
 
-	if e.operType == types.OperType_Tx {
+	if e.operType == types2.OperType_Tx {
 		lastInsertId, _, err = e.TxExec(strSQL)
 		if err != nil {
 			return 0, log.Errorf("upsert error [%s]", err)
@@ -368,9 +368,9 @@ func (e *Engine) mssqlUpsert(strSQL string) (lastInsertId int64, err error) {
 	} else {
 		// UPDATE users SET xxx=yyy WHERE id=nnn
 		strUpdates := fmt.Sprintf("%v %v %v %v %v %v=%v",
-			types.DATABASE_KEY_NAME_UPDATE, e.getTableName(),
-			types.DATABASE_KEY_NAME_SET, e.getOnConflictDo(),
-			types.DATABASE_KEY_NAME_WHERE, e.GetPkName(), lastInsertId)
+			types2.DATABASE_KEY_NAME_UPDATE, e.getTableName(),
+			types2.DATABASE_KEY_NAME_SET, e.getOnConflictDo(),
+			types2.DATABASE_KEY_NAME_WHERE, e.GetPkName(), lastInsertId)
 		if _, _, err = db.TxExec(strUpdates); err != nil {
 			log.Errorf("TxExec [%v] error [%v]", strSQL, err.Error())
 			_ = db.TxRollback()
@@ -390,7 +390,7 @@ func (e *Engine) getDistinct() string {
 }
 
 func (e *Engine) setDistinct() {
-	e.strDistinct = types.DATABASE_KEY_NAME_DISTINCT
+	e.strDistinct = types2.DATABASE_KEY_NAME_DISTINCT
 }
 
 func (e *Engine) sepStrByDot(strIn string) (strPrefix, strSuffix string) {
@@ -431,7 +431,7 @@ func (e *Engine) setTableName(strNames ...string) {
 
 func (e *Engine) getJoins() (strJoins string) {
 	for _, v := range e.joins {
-		strJoins += fmt.Sprintf(" %s %s %s %s ", v.jt.ToKeyWord(), v.strTableName, types.DATABASE_KEY_NAME_ON, v.strOn)
+		strJoins += fmt.Sprintf(" %s %s %s %s ", v.jt.ToKeyWord(), v.strTableName, types2.DATABASE_KEY_NAME_ON, v.strOn)
 	}
 	return
 }
@@ -573,19 +573,19 @@ func (e *Engine) setWhere(query string, args ...any) {
 	e.andConditions = append(e.andConditions, e.buildSqlExpr(query, args...))
 }
 
-func (e *Engine) getModelType() types.ModelType {
+func (e *Engine) getModelType() types2.ModelType {
 	return e.modelType
 }
 
-func (e *Engine) setModelType(modelType types.ModelType) {
+func (e *Engine) setModelType(modelType types2.ModelType) {
 	e.modelType = modelType
 }
 
-func (e *Engine) getOperType() types.OperType {
+func (e *Engine) getOperType() types2.OperType {
 	return e.operType
 }
 
-func (e *Engine) setOperType(operType types.OperType) {
+func (e *Engine) setOperType(operType types2.OperType) {
 	e.operType = operType
 }
 
@@ -601,11 +601,11 @@ func (e *Engine) getConflictColumns() []string {
 
 func (e *Engine) getSingleQuote() (strQuote string) {
 	switch e.adapterType {
-	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
+	case types2.AdapterSqlx_MySQL, types2.AdapterSqlx_Sqlite:
 		return "'"
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		return "'"
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		return "'"
 	}
 	return "'"
@@ -613,11 +613,11 @@ func (e *Engine) getSingleQuote() (strQuote string) {
 
 func (e *Engine) getForwardQuote() (strQuote string) {
 	switch e.adapterType {
-	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
+	case types2.AdapterSqlx_MySQL, types2.AdapterSqlx_Sqlite:
 		return "`"
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		return "\""
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		return "["
 	}
 	return ""
@@ -625,11 +625,11 @@ func (e *Engine) getForwardQuote() (strQuote string) {
 
 func (e *Engine) getBackQuote() (strQuote string) {
 	switch e.adapterType {
-	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
+	case types2.AdapterSqlx_MySQL, types2.AdapterSqlx_Sqlite:
 		return "`"
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		return "\""
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		return "]"
 	}
 	return ""
@@ -637,11 +637,11 @@ func (e *Engine) getBackQuote() (strQuote string) {
 
 func (e *Engine) getOnConflictForwardKey() (strKey string) {
 	switch e.adapterType {
-	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
+	case types2.AdapterSqlx_MySQL, types2.AdapterSqlx_Sqlite:
 		return "ON DUPLICATE"
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		return "ON CONFLICT ("
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		return ""
 	}
 	return
@@ -649,11 +649,11 @@ func (e *Engine) getOnConflictForwardKey() (strKey string) {
 
 func (e *Engine) getOnConflictBackKey() (strKey string) {
 	switch e.adapterType {
-	case types.AdapterSqlx_MySQL, types.AdapterSqlx_Sqlite:
+	case types2.AdapterSqlx_MySQL, types2.AdapterSqlx_Sqlite:
 		return "KEY UPDATE"
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		return ") DO UPDATE SET"
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		return ""
 	}
 	return
@@ -685,7 +685,7 @@ func (e *Engine) getOrderBy() (strOrderBy string) {
 	if isNilOrFalse(e.orderByColumns) {
 		return
 	}
-	return fmt.Sprintf("%v %v", types.DATABASE_KEY_NAME_ORDER_BY, e.getAscAndDesc())
+	return fmt.Sprintf("%v %v", types2.DATABASE_KEY_NAME_ORDER_BY, e.getAscAndDesc())
 }
 
 func (e *Engine) setGroupBy(strColumns ...string) {
@@ -703,7 +703,7 @@ func (e *Engine) getHaving() (strHaving string) {
 	if isNilOrFalse(e.havingCondition) {
 		return
 	}
-	return fmt.Sprintf("%v %v", types.DATABASE_KEY_NAME_HAVING, e.havingCondition)
+	return fmt.Sprintf("%v %v", types2.DATABASE_KEY_NAME_HAVING, e.havingCondition)
 }
 
 func (e *Engine) getGroupBy() (strGroupBy string) {
@@ -811,7 +811,7 @@ func (e *Engine) isColumnSelected(strCol string, strExcepts ...string) bool {
 
 func (e *Engine) getQuoteConflicts() (strQuoteConflicts string) {
 
-	if e.adapterType != types.AdapterSqlx_Postgres && e.adapterType != types.AdapterSqlx_OpenGauss {
+	if e.adapterType != types2.AdapterSqlx_Postgres && e.adapterType != types2.AdapterSqlx_OpenGauss {
 		return //only postgres need conflicts fields
 	}
 
@@ -838,7 +838,7 @@ func (e *Engine) getRawColumns() (strColumns string) {
 	var selectCols []string
 
 	if len(e.selectColumns) == 0 {
-		return types.SQLCA_CHAR_ASTERISK
+		return types2.SQLCA_CHAR_ASTERISK
 	}
 
 	for _, v := range e.selectColumns {
@@ -869,7 +869,7 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 
 	columns = strColumns
 	switch e.adapterType {
-	case types.AdapterSqlx_MySQL:
+	case types2.AdapterSqlx_MySQL:
 		{
 			/* -- MySQL
 			SELECT  id,lng,lat,name,(6371 * ACOS(COS(RADIANS(lat)) * COS(RADIANS(28.803909723)) * COS(RADIANS(121.5619236231) - RADIANS(lng))
@@ -885,7 +885,7 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 				e.setHaving(fmt.Sprintf("%s <= %v", nb.strAS, nb.distance))
 			}
 		}
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		{
 			/* -- Postgres
 			SELECT  a.* FROM
@@ -902,7 +902,7 @@ func (e *Engine) makeNearbyColumn(strColumns ...string) (columns []string) {
 
 // handle special characters, prevent SQL inject
 func (e *Engine) handleSpecialChars(strIn string) (strOut string) {
-	return types.PreventSqlInject(e.GetAdapter(), strIn)
+	return types2.PreventSqlInject(e.GetAdapter(), strIn)
 }
 
 func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (strUpdates string) {
@@ -913,7 +913,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 		if e.isColumnSelected(v, strExcepts...) && !e.isReadOnly(v) {
 			val := e.getModelValue(v)
 			if val == nil {
-				val = types.SqlNull{}
+				val = types2.SqlNull{}
 			}
 			val = convertBool2Int(val)
 			c := fmt.Sprintf("%v=%v", e.getQuoteColumnName(v), e.getQuoteColumnValue(val)) // column name format to `date`='1583055138',...
@@ -955,7 +955,7 @@ func (e *Engine) getQuoteUpdates(strColumns []string, strExcepts ...string) (str
 func (e *Engine) getOnConflictDo() (strDo string) {
 	var strUpdates string
 	switch e.adapterType {
-	case types.AdapterSqlx_MySQL:
+	case types2.AdapterSqlx_MySQL:
 		{
 			strUpdates = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 			if !isNilOrFalse(strUpdates) {
@@ -966,18 +966,18 @@ func (e *Engine) getOnConflictDo() (strDo string) {
 				}
 			}
 		}
-	case types.AdapterSqlx_Postgres, types.AdapterSqlx_OpenGauss:
+	case types2.AdapterSqlx_Postgres, types2.AdapterSqlx_OpenGauss:
 		{
 			strUpdates = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 			if !isNilOrFalse(strUpdates) {
 				strDo = fmt.Sprintf("%v RETURNING \"%v\"", strUpdates, e.GetPkName()) // TODO @libin test postgresql ON CONFLICT(...) DO UPDATE SET ... RETURNING id
 			}
 		}
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		{
 			strDo = e.getQuoteUpdates(e.getSelectColumns(), e.strPkName)
 		}
-	case types.AdapterSqlx_Sqlite:
+	case types2.AdapterSqlx_Sqlite:
 		{
 		}
 	}
@@ -1068,7 +1068,7 @@ func (e *Engine) getOnConflictUpdates(strExcepts ...string) (strUpdates string) 
 	return
 }
 
-func (e *Engine) buildSqlExpr(query string, args ...any) types.Expr {
+func (e *Engine) buildSqlExpr(query string, args ...any) types2.Expr {
 	if !strings.Contains(query, "?") && len(args) > 0 {
 		query = fmt.Sprintf("%s = ?", query)
 	}
@@ -1079,14 +1079,14 @@ func (e *Engine) buildSqlExpr(query string, args ...any) types.Expr {
 	for _, arg := range args {
 		vars = append(vars, indirectValue(arg))
 	}
-	return types.Expr{SQL: query, Vars: vars}
+	return types2.Expr{SQL: query, Vars: vars}
 }
 
 func (e *Engine) makeSqlxQueryPrimaryKey() (strSql string) {
 
 	strSql = fmt.Sprintf("%v %v%v%v %v %v %v %v%v%v=%v%v%v",
-		types.DATABASE_KEY_NAME_SELECT, e.getForwardQuote(), e.GetPkName(), e.getBackQuote(),
-		types.DATABASE_KEY_NAME_FROM, e.getTableName(), types.DATABASE_KEY_NAME_WHERE,
+		types2.DATABASE_KEY_NAME_SELECT, e.getForwardQuote(), e.GetPkName(), e.getBackQuote(),
+		types2.DATABASE_KEY_NAME_FROM, e.getTableName(), types2.DATABASE_KEY_NAME_WHERE,
 		e.getForwardQuote(), e.GetPkName(), e.getBackQuote(),
 		e.getSingleQuote(), e.getPkValue(), e.getSingleQuote())
 	return
@@ -1102,18 +1102,18 @@ func (e *Engine) getCaller(skip int) (strFunc string) {
 	return
 }
 
-func (e *Engine) makeSQL(operType types.OperType, rawSQL bool) (strSql string, args []any) {
+func (e *Engine) makeSQL(operType types2.OperType, rawSQL bool) (strSql string, args []any) {
 
 	switch operType {
-	case types.OperType_Query:
+	case types2.OperType_Query:
 		strSql, args = e.makeSqlxQuery(rawSQL)
-	case types.OperType_Update:
+	case types2.OperType_Update:
 		strSql, args = e.makeSqlxUpdate(rawSQL)
-	case types.OperType_Insert:
+	case types2.OperType_Insert:
 		strSql = e.makeSqlxInsert()
-	case types.OperType_Upsert:
+	case types2.OperType_Upsert:
 		strSql = e.makeSqlxUpsert()
-	case types.OperType_Delete:
+	case types2.OperType_Delete:
 		strSql, args = e.makeSqlxDelete(rawSQL)
 	default:
 		log.Errorf("operation illegal")
@@ -1121,7 +1121,7 @@ func (e *Engine) makeSQL(operType types.OperType, rawSQL bool) (strSql string, a
 	return strings.TrimSpace(strSql), args
 }
 
-func (e *Engine) makeInCondition(cond types.Expr) (strCondition string, args []any) {
+func (e *Engine) makeInCondition(cond types2.Expr) (strCondition string, args []any) {
 
 	var strValues []string
 	for _, v := range cond.Vars {
@@ -1140,21 +1140,21 @@ func (e *Engine) makeInCondition(cond types.Expr) (strCondition string, args []a
 			strValues = append(strValues, fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()))
 		}
 	}
-	strCondition = fmt.Sprintf("%v %v (%v)", cond.SQL, types.DATABASE_KEY_NAME_IN, strings.Join(strValues, ","))
+	strCondition = fmt.Sprintf("%v %v (%v)", cond.SQL, types2.DATABASE_KEY_NAME_IN, strings.Join(strValues, ","))
 	return
 }
 
-func (e *Engine) makeNotCondition(cond types.Expr) (strCondition string, args []any) {
+func (e *Engine) makeNotCondition(cond types2.Expr) (strCondition string, args []any) {
 
 	var strValues []string
 	for _, v := range cond.Vars {
 		strValues = append(strValues, fmt.Sprintf("%v%v%v", e.getSingleQuote(), v, e.getSingleQuote()))
 	}
-	strCondition = fmt.Sprintf("%v %v (%v)", cond.SQL, types.DATABASE_KEY_NAME_NOT_IN, strings.Join(strValues, ","))
+	strCondition = fmt.Sprintf("%v %v (%v)", cond.SQL, types2.DATABASE_KEY_NAME_NOT_IN, strings.Join(strValues, ","))
 	return
 }
 
-func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool, noKeywords ...bool) (strWhere string, args []any) {
+func (e *Engine) makeWhereCondition(operType types2.OperType, rawSQL bool, noKeywords ...bool) (strWhere string, args []any) {
 
 	var noKeyword bool
 	if len(noKeywords) > 0 {
@@ -1166,7 +1166,7 @@ func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool, noKeyw
 
 	if strWhere == "" {
 		//where condition required when update or delete
-		if operType != types.OperType_Update && operType != types.OperType_Delete && len(e.joins) == 0 {
+		if operType != types2.OperType_Update && operType != types2.OperType_Delete && len(e.joins) == 0 {
 			strWhere += "1=1"
 		} else {
 			if len(e.joins) > 0 || len(e.andConditions) != 0 {
@@ -1186,7 +1186,7 @@ func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool, noKeyw
 				args = append(args, v.Vars...)
 			}
 		}
-		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, query)
+		strWhere += fmt.Sprintf(" %v %v ", types2.DATABASE_KEY_NAME_AND, query)
 	}
 	//IN conditions
 	for _, v := range e.inConditions {
@@ -1196,7 +1196,7 @@ func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool, noKeyw
 		if len(vars) != 0 {
 			args = append(args, vars...)
 		}
-		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, query)
+		strWhere += fmt.Sprintf(" %v %v ", types2.DATABASE_KEY_NAME_AND, query)
 	}
 	//NOT IN conditions
 	for _, v := range e.notConditions {
@@ -1206,14 +1206,14 @@ func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool, noKeyw
 		if len(vars) != 0 {
 			args = append(args, vars...)
 		}
-		strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, query)
+		strWhere += fmt.Sprintf(" %v %v ", types2.DATABASE_KEY_NAME_AND, query)
 	}
 	//OR conditions
 	for _, v := range e.orConditions {
 		if strings.Contains(v.SQL, "(") && strings.Contains(v.SQL, ")") {
-			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_AND, v.RawSQL()) //multiple OR condition append
+			strWhere += fmt.Sprintf(" %v %v ", types2.DATABASE_KEY_NAME_AND, v.RawSQL()) //multiple OR condition append
 		} else {
-			strWhere += fmt.Sprintf(" %v %v ", types.DATABASE_KEY_NAME_OR, v.RawSQL()) //single OR condition append
+			strWhere += fmt.Sprintf(" %v %v ", types2.DATABASE_KEY_NAME_OR, v.RawSQL()) //single OR condition append
 		}
 	}
 
@@ -1221,32 +1221,32 @@ func (e *Engine) makeWhereCondition(operType types.OperType, rawSQL bool, noKeyw
 		return strWhere, args
 	}
 	if strWhere != "" {
-		strWhere = types.DATABASE_KEY_NAME_WHERE + " " + strWhere
+		strWhere = types2.DATABASE_KEY_NAME_WHERE + " " + strWhere
 	} else {
-		strWhere = types.DATABASE_KEY_NAME_WHERE
+		strWhere = types2.DATABASE_KEY_NAME_WHERE
 	}
 	return strWhere, args
 }
 
 func (e *Engine) makeSqlxQuery(rawSQL bool) (strSqlx string, args []any) {
 	var strWhere string
-	strWhere, args = e.makeWhereCondition(types.OperType_Query, rawSQL)
+	strWhere, args = e.makeWhereCondition(types2.OperType_Query, rawSQL)
 
 	switch e.adapterType {
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
-			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+			types2.DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getLimit(), e.getRawColumns(), types2.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
 	default:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v",
-			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+			types2.DATABASE_KEY_NAME_SELECT, e.getDistinct(), e.getRawColumns(), types2.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), e.getLimit(), e.getOffset())
 	}
 	return
 }
 
 func (e *Engine) makeSqlxQueryCount(withLimit bool) (strSqlx string) {
-	strWhere, _ := e.makeWhereCondition(types.OperType_Query, true)
+	strWhere, _ := e.makeWhereCondition(types2.OperType_Query, true)
 
 	var strLimit string
 	if withLimit {
@@ -1260,16 +1260,16 @@ func (e *Engine) makeSqlxQueryCount(withLimit bool) (strSqlx string) {
 			strRawColumns = e.groupByColumns[0]
 		}
 	} else {
-		strRawColumns = types.DATABASE_KEY_NAME_COUNT + "(" + e.GetPkName() + ")"
+		strRawColumns = types2.DATABASE_KEY_NAME_COUNT + "(" + e.GetPkName() + ")"
 	}
 	switch e.adapterType {
-	case types.AdapterSqlx_Mssql:
+	case types2.AdapterSqlx_Mssql:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v",
-			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), strLimit, strRawColumns, types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+			types2.DATABASE_KEY_NAME_SELECT, e.getDistinct(), strLimit, strRawColumns, types2.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy())
 	default:
 		strSqlx = fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v",
-			types.DATABASE_KEY_NAME_SELECT, e.getDistinct(), strRawColumns, types.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
+			types2.DATABASE_KEY_NAME_SELECT, e.getDistinct(), strRawColumns, types2.DATABASE_KEY_NAME_FROM, e.getTableName(), e.getJoins(),
 			strWhere, e.getGroupBy(), e.getHaving(), e.getOrderBy(), strLimit, e.getOffset())
 	}
 	if groupOrDistinct {
@@ -1281,26 +1281,26 @@ func (e *Engine) makeSqlxQueryCount(withLimit bool) (strSqlx string) {
 
 func (e *Engine) makeSqlxForUpdate(rawSQL bool) (strSql string, args []any) {
 	strSql, args = e.makeSqlxQuery(rawSQL)
-	strSql += " " + types.DATABASE_KEY_NAME_FOR_UPDATE
+	strSql += " " + types2.DATABASE_KEY_NAME_FOR_UPDATE
 	return strSql, args
 }
 
 func (e *Engine) makeSqlxUpdate(rawSQL bool) (strSqlx string, args []any) {
 	var strWhere string
-	strWhere, args = e.makeWhereCondition(types.OperType_Update, rawSQL)
+	strWhere, args = e.makeWhereCondition(types2.OperType_Update, rawSQL)
 	strSqlx = fmt.Sprintf("%v %v %v %v %v %v",
-		types.DATABASE_KEY_NAME_UPDATE, e.getTableName(), types.DATABASE_KEY_NAME_SET,
+		types2.DATABASE_KEY_NAME_UPDATE, e.getTableName(), types2.DATABASE_KEY_NAME_SET,
 		e.getQuoteUpdates(e.getSelectColumns(), e.GetPkName()), strWhere, e.getLimit())
 	return
 }
 
 func (e *Engine) makeSqlxInsert() (strSqlx string) {
-	var insertInto = types.DATABASE_KEY_NAME_INSERT
+	var insertInto = types2.DATABASE_KEY_NAME_INSERT
 	if e.insertIgnore {
-		insertInto = types.DATABASE_KEY_NAME_INSERT_IGNORE
+		insertInto = types2.DATABASE_KEY_NAME_INSERT_IGNORE
 	}
 	strColumns, strValues := e.getInsertColumnsAndValues()
-	strSqlx = fmt.Sprintf("%v %v %v %v %v", insertInto, e.getTableName(), strColumns, types.DATABASE_KEY_NAME_VALUES, strValues)
+	strSqlx = fmt.Sprintf("%v %v %v %v %v", insertInto, e.getTableName(), strColumns, types2.DATABASE_KEY_NAME_VALUES, strValues)
 	return
 }
 
@@ -1308,17 +1308,17 @@ func (e *Engine) makeSqlxUpsert() (strSqlx string) {
 	strColumns, strValues := e.getInsertColumnsAndValues()
 	strOnConflictUpdates := e.getOnConflictUpdates()
 
-	strSqlx = fmt.Sprintf("%v %v %v %v %v %v", types.DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, types.DATABASE_KEY_NAME_VALUES, strValues, strOnConflictUpdates)
+	strSqlx = fmt.Sprintf("%v %v %v %v %v %v", types2.DATABASE_KEY_NAME_INSERT, e.getTableName(), strColumns, types2.DATABASE_KEY_NAME_VALUES, strValues, strOnConflictUpdates)
 	return
 }
 
 func (e *Engine) makeSqlxDelete(rawSQL bool) (strSqlx string, args []any) {
 	var strWhere string
-	strWhere, args = e.makeWhereCondition(types.OperType_Delete, rawSQL)
+	strWhere, args = e.makeWhereCondition(types2.OperType_Delete, rawSQL)
 	if strWhere == "" {
 		panic("no condition to delete records") //删除必须加条件,WHERE条件可设置为1=1(确保不是人为疏忽)
 	}
-	strSqlx = fmt.Sprintf("%v %v %v %v %v", types.DATABASE_KEY_NAME_DELETE, types.DATABASE_KEY_NAME_FROM, e.getTableName(), strWhere, e.getLimit())
+	strSqlx = fmt.Sprintf("%v %v %v %v %v", types2.DATABASE_KEY_NAME_DELETE, types2.DATABASE_KEY_NAME_FROM, e.getTableName(), strWhere, e.getLimit())
 	return
 }
 
@@ -1328,7 +1328,7 @@ func (e *Engine) cleanWhereCondition() {
 }
 
 func (e *Engine) autoRollback() {
-	if e.bAutoRollback && e.operType == types.OperType_Tx && e.tx != nil {
+	if e.bAutoRollback && e.operType == types2.OperType_Tx && e.tx != nil {
 		_ = e.tx.Rollback()
 		log.Debugf("tx auto rollback successful")
 	}
@@ -1351,16 +1351,16 @@ func (e *Engine) roundFunc(strColumn string, round int, strAS ...string) string 
 	} else {
 		strAlias = strAS[0]
 	}
-	return fmt.Sprintf("%s(%s, %d) AS %s", types.DATABASE_KEY_NAME_ROUND, strColumn, round, strAlias)
+	return fmt.Sprintf("%s(%s, %d) AS %s", types2.DATABASE_KEY_NAME_ROUND, strColumn, round, strAlias)
 }
 
 func (e *Engine) setForUpdate() *Engine {
-	e.strForUpdate = types.DATABASE_KEY_NAME_FOR_UPDATE
+	e.strForUpdate = types2.DATABASE_KEY_NAME_FOR_UPDATE
 	return e
 }
 
 func (e *Engine) setLockShareMode() *Engine {
-	e.strLockShareMode = types.DATABASE_KEY_NAME_LOCK_SHARE_MODE
+	e.strLockShareMode = types2.DATABASE_KEY_NAME_LOCK_SHARE_MODE
 	return e
 }
 
@@ -1371,7 +1371,7 @@ func (e *Engine) setAnd(query string, args ...any) *Engine {
 	return e
 }
 
-func (e *Engine) setOr(exprs ...types.Expr) *Engine {
+func (e *Engine) setOr(exprs ...types2.Expr) *Engine {
 	if len(exprs) == 1 {
 		e.orConditions = append(e.orConditions, exprs[0])
 		return e
@@ -1382,7 +1382,7 @@ func (e *Engine) setOr(exprs ...types.Expr) *Engine {
 		ors = append(ors, expr.RawSQL(e.GetAdapter()))
 	}
 	strCombOrs := " ( " + strings.Join(ors, " OR ") + " ) "
-	e.orConditions = append(e.orConditions, types.Expr{SQL: strCombOrs})
+	e.orConditions = append(e.orConditions, types2.Expr{SQL: strCombOrs})
 	return e
 }
 
@@ -1400,13 +1400,13 @@ func (e *Engine) parseQueryAndMap(query any) {
 
 func (e *Engine) parseQuerySqlca(query any) {
 	if db, ok := query.(*Engine); ok {
-		querier, args := db.makeWhereCondition(types.OperType_Query, false, true)
+		querier, args := db.makeWhereCondition(types2.OperType_Query, false, true)
 		e.setNormalCondition(querier, args...)
 	}
 }
 
 func (e *Engine) parseQueryOrMap(query any) {
-	var qss []types.Expr
+	var qss []types2.Expr
 	where := query.(map[string]any)
 	for k, v := range where {
 		expr := e.buildSqlExpr(k, v)
@@ -1483,7 +1483,7 @@ func (e *Engine) exec(query string, args ...any) (result sql.Result, err error) 
 
 func (e *Engine) getQueryer() sqlx.Queryer {
 	var queryer sqlx.Queryer
-	if e.operType == types.OperType_Tx {
+	if e.operType == types2.OperType_Tx {
 		queryer = sqlx.Queryer(e.tx)
 	} else {
 		queryer = sqlx.Queryer(e.getDB())
@@ -1493,7 +1493,7 @@ func (e *Engine) getQueryer() sqlx.Queryer {
 
 func (e *Engine) getQueryerCtx() sqlx.QueryerContext {
 	var queryer sqlx.QueryerContext
-	if e.operType == types.OperType_Tx {
+	if e.operType == types2.OperType_Tx {
 		queryer = sqlx.QueryerContext(e.tx)
 	} else {
 		queryer = sqlx.QueryerContext(e.getDB())
@@ -1503,7 +1503,7 @@ func (e *Engine) getQueryerCtx() sqlx.QueryerContext {
 
 func (e *Engine) getExecer() sqlx.Execer {
 	var execer sqlx.Execer
-	if e.operType == types.OperType_Tx {
+	if e.operType == types2.OperType_Tx {
 		execer = sqlx.Execer(e.tx)
 	} else {
 		execer = sqlx.Execer(e.getDB())
@@ -1513,7 +1513,7 @@ func (e *Engine) getExecer() sqlx.Execer {
 
 func (e *Engine) getExecerCtx() sqlx.ExecerContext {
 	var execer sqlx.ExecerContext
-	if e.operType == types.OperType_Tx {
+	if e.operType == types2.OperType_Tx {
 		execer = sqlx.ExecerContext(e.tx)
 	} else {
 		execer = sqlx.ExecerContext(e.getDB())

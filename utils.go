@@ -3,6 +3,7 @@ package sqlca
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -11,7 +12,7 @@ import (
 	"time"
 
 	"github.com/civet148/log"
-	"github.com/civet148/sqlca/v3/types"
+	types2 "github.com/civet148/sqlca/v3/internal/types"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -24,8 +25,8 @@ const (
 	queryInterface_Sqlca   queryInterfaceType = 3
 )
 
-func NewSqlClause(fmts string, args ...any) *types.SqlClauseValue {
-	return types.NewSqlClauseValue(fmts, args...)
+func NewSqlClause(fmts string, args ...any) *types2.SqlClauseValue {
+	return types2.NewSqlClauseValue(fmts, args...)
 }
 
 // convertCamelToSnake converts a CamelCase string to snake_case
@@ -170,14 +171,14 @@ func indirectValue(v any, isClauses ...bool) any {
 	}
 
 	if v == nil {
-		return types.SqlNull{}
+		return types2.SqlNull{}
 	}
 
 	value := reflect.ValueOf(v)
 	// 循环处理指针，直到获取到非指针的值
 	for value.Kind() == reflect.Ptr {
 		if value.IsNil() {
-			return types.SqlNull{}
+			return types2.SqlNull{}
 		}
 		value = value.Elem()
 	}
@@ -258,11 +259,11 @@ func quotedStruct(v any) (sv string, ok bool) {
 	val := reflect.ValueOf(v)
 	val = reflect.Indirect(val)
 	switch s := val.Interface().(type) {
-	case types.Expr:
+	case types2.Expr:
 		return s.RawSQL(), true
-	case types.SqlNull:
+	case types2.SqlNull:
 		return s.String(), true
-	case types.SqlClauseValue:
+	case types2.SqlClauseValue:
 		return s.String(), true
 	}
 	return sv, false
@@ -294,4 +295,51 @@ func ConvertVal[T any](v *T) (ret T) {
 
 func SurroundBackticks(s string) string {
 	return fmt.Sprintf("`%s`", s)
+}
+
+func JsonValue(l interface{}) (driver.Value, error) {
+	bytes, err := json.Marshal(l)
+	return string(bytes), err
+}
+
+func JsonScan(input interface{}, l interface{}) (err error) {
+	switch value := input.(type) {
+	case string:
+		if value == "" {
+			return
+		}
+		err = json.Unmarshal([]byte(value), l)
+	case []byte:
+		if len(value) == 0 {
+			return
+		}
+		err = json.Unmarshal(value, l)
+	default:
+		err = errors.New("not supported type")
+	}
+	return
+}
+
+type KindPointerSlice[T any] []*T
+
+func (KindPointerSlice[T]) GormDataType() string {
+	return "json"
+}
+func (k *KindPointerSlice[T]) Scan(v any) error {
+	return JsonScan(v, k)
+}
+func (c KindPointerSlice[T]) Value() (driver.Value, error) {
+	return JsonValue(c)
+}
+
+type KindBaseSlice[T any] []T
+
+func (KindBaseSlice[T]) GormDataType() string {
+	return "json"
+}
+func (k *KindBaseSlice[T]) Scan(v any) error {
+	return JsonScan(v, k)
+}
+func (c KindBaseSlice[T]) Value() (driver.Value, error) {
+	return JsonValue(c)
 }

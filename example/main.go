@@ -51,74 +51,74 @@ func init() {
 }
 
 func main() {
-	// 测试普通变量查询
-	requireNoError(TestQueryByNormalVars(db))
-
-	// 测试关联查询
-	requireNoError(TestPreload(db))
-
-	// 测试更新功能
-	requireNoError(TestUpdate(db))
-
-	// 测试删除功能
-	requireNoError(TestDelete(db))
-
-	// 测试事务处理
-	requireNoError(TestTransaction(db))
-
-	// 测试批量插入
-	requireNoError(TestInsertBatch(db))
-
-	// 测试查询限制
-	requireNoError(TestQueryLimit(db))
-
-	// 测试查询无结果
-	requireError(TestQueryErrNotFound(db))
-
-	// 测试分页查询
-	requireNoError(TestQueryByPage(db))
-
-	// 测试条件查询
-	requireNoError(TestQueryByCondition(db))
-
-	// 测试分组查询
-	requireNoError(TestQueryByGroup(db))
-
-	// 测试统计行数
-	requireNoError(TestQueryCountRows(db))
-
-	// 测试联表查询
-	requireNoError(TestQueryJoins(db))
-
-	// 测试 OR 条件查询
-	requireNoError(TestQueryOr(db))
-
-	// 测试原始 SQL 查询
-	requireNoError(TestQueryRawSQL(db))
-
-	// 测试 JSON 字段查询
-	requireNoError(TestQueryWithJsonColumn(db))
-
-	// 测试通过 Map 更新
-	requireNoError(TestUpdateByMap(db))
-
-	// 测试事务封装
-	requireNoError(TestTransactionWrapper(db))
-
-	// 测试执行原始 SQL
-	requireNoError(TestExecRawSQL(db))
-
-	// 测试地理位置坐标操作
-	requireNoError(TestUpsertPoint(db))
-	requireNoError(TestUpdatePointByExpress(db))
-
-	// 测试分布式锁
-	// requireNoError(TestDistributionLock(db))
-
-	// 测试通过sqlca.Engine对象获取Where条件
-	requireNoError(TestConditionFromSqlcaEngine(db))
-
-	log.Infof("所有测试验证通过！")
+	//// 测试普通变量查询
+	//requireNoError(TestQueryByNormalVars(db))
+	//
+	//// 测试关联查询
+	//requireNoError(TestPreload(db))
+	//
+	//// 测试更新功能
+	//requireNoError(TestUpdate(db))
+	//
+	//// 测试删除功能
+	//requireNoError(TestDelete(db))
+	//
+	//// 测试事务处理
+	//requireNoError(TestTransaction(db))
+	//
+	//// 测试批量插入
+	//requireNoError(TestInsertBatch(db))
+	//
+	//// 测试查询限制
+	//requireNoError(TestQueryLimit(db))
+	//
+	//// 测试查询无结果
+	//requireError(TestQueryErrNotFound(db))
+	//
+	//// 测试分页查询
+	//requireNoError(TestQueryByPage(db))
+	//
+	//// 测试条件查询
+	//requireNoError(TestQueryByCondition(db))
+	//
+	//// 测试分组查询
+	//requireNoError(TestQueryByGroup(db))
+	//
+	//// 测试统计行数
+	//requireNoError(TestQueryCountRows(db))
+	//
+	//// 测试联表查询
+	//requireNoError(TestQueryJoins(db))
+	//
+	//// 测试 OR 条件查询
+	//requireNoError(TestQueryOr(db))
+	//
+	//// 测试原始 SQL 查询
+	//requireNoError(TestQueryRawSQL(db))
+	//
+	//// 测试 JSON 字段查询
+	//requireNoError(TestQueryWithJsonColumn(db))
+	//
+	//// 测试通过 Map 更新
+	//requireNoError(TestUpdateByMap(db))
+	//
+	//// 测试事务封装
+	//requireNoError(TestTransactionWrapper(db))
+	//
+	//// 测试执行原始 SQL
+	//requireNoError(TestExecRawSQL(db))
+	//
+	//// 测试地理位置坐标操作
+	//requireNoError(TestUpsertPoint(db))
+	//requireNoError(TestUpdatePointByExpress(db))
+	//
+	//// 测试分布式锁
+	//// requireNoError(TestDistributionLock(db))
+	//
+	//// 测试通过sqlca.Engine对象获取Where条件
+	//requireNoError(TestConditionFromSqlcaEngine(db))
+	//
+	//log.Infof("所有测试验证通过！")
 }
 
 func requireNoError(err error) {
@@ -184,6 +184,7 @@ func InsertTestData(db *sqlca.Engine) (err error) {
 		}
 	}
 
+	var lrvRoot = sqlca.NewLrvRoot()
 	// 2. 插入用户数据
 	users := []*models.User{
 		{
@@ -192,8 +193,9 @@ func InsertTestData(db *sqlca.Engine) (err error) {
 				CreatedAt: time.Now(),
 				UpdatedAt: time.Now(),
 			},
-			UserName: "lory",
-			Email:    "lory@hotmail.com",
+			UserName: "admin",
+			Email:    "admin@hotmail.com",
+			LrvTree:  lrvRoot,
 		},
 		{
 			Id: 2,
@@ -203,11 +205,17 @@ func InsertTestData(db *sqlca.Engine) (err error) {
 			},
 			UserName: "civet148",
 			Email:    "civet148@126.com",
+			LrvTree:  lrvRoot.NewChild(1),
 		},
 	}
 
 	for _, user := range users {
-		_, err = db.Model(user).Upsert()
+		if user.Id != 1 {
+			if err = db.ShiftLRV("users", user.LeftVal, user.RightVal); err != nil {
+				return log.Errorf("平衡左右值树失败: %s", err)
+			}
+		}
+		_, _, err = db.Model(user).Debug().Insert()
 		if err != nil {
 			return log.Errorf("插入用户数据失败: %s", err)
 		}

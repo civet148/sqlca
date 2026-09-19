@@ -1380,7 +1380,7 @@ func (e *Engine) GetRedisClient() *redigo.Redigo {
 }
 
 // 调整左右值树(在新建节点前操作，leftVal和rightVal为新创建的节点的左右值)
-func (e *Engine) ShiftLRV(strTableName string, leftVal, rightVal int64, options ...ShiftOption) (err error) {
+func (e *Engine) ShiftLRV(strTableName string, leftVal, rightVal int, options ...ShiftOption) (err error) {
 	db := e.clone()
 	var opts = &lrvOptions{
 		LeftColumn:  "left_val",
@@ -1390,9 +1390,9 @@ func (e *Engine) ShiftLRV(strTableName string, leftVal, rightVal int64, options 
 		op(opts)
 	}
 	// UPDATE table_name SET left_val=if(left_val<?,left_val,left_val+2), right_val=right_val+2 WHERE right_val>=? 示例参数值[left_val=2 right_val=7]
-	strQuery := fmt.Sprintf("UPDATE `%s` SET `%s`=if(`%s`<?,`%s`,`%s`+2), `%s`=`%s`+2 WHERE `%s`>=?",
+	strQuery := fmt.Sprintf("UPDATE %s SET `%s`=if(`%s`<?,`%s`,`%s`+2), `%s`=`%s`+2 WHERE `%s`>=?",
 		strTableName, opts.LeftColumn, opts.LeftColumn, opts.LeftColumn, opts.LeftColumn, opts.RightColumn, opts.RightColumn, opts.RightColumn)
-	_, _, err = db.ExecRaw(strQuery, strTableName, leftVal, rightVal)
+	_, _, err = db.ExecRaw(strQuery, leftVal, rightVal)
 	if err != nil {
 		return err
 	}

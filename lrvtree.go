@@ -1,7 +1,7 @@
 package sqlca
 
-// LeftRightValTree 左右值树
-type LeftRightValTree struct {
+// LrvTree 左右值树
+type LrvTree struct {
 	LeftVal  int                  `gorm:"column:left_val;index"`                   // 左值
 	RightVal int                  `gorm:"column:right_val;index"`                  // 右值
 	Depth    int                  `gorm:"column:depth;"`                           // 深度
@@ -10,8 +10,8 @@ type LeftRightValTree struct {
 }
 
 // 创建左右值树根节点
-func NewLrvRoot() LeftRightValTree {
-	return LeftRightValTree{
+func NewLrvRoot() LrvTree {
+	return LrvTree{
 		LeftVal:  1,
 		RightVal: 2,
 		Depth:    0,
@@ -19,8 +19,8 @@ func NewLrvRoot() LeftRightValTree {
 }
 
 // 创建左右值树子节点
-func (lr *LeftRightValTree) NewChild(parentId int64) LeftRightValTree {
-	nlr := &LeftRightValTree{}
+func (lr *LrvTree) NewChild(parentId int64) LrvTree {
+	nlr := &LrvTree{}
 	if parentId == 0 { // 写入节点为根节点
 		lr.LeftVal, lr.RightVal, lr.Depth = 1, 2, 0
 		return *lr
@@ -35,19 +35,19 @@ func (lr *LeftRightValTree) NewChild(parentId int64) LeftRightValTree {
 	return *nlr
 }
 
-func (lr *LeftRightValTree) GetLeftVal() int {
+func (lr *LrvTree) GetLeftVal() int {
 	return lr.LeftVal
 }
-func (lr *LeftRightValTree) GetRightVal() int {
+func (lr *LrvTree) GetRightVal() int {
 	return lr.RightVal
 }
-func (lr *LeftRightValTree) GetDepth() int {
+func (lr *LrvTree) GetDepth() int {
 	return lr.Depth
 }
-func (lr *LeftRightValTree) GetParentId() int64 {
+func (lr *LrvTree) GetParentId() int64 {
 	return lr.ParentId
 }
 
-func (lr *LeftRightValTree) GetRootPath() []int64 {
+func (lr *LrvTree) GetRootPath() []int64 {
 	return lr.RootPath
 }

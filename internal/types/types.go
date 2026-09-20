@@ -23,6 +23,8 @@ const (
 	SQLCA_TAG_VALUE_IS_NULL         = "isnull"         //is nullable
 	SQLCA_TAG_VALUE_NULLABLE        = "nullable"       //is nullable
 	SQLCA_TAG_VALUE_IGNORE          = "-"              //ignore
+	GORM_TAG_VALUE_EMBEDDED         = "embedded"       //ignore
+	GORM_TAG_VALUE_NO_MIGRATION     = "-:migration"    //ignore
 	GORM_TAG_VALUE_AUTO_CREATE_TIME = "autoCreateTime" //gorm:"autoCreateTime"
 	GORM_TAG_VALUE_AUTO_UPDATE_TIME = "autoUpdateTime" //gorm:"autoUpdateTime"
 	XORM_TAG_VALUE_AUTO_CREATE_TIME = "created"        //xorm:"created"

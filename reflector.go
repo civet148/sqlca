@@ -13,6 +13,16 @@ import (
 	"github.com/civet148/sqlca/v3/internal/types"
 )
 
+var ignoreTags = map[string]bool{
+	types.SQLCA_TAG_VALUE_IGNORE:      true,
+	types.GORM_TAG_VALUE_EMBEDDED:     true,
+	types.GORM_TAG_VALUE_NO_MIGRATION: true,
+}
+
+func isIgnoreTag(tagVal string) bool {
+	return ignoreTags[tagVal]
+}
+
 type ModelReflector struct {
 	value   interface{}            //value
 	engine  *Engine                //database engine
@@ -108,7 +118,7 @@ func (s *ModelReflector) convertMapString(ms map[string]string) (mi map[string]a
 // get struct field's tag value
 func (s *ModelReflector) getTag(sf reflect.StructField, tagNames ...string) (strValue string, ignore bool) {
 	for _, tagName := range tagNames {
-		strValue = handleTagValue(sf, tagName, sf.Tag.Get(tagName))
+		strValue = parseTagValue(sf, tagName, sf.Tag.Get(tagName))
 		if strValue == types.SQLCA_TAG_VALUE_IGNORE {
 			return "", true
 		}
@@ -122,7 +132,7 @@ func (s *ModelReflector) getTag(sf reflect.StructField, tagNames ...string) (str
 func recursiveTags(sf reflect.StructField, tags ...string) (strValue string) {
 	for _, tagName := range tags {
 		strValue = strings.TrimSpace(sf.Tag.Get(tagName))
-		if strValue == types.SQLCA_TAG_VALUE_IGNORE || strValue == "" {
+		if isIgnoreTag(strValue) || strValue == "" {
 			continue
 		}
 		break
@@ -143,8 +153,10 @@ func (s *ModelReflector) parseStructFields(typ reflect.Type, val reflect.Value, 
 				typField.Type = typField.Type.Elem()
 				valField = valField.Elem()
 			}
+			//log.Infof("结构体字段：%v 类型: %v", typField.Name, typField.Type)
 			tagVal, ignore := s.getTag(typField, types.TAG_NAME_DB, types.TAG_NAME_GORM, types.TAG_NAME_XORM, types.TAG_NAME_PROTOBUF)
 			if ignore {
+				//log.Warnf("结构体字段：%v 类型: %v 标签：%v [IGNORE]", typField.Name, typField.Type, tagVal)
 				continue
 			}
 			if !valField.IsValid() || !valField.CanInterface() {
@@ -158,6 +170,7 @@ func (s *ModelReflector) parseStructFields(typ reflect.Type, val reflect.Value, 
 					s.engine.setNullableColumns(tagVal)
 				}
 			}
+			//log.Infof("结构体字段：%v 类型: %v 标签：%v", typField.Name, typField.Type, tagVal)
 			if typField.Type.Kind() == reflect.Struct {
 				if tagVal == "" {
 					s.parseStructFields(typField.Type, valField, tagNames...) //recurse every field that type is a struct
@@ -171,33 +184,28 @@ func (s *ModelReflector) parseStructFields(typ reflect.Type, val reflect.Value, 
 					s.Columns = append(s.Columns, tagVal)
 				}
 			} else {
-				s.setValueByField(typField, valField, tagNames...) // save field tag value and field value to map
+				s.setValueByField(typField, valField, tagVal, tagNames...) // save field tag value and field value to map
 			}
 		}
 	}
 }
 
 // trim the field value's first and last blank character and save to map
-func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.Value, tagNames ...string) {
+func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.Value, tagVal string, tagNames ...string) {
 
 	if len(tagNames) == 0 {
 		log.Errorf("ModelReflector.setValueByField no tag to set value")
 		return
 	}
 
-	var tagVal string
 	for _, v := range tagNames {
 
 		if v == types.TAG_NAME_SQLCA {
 			continue
 		}
 
-		strTagValue, ignore := s.getTag(field, v)
 		//parse db、json、protobuf tag
-		tagVal = handleTagValue(field, v, strTagValue)
-		if ignore {
-			break
-		}
+		tagVal = parseTagValue(field, v, tagVal)
 		if tagVal != "" {
 			s.Dict[tagVal] = indirectValue(val.Interface())
 			s.Columns = append(s.Columns, tagVal)
@@ -207,13 +215,10 @@ func (s *ModelReflector) setValueByField(field reflect.StructField, val reflect.
 
 	for _, v := range tagNames {
 		if v == types.TAG_NAME_SQLCA { //parse sqlca tag
-			strTagValue, ignore := s.getTag(field, v)
-			if !ignore && strTagValue != "" {
-				vs := strings.Split(strTagValue, ",")
-				for _, vv := range vs {
-					if vv == types.SQLCA_TAG_VALUE_READ_ONLY { //column is read only
-						s.engine.readOnly = append(s.engine.readOnly, tagVal)
-					}
+			vs := strings.Split(tagVal, ",")
+			for _, vv := range vs {
+				if vv == types.SQLCA_TAG_VALUE_READ_ONLY { //column is read only
+					s.engine.readOnly = append(s.engine.readOnly, tagVal)
 				}
 			}
 		}
@@ -385,7 +390,7 @@ func (e *Engine) getStructFieldValues(typ reflect.Type, val reflect.Value, exclu
 				}
 			}
 
-			if tagName != "" && tagName != types.SQLCA_TAG_VALUE_IGNORE {
+			if tagName != "" && !isIgnoreTag(tagName) {
 				keys = append(keys, tagName)
 				values = append(values, fieldVal)
 			}
@@ -552,7 +557,8 @@ func (e *Engine) fetchToStructAny(fetcher *Fetcher, field reflect.StructField, v
 	if _, ok := val.Addr().Interface().(sql.Scanner); ok {
 		e.fetchToScanner(fetcher, field, val)
 	} else {
-		if e.getTagValue(field) != "" {
+		var tagVal = e.getTagValue(field)
+		if tagVal != "" && !isIgnoreTag(tagVal) {
 			_ = e.fetchToJsonObject(fetcher, field, val, ptr...)
 		} else {
 			_ = e.fetchToStruct(fetcher, field.Type, val)
@@ -579,7 +585,7 @@ func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, 
 	}()
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
-	if strDbTagVal == types.SQLCA_TAG_VALUE_IGNORE {
+	if isIgnoreTag(strDbTagVal) {
 		return nil
 	}
 
@@ -604,7 +610,7 @@ func (e *Engine) fetchToJsonObject(fetcher *Fetcher, field reflect.StructField, 
 func (e *Engine) fetchToScanner(fetcher *Fetcher, field reflect.StructField, val reflect.Value) {
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
-	if strDbTagVal == types.SQLCA_TAG_VALUE_IGNORE {
+	if isIgnoreTag(strDbTagVal) {
 		return
 	}
 	if v, ok := fetcher.mapValues[strDbTagVal]; ok {
@@ -627,23 +633,21 @@ func (e *Engine) fetchToBaseType(fetcher *Fetcher, typ reflect.Type, val reflect
 	return
 }
 
-func handleTagValue(field reflect.StructField, strTagName, strTagValue string) string {
+func parseTagValue(field reflect.StructField, strTagName, strTagValue string) string {
 
 	if strTagValue == "" {
 		return ""
 	}
 	if strTagName == types.TAG_NAME_GORM {
 		vs := strings.Split(strTagValue, ";")
-		var col string
-		for _, col = range vs {
-			if strings.Contains(col, "column") {
-				vs = strings.Split(col, ":")
-				col = vs[1]
-			} else {
-				col = convertCamelToSnake(field.Name)
+		var tv string
+		for _, v := range vs {
+			if strings.Contains(v, "column") {
+				ss := strings.Split(v, ":")
+				tv = ss[1]
 			}
 		}
-		strTagValue = col
+		strTagValue = tv
 	} else if strTagName == types.TAG_NAME_PROTOBUF {
 		//parse protobuf tag value
 		vs := strings.Split(strTagValue, ",")
@@ -668,7 +672,7 @@ func handleTagValue(field reflect.StructField, strTagName, strTagValue string) s
 func (e *Engine) getTagValue(sf reflect.StructField) (strValue string) {
 
 	for _, v := range e.dbTags { //support multiple tag
-		strValue = handleTagValue(sf, v, sf.Tag.Get(v))
+		strValue = parseTagValue(sf, v, sf.Tag.Get(v))
 		if strValue != "" {
 			return
 		}
@@ -681,7 +685,7 @@ func (e *Engine) setValueByField(fetcher *Fetcher, field reflect.StructField, va
 
 	//优先给有db标签的成员变量赋值
 	strDbTagVal := e.getTagValue(field)
-	if strDbTagVal == types.SQLCA_TAG_VALUE_IGNORE {
+	if isIgnoreTag(strDbTagVal) {
 		return nil
 	}
 	var assigned bool

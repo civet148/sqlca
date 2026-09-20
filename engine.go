@@ -1380,7 +1380,7 @@ func (e *Engine) GetRedisClient() *redigo.Redigo {
 }
 
 // 调整左右值树(在新建节点前操作，leftVal和rightVal为新创建的节点的左右值)
-func (e *Engine) ShiftLRV(strTableName string, leftVal, rightVal int, options ...ShiftOption) (err error) {
+func (e *Engine) ShiftLRV(strTableName string, options ...ShiftOption) (err error) {
 	db := e.clone()
 	var opts = &lrvOptions{
 		LeftColumn:  "left_val",
@@ -1389,10 +1389,29 @@ func (e *Engine) ShiftLRV(strTableName string, leftVal, rightVal int, options ..
 	for _, op := range options {
 		op(opts)
 	}
-	// UPDATE table_name SET left_val=if(left_val<?,left_val,left_val+2), right_val=right_val+2 WHERE right_val>=? 示例参数值[left_val=2 right_val=7]
-	strQuery := fmt.Sprintf("UPDATE %s SET `%s`=if(`%s`<?,`%s`,`%s`+2), `%s`=`%s`+2 WHERE `%s`>=?",
-		strTableName, opts.LeftColumn, opts.LeftColumn, opts.LeftColumn, opts.LeftColumn, opts.RightColumn, opts.RightColumn, opts.RightColumn)
-	_, _, err = db.ExecRaw(strQuery, leftVal, rightVal)
+	/*
+		UPDATE users
+		SET
+		    left_val = CASE
+		        WHEN left_val > 2 THEN left_val + 2
+		        ELSE left_val
+		    END,
+		    right_val = CASE
+		        WHEN left_val = 1 THEN right_val + 2   -- root 扩展右值
+		        WHEN right_val > 2 THEN right_val + 2  -- 其他受影响的节点
+		        ELSE right_val
+		    END
+		WHERE left_val > 2 OR left_val = 1;
+	*/
+	strQuery := fmt.Sprintf(`UPDATE %s SET
+		    %s = CASE WHEN %s > 2 THEN %s + 2 ELSE %s END,
+		    %s = CASE WHEN %s = 1 THEN %s + 2 WHEN %s > 2 THEN %s + 2 ELSE %s END
+		WHERE %s > 2 OR %s = 1;`,
+		strTableName, opts.LeftColumn, opts.LeftColumn, opts.LeftColumn, opts.LeftColumn,
+		opts.RightColumn, opts.LeftColumn, opts.RightColumn, opts.RightColumn, opts.RightColumn, opts.RightColumn,
+		opts.LeftColumn, opts.LeftColumn)
+
+	_, _, err = db.ExecRaw(strQuery)
 	if err != nil {
 		return err
 	}

@@ -24,15 +24,15 @@ const (
 )
 
 type User struct {
-	Id            uint64                     `json:"id" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`
-	UserName      string                     `json:"user_name" db:"user_name" gorm:"column:user_name;type:varchar(32);uniqueIndex:idx_users_user_name,priority:1;null;" sqlca:"nullable"`
-	State         int8                       `json:"state" db:"state" gorm:"column:state;type:tinyint(1);default:0;null;" sqlca:"nullable"`
-	Email         string                     `json:"email" db:"email" gorm:"column:email;type:varchar(64);uniqueIndex:idx_users_email,priority:1;null;" sqlca:"nullable"`
-	ExtraData     struct{}                   `json:"extra_data" db:"extra_data" gorm:"column:extra_data;type:json;null;" sqlca:"nullable"`
-	Roles         []*Role                    `json:"roles,omitempty" db:"-" gorm:"many2many:user_roles;"` // 用户角色列表
-	Profile       UserProfile                `json:"profile,omitempty" db:"-" gorm:"foreignKey:UserId;"`  // 用户资料明细
-	BaseModel     `json:"-" gorm:"embedded"` // 基础模型(嵌入结构体)
-	sqlca.LrvTree `json:"-" gorm:"embedded"` // 左右值树(嵌入结构体)
+	Id            uint64                              `json:"id" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`
+	UserName      string                              `json:"user_name" db:"user_name" gorm:"column:user_name;type:varchar(32);uniqueIndex:idx_users_user_name,priority:1;null;" sqlca:"nullable"`
+	State         int8                                `json:"state" db:"state" gorm:"column:state;type:tinyint(1);default:0;null;" sqlca:"nullable"`
+	Email         string                              `json:"email" db:"email" gorm:"column:email;type:varchar(64);uniqueIndex:idx_users_email,priority:1;null;" sqlca:"nullable"`
+	ExtraData     struct{}                            `json:"extra_data" db:"extra_data" gorm:"column:extra_data;type:json;null;" sqlca:"nullable"`
+	Roles         []*Role                             `json:"roles,omitempty" db:"-" gorm:"many2many:user_roles;"` // 用户角色列表
+	Profile       UserProfile                         `json:"profile,omitempty" db:"-" gorm:"foreignKey:UserId;"`  // 用户资料明细
+	BaseModel     `json:"base_model" gorm:"embedded"` // 基础模型(嵌入结构体)
+	sqlca.LrvTree `json:"-" gorm:"embedded"`          // 左右值树(嵌入结构体)
 }
 
 func (do User) DatabaseName() string { return "test" }

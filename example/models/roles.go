@@ -12,9 +12,9 @@ const (
 )
 
 type Role struct {
-	Id   uint64 `json:"id" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`
-	Name string `json:"name" db:"name" gorm:"column:name;type:varchar(64);uniqueIndex:idx_roles_name,priority:1;null;" sqlca:"nullable"`
-	BaseModel
+	Id        uint64 `json:"id" db:"id" gorm:"column:id;primaryKey;autoIncrement;"`
+	Name      string `json:"name" db:"name" gorm:"column:name;type:varchar(64);uniqueIndex:idx_roles_name,priority:1;null;" sqlca:"nullable"`
+	BaseModel `json:"base_model" gorm:"embedded"`
 }
 
 func (do Role) DatabaseName() string { return "test" }

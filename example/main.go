@@ -523,13 +523,13 @@ func TestTransaction(db *sqlca.Engine) (err error) {
 
 	// 1. 在事务中插入新用户
 	newUser := &models.User{
-		Id: 3,
+		Id: 9,
 		BaseModel: models.BaseModel{
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
-		UserName: "testuser",
-		Email:    "test@example.com",
+		UserName: "txuser",
+		Email:    "txuser@example.com",
 	}
 
 	_, err = tx.Model(newUser).Upsert()
@@ -539,12 +539,12 @@ func TestTransaction(db *sqlca.Engine) (err error) {
 
 	// 2. 在事务中插入用户资料
 	newProfile := &models.UserProfile{
-		Id: 3,
+		Id: 9,
 		BaseModel: models.BaseModel{
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
-		UserId:  3,
+		UserId:  9,
 		Avatar:  "https://www.hello.com/test.jpg",
 		Address: "中国广州市天河区C座",
 	}
@@ -562,7 +562,7 @@ func TestTransaction(db *sqlca.Engine) (err error) {
 
 	// 验证事务结果
 	var user *models.User
-	_, err = db.Model(&user).Id(3).Preload("Profile").Query()
+	_, err = db.Model(&user).Id(9).Preload("Profile").Query()
 	if err != nil {
 		return log.Errorf("查询事务中创建的用户失败: %s", err)
 	}
@@ -813,7 +813,6 @@ func TestQueryWithJsonColumn(db *sqlca.Engine) (err error) {
 	var do models.InventoryData
 	_, err = db.Model(&do).
 		Table("inventory_data").
-		Select("id", "name", "serial_no", "quantity", "price", "product_extra").
 		Id(inventory.Id).
 		MustFind()
 	if err != nil {

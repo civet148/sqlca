@@ -38,7 +38,7 @@ type InventoryIn struct {
 	CreateName string     `json:"create_name" db:"create_name" gorm:"column:create_name;type:varchar(64);null;" sqlca:"nullable"`
 	UpdateId   uint64     `json:"update_id" db:"update_id" gorm:"column:update_id;type:bigint unsigned;default:0;null;" sqlca:"nullable"`
 	UpdateName string     `json:"update_name" db:"update_name" gorm:"column:update_name;type:varchar(64);null;" sqlca:"nullable"`
-	BaseModel
+	BaseModel  `json:"base_model" gorm:"embedded"`
 }
 
 func (do InventoryIn) DatabaseName() string { return "test" }

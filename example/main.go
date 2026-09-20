@@ -515,49 +515,46 @@ func TestDelete(db *sqlca.Engine) (err error) {
 
 func TestTransaction(db *sqlca.Engine) (err error) {
 	// 测试事务处理
-	tx, err := db.TxBegin()
+
+	err = db.TxFunc(func(tx *sqlca.Engine) error {
+
+		// 1. 在事务中插入新用户
+		newUser := &models.User{
+			Id: 9,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserName: "txuser",
+			Email:    "txuser@example.com",
+		}
+
+		_, err = tx.Model(newUser).Upsert()
+		if err != nil {
+			return log.Errorf("事务中插入用户失败: %s", err)
+		}
+
+		// 2. 在事务中插入用户资料
+		newProfile := &models.UserProfile{
+			Id: 9,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserId:  9,
+			Avatar:  "https://www.hello.com/test.jpg",
+			Address: "中国广州市天河区C座",
+		}
+
+		_, err = tx.Model(newProfile).Upsert()
+		if err != nil {
+			return log.Errorf("事务中插入用户资料失败: %s", err)
+		}
+
+		return nil
+	})
 	if err != nil {
-		return log.Errorf("开启事务失败: %s", err)
-	}
-	defer tx.TxRollback()
-
-	// 1. 在事务中插入新用户
-	newUser := &models.User{
-		Id: 9,
-		BaseModel: models.BaseModel{
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		},
-		UserName: "txuser",
-		Email:    "txuser@example.com",
-	}
-
-	_, err = tx.Model(newUser).Upsert()
-	if err != nil {
-		return log.Errorf("事务中插入用户失败: %s", err)
-	}
-
-	// 2. 在事务中插入用户资料
-	newProfile := &models.UserProfile{
-		Id: 9,
-		BaseModel: models.BaseModel{
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		},
-		UserId:  9,
-		Avatar:  "https://www.hello.com/test.jpg",
-		Address: "中国广州市天河区C座",
-	}
-
-	_, err = tx.Model(newProfile).Upsert()
-	if err != nil {
-		return log.Errorf("事务中插入用户资料失败: %s", err)
-	}
-
-	// 3. 提交事务
-	err = tx.TxCommit()
-	if err != nil {
-		return log.Errorf("提交事务失败: %s", err)
+		return log.Errorf("事务处理失败: %s", err)
 	}
 
 	// 验证事务结果

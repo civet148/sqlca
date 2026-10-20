@@ -118,6 +118,8 @@ func main() {
 	// 测试通过sqlca.Engine对象获取Where条件
 	requireNoError(TestConditionFromSqlcaEngine(db))
 
+	// 测试批量保存数据（不同对象类型）
+	requireNoError(TestSaveModels(db))
 	log.Infof("所有测试验证通过！")
 }
 
@@ -985,5 +987,63 @@ func TestConditionFromSqlcaEngine(db *sqlca.Engine) (err error) {
 		return log.Errorf("数据查询错误：%s", err)
 	}
 	log.Infof("1.查询结果数据条数: %d", count)
+	return nil
+}
+
+func TestSaveModels(db *sqlca.Engine) (err error) {
+	do := &models.InventoryData{
+		Id: uint64(db.NewID()),
+		BaseModel: models.BaseModel{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+		IsFrozen: models.FrozenState_Ture,
+		Name:     "测试坐标",
+		SerialNo: "SNO_009",
+		Quantity: 1200,
+		Location: sqlca.Point{
+			X: 112.34232,
+			Y: -20.32432,
+		},
+	}
+	// 2. 插入用户数据
+	users := []*models.User{
+		{
+			Id: 100,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserName: "test1",
+			Email:    "test1@hotmail.com",
+		},
+		{
+			Id: 200,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserName: "test2",
+			Email:    "test2@126.com",
+		},
+		{
+			Id: 300,
+			BaseModel: models.BaseModel{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			UserName: "test3",
+			Email:    "test3@126.com",
+		},
+	}
+	var dos []any
+	dos = append(dos, do)
+	for _, user := range users {
+		dos = append(dos, user)
+	}
+	if err = db.Save(context.Background(), dos...); err != nil {
+		return log.Errorf("Save方法数据保存错误：%s", err)
+	}
+	log.Infof("批量不同对象类型数据保存成功")
 	return nil
 }

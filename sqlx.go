@@ -292,14 +292,14 @@ func (e *Engine) mysqlQueryUpsert(strSQL string) (lastInsertId int64, err error)
 			if e.verbose {
 				log.Errorf("error %v model %+v", err, e.model)
 			}
-			return
+			return 0, err
 		}
 		lastInsertId, err = r.LastInsertId()
 		if err != nil {
 			if e.verbose {
 				log.Errorf("get last insert id error %v model %+v", err, e.model)
 			}
-			return
+			return 0, err
 		}
 	}
 	return

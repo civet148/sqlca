@@ -641,7 +641,7 @@ func (e *Engine) Upsert() (lastInsertId int64, err error) {
 	if err != nil {
 		return 0, log.Errorf("caller [%v] query [%s] error: %v", e.getCaller(2), strSql, err.Error())
 	}
-	e.printVerbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
+	//e.printVerbose("caller [%v] last id [%v] SQL [%s]", e.getCaller(2), lastInsertId, strSql)
 	return
 }
 
@@ -1416,4 +1416,15 @@ func (e *Engine) ShiftLRV(strTableName string, options ...ShiftOption) (err erro
 		return err
 	}
 	return nil
+}
+
+func (e *Engine) Save(ctx context.Context, models ...any) (err error) {
+	return e.TxFuncContext(ctx, func(ctx context.Context, tx *Engine) error {
+		for _, model := range models {
+			if _, err = tx.Model(ctx, model).Upsert(); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
